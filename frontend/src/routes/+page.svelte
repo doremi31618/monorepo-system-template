@@ -1,5 +1,6 @@
 
 <script lang="ts">
+      import { AppConfig } from "$lib/config";
       import * as NavigationMenu from "$lib/components/ui/navigation-menu/index.js";
       import { Separator } from "$lib/components/ui/separator/index.js";
 
@@ -12,13 +13,13 @@
             
             <div class="flex items-center justify-between">
                 <NavigationMenu.Item>
-                    <NavigationMenu.Link href="/">Home</NavigationMenu.Link>
+                    <NavigationMenu.Link href={AppConfig.route.base}>Home</NavigationMenu.Link>
                 </NavigationMenu.Item>
                 <NavigationMenu.Item>
-                    <NavigationMenu.Link href="/login">login</NavigationMenu.Link>
+                    <NavigationMenu.Link href={AppConfig.route.auth.login}>login</NavigationMenu.Link>
                 </NavigationMenu.Item>
                 <NavigationMenu.Item>
-                    <NavigationMenu.Link href="/signup">signup</NavigationMenu.Link>
+                    <NavigationMenu.Link href={AppConfig.route.auth.register}>signup</NavigationMenu.Link>
                 </NavigationMenu.Item>
             </div>
             
