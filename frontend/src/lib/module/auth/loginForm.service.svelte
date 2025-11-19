@@ -3,6 +3,7 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import * as Card from "$lib/components/ui/card/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
+	import { appRoutePath } from "$lib/config/route";
 	import {
 		FieldGroup,
 		Field,
@@ -18,8 +19,12 @@
         password: '',
     });
 
+	
+
     async function handleSubmit(event: Event) {
         event.preventDefault();
+
+
         await login(form.email, form.password);
     }
 
@@ -58,7 +63,7 @@
 						Login with Google
 					</Button>
 					<FieldDescription class="text-center">
-						Don't have an account? <a href="##">Sign up</a>
+						Don't have an account? <a href={appRoutePath.auth.register}>Sign up</a>
 					</FieldDescription>
 				</Field>
 			</FieldGroup>

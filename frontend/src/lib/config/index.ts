@@ -8,8 +8,10 @@ export type AppConfig = {
     route: typeof appRoutePath;
 }
 
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3333';
+
 export const AppConfig: AppConfig = {
-    apiBaseUrl: 'http://localhost:3333',
+    apiBaseUrl,
     sessionStorageKey: 'app.session.v1',
     useMockApi: false,
     route: appRoutePath,

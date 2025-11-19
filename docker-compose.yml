@@ -8,7 +8,7 @@ services:
       dockerfile: Dockerfile.dev
     working_dir: /app
     environment:
-      VITE_API_URL: http://localhost:3333
+      VITE_API_BASE_URL: http://localhost:3333
     ports:
       - "5173:5173"
     volumes:
@@ -33,6 +33,7 @@ services:
       - /app/node_modules
     environment:
       DATABASE_URL: postgres://postgres:postgres@db:5432/postgres
+      API_BASE_URL: http://localhost:3333
     command: sh -c "npm install && npm run start:dev"
     depends_on:
       - db

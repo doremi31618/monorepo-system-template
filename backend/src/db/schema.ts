@@ -3,8 +3,8 @@ import * as authModel from './schema/authModel';
 
 export { userModel, authModel };
 export const schema = {
-    userModel,
-    authModel,
+	userModel,
+	authModel
 };
 
 export * from './schema/userModel';

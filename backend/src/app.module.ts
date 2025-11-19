@@ -8,15 +8,18 @@ import { RepositoryModule } from './repository/repository.module';
 import { UserModule } from './user/user.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MailModule } from './mail/mail.module';
+import appConfig from './config/app.config';
 @Module({
-  imports: [
-    ScheduleModule.forRoot(),
-    ConfigModule.forRoot({ isGlobal: true }), 
-    DbModule, 
-    AuthModule, 
-    RepositoryModule, 
-    UserModule, MailModule],
-  controllers: [AppController],
-  providers: [AppService],
+	imports: [
+		ScheduleModule.forRoot(),
+		ConfigModule.forRoot({ isGlobal: true, load: [appConfig] }),
+		DbModule,
+		AuthModule,
+		RepositoryModule,
+		UserModule,
+		MailModule
+	],
+	controllers: [AppController],
+	providers: [AppService]
 })
 export class AppModule {}

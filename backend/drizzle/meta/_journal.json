@@ -8,6 +8,27 @@
       "when": 1762354552886,
       "tag": "0000_white_puff_adder",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1763174713067,
+      "tag": "0001_hot_serpent_society",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1763174870672,
+      "tag": "0002_needy_randall_flagg",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1763175257109,
+      "tag": "0003_parallel_lord_hawal",
+      "breakpoints": true
     }
   ]
 }

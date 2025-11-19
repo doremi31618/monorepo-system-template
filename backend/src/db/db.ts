@@ -4,11 +4,13 @@ import { Pool } from 'pg';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
-    console.warn('DATABASE_URL is not set; falling back to default pg connection params');
+	console.warn(
+		'DATABASE_URL is not set; falling back to default pg connection params'
+	);
 }
 
 export const pool = new Pool({
-    connectionString,
+	connectionString
 });
 
 export const db = drizzle(pool, { schema });

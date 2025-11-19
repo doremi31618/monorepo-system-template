@@ -1,9 +1,12 @@
 import { httpClient } from './httpClient';
 
-export type Session = {
-    token: string;
+export type UserBasicInfo = {
     userId: number;
     name: string;
+}
+
+export type Session = UserBasicInfo & {
+    token: string;
 }
 
 export async function InspectSession(){
@@ -16,7 +19,7 @@ export async function login(email: string, password: string) {
 }
 
 export async function register(name: string, email: string, password: string) {
-    return await httpClient.post<Session>('/auth/register', { name, email, password });
+    return await httpClient.post<Session>('/auth/signup', { name, email, password });
 }
 
 export async function logout(){

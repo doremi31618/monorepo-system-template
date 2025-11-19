@@ -1,3 +1,4 @@
+import { browser } from '$app/environment';
 import { AppConfig } from '$lib/config';
 
 
@@ -24,6 +25,7 @@ import { AppConfig } from '$lib/config';
 //--------------------------------
 
 export type ApiResponse<T> = {
+    error?: string | null;
     statusCode: number;
     message: string;
     data?: T | null;
@@ -31,23 +33,160 @@ export type ApiResponse<T> = {
     path?: string;
 }
 
-async function request<T>(path:string, options: RequestInit = {}): Promise<ApiResponse<T>> {
-    const token = localStorage.getItem('token')
-    const res = await fetch(`${AppConfig.apiBaseUrl}${path}`, {
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `${token}`,
-        },
-    });
-    if (!res.ok) {
-        throw new Error(await safeErrorMessage(res));
+function authorizationHeader(): Record<string, string> {
+    if (!browser) return {};
+    const raw = localStorage.getItem(AppConfig.sessionStorageKey);
+    if (!raw) return {};
+    try {
+        const session = JSON.parse(raw) as { token?: string | null } | string;
+        const token = typeof session === 'string' ? session : session?.token;
+        if (token) {
+            return { Authorization: `Bearer ${token}` };
+        }
+    } catch (error) {
+        console.error('Failed to read session token', error);
     }
-
-    return res.json() as Promise<ApiResponse<T>>;
+    return {};
 }
 
-async function safeErrorMessage<T>(response: Response): Promise<string> {
+function updateStoredSessionToken(token: string) {
+    if (!browser) return;
+    const raw = localStorage.getItem(AppConfig.sessionStorageKey);
+    if (!raw) {
+        localStorage.setItem(
+            AppConfig.sessionStorageKey,
+            JSON.stringify({ token })
+        );
+        return;
+    }
+    try {
+        const session = JSON.parse(raw) as { token?: string } | string;
+        if (typeof session === 'string') {
+            localStorage.setItem(
+                AppConfig.sessionStorageKey,
+                JSON.stringify({ token })
+            );
+            return;
+        }
+        localStorage.setItem(
+            AppConfig.sessionStorageKey,
+            JSON.stringify({ ...session, token })
+        );
+    } catch (error) {
+        console.error('Failed to update session token from storage', error);
+        localStorage.setItem(
+            AppConfig.sessionStorageKey,
+            JSON.stringify({ token })
+        );
+    }
+}
+
+let pendingRefresh: Promise<string> | null = null;
+
+async function refreshToken(): Promise<string> {
+    if (!browser) {
+        throw new Error('Cannot refresh token outside the browser environment');
+    }
+
+    if (!pendingRefresh) {
+        pendingRefresh = (async () => {
+            const refreshResponse = await fetch(`${AppConfig.apiBaseUrl}/auth/refresh`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...authorizationHeader(),
+                },
+            });
+            const { body: refreshData, parsed } = await safeParse<ApiResponse<{ token?: string; sessionToken?: string }>>(refreshResponse);
+
+            if (!refreshResponse.ok) {
+                throw new Error(
+                    await safeErrorMessage(refreshResponse, refreshData ?? undefined, parsed)
+                );
+            }
+
+            const nextToken =
+                refreshData?.data?.token ?? refreshData?.data?.sessionToken;
+
+            if (nextToken) {
+                updateStoredSessionToken(nextToken);
+                return nextToken;
+            }
+
+            throw new Error(
+                await safeErrorMessage(refreshResponse, refreshData ?? undefined, parsed)
+            );
+        })();
+
+        pendingRefresh.finally(() => {
+            pendingRefresh = null;
+        });
+    }
+
+    return pendingRefresh;
+}
+
+async function rawRequest(path: string, options: RequestInit = {}): Promise<Response> {
+    const headers = {
+        'Content-Type': 'application/json',
+        ...authorizationHeader(),
+        ...(options.headers ?? {}),
+    };
+    const res = await fetch(`${AppConfig.apiBaseUrl}${path}`, {
+        ...options,
+        headers,
+    });
+    return res;
+}
+
+// try request with refresh token if 401
+async function request<T>(path: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+    const res = await rawRequest(path, options);
+
+    if (res.ok) {
+        return res.json() as Promise<ApiResponse<T>>;
+    }
+
+    const { body: data, parsed } = await safeParse<ApiResponse<T>>(res);
+    const isUnauthorized =
+        res.status === 401 || data?.statusCode === 401 || data?.error === 'Unauthorized';
+
+    if (isUnauthorized) {
+        const newToken = await refreshToken();
+        if (!newToken) {
+            throw new Error('Failed to refresh token');
+        }
+        const retryResponse = await rawRequest(path, { ...options });
+        return retryResponse.json() as Promise<ApiResponse<T>>;
+    }
+
+    throw new Error(await safeErrorMessage(res, data ?? undefined, parsed));
+}
+
+type SafeParseResult<T> = { body: T | null; parsed: boolean };
+
+async function safeParse<T>(response: Response): Promise<SafeParseResult<T>> {
+    try {
+        return {
+            body: await response.json() as T,
+            parsed: true,
+        };
+    } catch {
+        return { body: null, parsed: false };
+    }
+}
+
+async function safeErrorMessage<T>(
+    response: Response,
+    parsedBody?: ApiResponse<T>,
+    alreadyParsed = false
+): Promise<string> {
+    if (parsedBody) {
+        return parsedBody.message ?? `HTTP ${parsedBody.statusCode ?? response.status} error`;
+    }
+    if (alreadyParsed) {
+        return `HTTP ${response.status}`;
+    }
     try {
         const data = await response.json() as ApiResponse<T>;
         return data.message ?? `HTTP ${data.statusCode} error`;
@@ -58,8 +197,8 @@ async function safeErrorMessage<T>(response: Response): Promise<string> {
 }
 
 export const httpClient = {
-    get:<T>(path:string):Promise<ApiResponse<T>> => request(path, { method: 'GET' }) as Promise<ApiResponse<T>>,
-    post:<T>(path:string, data: unknown): Promise<ApiResponse<T>> => request(path, { method: 'POST', body: JSON.stringify(data) }) as Promise<ApiResponse<T>>,
-    put:<T>(path:string, data: unknown): Promise<ApiResponse<T>> => request(path, { method: 'PUT', body: JSON.stringify(data) }) as Promise<ApiResponse<T>>,
-    delete:<T>(path:string): Promise<ApiResponse<T>> => request(path, { method: 'DELETE' }) as Promise<ApiResponse<T>>,
+    get: <T>(path: string): Promise<ApiResponse<T>> => request(path, { method: 'GET' }) as Promise<ApiResponse<T>>,
+    post: <T>(path: string, data: unknown): Promise<ApiResponse<T>> => request(path, { method: 'POST', body: JSON.stringify(data) }) as Promise<ApiResponse<T>>,
+    put: <T>(path: string, data: unknown): Promise<ApiResponse<T>> => request(path, { method: 'PUT', body: JSON.stringify(data) }) as Promise<ApiResponse<T>>,
+    delete: <T>(path: string): Promise<ApiResponse<T>> => request(path, { method: 'DELETE' }) as Promise<ApiResponse<T>>,
 }
