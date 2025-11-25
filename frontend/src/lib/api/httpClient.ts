@@ -92,6 +92,7 @@ async function refreshToken(): Promise<string> {
         pendingRefresh = (async () => {
             const refreshResponse = await fetch(`${AppConfig.apiBaseUrl}/auth/refresh`, {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     ...authorizationHeader(),
@@ -100,9 +101,11 @@ async function refreshToken(): Promise<string> {
             const { body: refreshData, parsed } = await safeParse<ApiResponse<{ token?: string; sessionToken?: string }>>(refreshResponse);
 
             if (!refreshResponse.ok) {
-                throw new Error(
-                    await safeErrorMessage(refreshResponse, refreshData ?? undefined, parsed)
-                );
+                throw {
+                    error: await safeErrorMessage(refreshResponse, refreshData ?? undefined, parsed),
+                    statusCode: refreshData?.statusCode ?? refreshResponse.status,
+                    message: refreshData?.message ?? await safeErrorMessage(refreshResponse, refreshData ?? undefined, parsed),
+                }
             }
 
             const nextToken =
@@ -113,9 +116,13 @@ async function refreshToken(): Promise<string> {
                 return nextToken;
             }
 
-            throw new Error(
-                await safeErrorMessage(refreshResponse, refreshData ?? undefined, parsed)
-            );
+            
+
+            throw {
+                error: await safeErrorMessage(refreshResponse, refreshData ?? undefined, parsed),
+                statusCode: refreshData?.statusCode ?? refreshResponse.status,
+                message: refreshData?.message ?? await safeErrorMessage(refreshResponse, refreshData ?? undefined, parsed),
+            }
         })();
 
         pendingRefresh.finally(() => {
@@ -134,6 +141,7 @@ async function rawRequest(path: string, options: RequestInit = {}): Promise<Resp
     };
     const res = await fetch(`${AppConfig.apiBaseUrl}${path}`, {
         ...options,
+        credentials: 'include',
         headers,
     });
     return res;
@@ -154,13 +162,29 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<ApiR
     if (isUnauthorized) {
         const newToken = await refreshToken();
         if (!newToken) {
-            throw new Error('Failed to refresh token');
+            throw {
+                error: 'Failed to refresh token',
+                statusCode: 401,
+                message: 'Failed to refresh token',
+            };
         }
         const retryResponse = await rawRequest(path, { ...options });
-        return retryResponse.json() as Promise<ApiResponse<T>>;
+        if (retryResponse.ok) {
+            return retryResponse.json() as Promise<ApiResponse<T>>;
+        }
+        const { body: retryData, parsed: retryParsed } = await safeParse<ApiResponse<T>>(retryResponse);
+        throw {
+            error: await safeErrorMessage(retryResponse, retryData ?? undefined, retryParsed),
+            statusCode: retryData?.statusCode ?? retryResponse.status,
+            message: retryData?.message ?? await safeErrorMessage(retryResponse, retryData ?? undefined, retryParsed),
+        };
     }
 
-    throw new Error(await safeErrorMessage(res, data ?? undefined, parsed));
+    throw {
+        error: await safeErrorMessage(res, data ?? undefined, parsed),
+        statusCode: data?.statusCode ?? res.status,
+        message: data?.message ?? await safeErrorMessage(res, data ?? undefined, parsed),
+    };
 }
 
 type SafeParseResult<T> = { body: T | null; parsed: boolean };
@@ -176,6 +200,7 @@ async function safeParse<T>(response: Response): Promise<SafeParseResult<T>> {
     }
 }
 
+// get error message from response
 async function safeErrorMessage<T>(
     response: Response,
     parsedBody?: ApiResponse<T>,
