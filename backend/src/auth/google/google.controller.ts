@@ -43,8 +43,9 @@ export class GoogleController {
 
 	@Get('callback')
 	async handleGoogleCallback(
-        @Res() res: Response,
-        @Query('code') code: string) {
+		@Res() res: Response,
+		@Query('code') code: string
+	) {
 		const tokenResponse = await this.oauth2Client.getToken(code);
 		this.oauth2Client.setCredentials(tokenResponse.tokens);
 
@@ -68,17 +69,18 @@ export class GoogleController {
 		}
 
 		// create session for user
-		const { sessionToken, refreshToken } = await this.authService.CreateSession(
+		const { refreshToken } = await this.authService.CreateSession(
 			existingUser.id
 		);
 
-        res.cookie('refreshToken', refreshToken.refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            maxAge: 1000 * 60 * 60 * 24 * 30 // 30 days
-        });
+		res.cookie('refreshToken', refreshToken.refreshToken, {
+			httpOnly: true,
+			secure: process.env.NODE_ENV === 'production',
+			maxAge: 1000 * 60 * 60 * 24 * 30 // 30 days
+		});
 
-		return res.redirect(`${process.env.FRONTEND_URL}/auth/google/callback?token=${sessionToken}`);
+		return res.redirect(`${process.env.FRONTEND_URL}/auth/callback`);
+
 
 		// return { data: { message: 'Google callback successful' } };
 	}

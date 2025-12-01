@@ -27,6 +27,7 @@ export type AuthStore = { subscribe: Writable<AuthState>['subscribe'] } & {
     logout: () => Promise<AuthResult>;
     InspectSession: () => Promise<AuthResult>;
     isAuthenticated: () => Promise<boolean>;
+    refreshSession: () => Promise<AuthResult>;
     setSession: (session: authAPI.Session | null, message?: string | null, status?: AuthStatus) => void;
     clearSession: (message?: string | null, status?: AuthStatus) => void;
 };
@@ -97,6 +98,23 @@ function createAuthStore(): AuthStore {
         subscribe,
         setSession,
         clearSession,
+        async refreshSession() {
+            update((state) => ({ ...state, status: 'loading', message: null }));
+            try {
+                const response = await authAPI.refresh() as ApiResponse<authAPI.Session>;
+                setSession(response.data ?? null, response.message);
+                return formatResult(response);
+            } catch (error) {
+                clearSession('Failed to refresh session', 'error');
+                const fallback: AuthResult = {
+                    session: null,
+                    status: (error as ApiResponse<unknown>)?.statusCode ?? 500,
+                    message: (error as ApiResponse<unknown>)?.message ?? 'Failed to refresh session',
+                    error: (error as ApiResponse<unknown>)?.error ?? null,
+                };
+                return fallback;
+            }
+        },
         async getToken() {
             return readFromStorage();
         },
