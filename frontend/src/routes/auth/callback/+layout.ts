@@ -13,9 +13,11 @@ export const load: LayoutLoad = async ({ url }) => {
 
     if (token) {
         await authStore.refreshSession();
+        console.log('token', token, 'goto', appRoutePath.user.home);
         await goto(appRoutePath.user.home);
         return;
     }
+    console.log('no token, goto login');
 
-    await goto(appRoutePath.auth.login, { replaceState: true });
+    // await goto(appRoutePath.auth.login);
 };

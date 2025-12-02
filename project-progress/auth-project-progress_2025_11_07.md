@@ -1,6 +1,6 @@
 # Auth Module Progress Report
 
- _Last updated: 2025-11-28_
+ _Last updated: 2025-12-02_
 
 This document captures the current auth implementation status, the outstanding backlog ordered by dependency, and the daily notes that explain why items sit where they do.
 
@@ -18,7 +18,7 @@ This document captures the current auth implementation status, the outstanding b
 | Session cleanup cron | ✅ Wired | `AppModule` imports `ScheduleModule.forRoot()`, so `SessionCleanupService.cleanupExpiredSessions` runs nightly to purge expired rows. |
 | Logout / session revocation (`POST /auth/signout`) | ✅ Implemented | `AuthController.signout` uses the shared extractor to revoke the DB session + refresh rows and now calls `response.clearCookie('refreshToken', …)` so browsers drop the HttpOnly cookie after logout. |
 | Token refresh (`POST /auth/refresh`) | ✅ Implemented | Controller now reads the `refreshToken` cookie, `AuthService.refresh` rotates both session + refresh records, and the new HttpOnly cookie is re-issued together with the fresh session token payload. |
-| Google SSO | ⚠️ Partial | Added `/auth/google/login` redirect + callback that exchanges code, creates/looks up users, mints session/refresh, sets refresh cookie, and redirects back with the access token; frontend callback handling still pending. |
+| Google SSO | ✅ Implemented | `/auth/google/login` + callback now exchange code, persist/fetch federated users, issue session/refresh, set the HttpOnly cookie, and redirect back with the access token; frontend callback consumes the token and stores session state. |
 | Password reset / forgot password | ❌ Missing | Backend has no endpoints, reset tokens, or email delivery yet; only the frontend scaffolding exists so far. |
 | API base URL alignment | ✅ Configured | `backend/src/config/app.config.ts` and `frontend/src/lib/config/index.ts` now both default to `http://localhost:3333`, so the two sides agree as soon as `.env` populates `PORT` / `VITE_API_BASE_URL`. |
 | SMTP integration testing | ⚠️ Opt-in only | Added `src/mail/jtest.spec.ts`, which sends a real SES email when `RUN_SMTP_TEST=true`. `.env` loading is commented out and credentials are shared with production keys, so the spec is disabled by default. |
@@ -32,14 +32,14 @@ This document captures the current auth implementation status, the outstanding b
 | Signup page UI | ✅ Implemented | `signupForm.serevice.svelte` adds password length + confirm rules, inline errors, loading/disabled states, and surfaces store messages for API feedback. |
 | Auth API client layer | ✅ Implemented | `httpClient` now attaches `credentials: 'include'` on all calls, bubbles backend `{ message, statusCode, error }` instead of masking them, refresh retries keep headers intact, and refreshed tokens persist back to storage for reuse. |
 | Auth store (`lib/store/authStore.ts`) | ✅ Implemented | Store now hydrates safely in SSR, exposes `{ session, status, message }`, centralises `setSession/clearSession`, redirects logout to the login route, and keeps in-memory state in sync with storage after login/register/refresh. |
-| Google SSO UI | ❌ Missing | The Google button is commented out in both login & signup forms, and there is no handler/OAuth flow. |
+| Google SSO UI | ✅ Implemented | Google buttons are live on login/signup, trigger the backend redirect, and the callback handler stores the returned access token into the auth store. |
 | Password reset UI | ⚠️ Partial | Added a forgot-password + OTP layout (`frontend/src/lib/module/auth/forgot-password.service.svelte`) and route shell (`frontend/src/routes/auth/forgot-password/+page.svelte`) with email capture and a verification-code state, but it is not wired to any store/API yet and lacks submit/resend handling. |
 | Session handling | ⚠️ Partial | The retry scaffolding exists inside `httpClient`, but the `user/+layout` guard still references `$authStore` globals on the client only, there is no server `+layout.ts` load, and missing cookies mean refresh/signout calls continue to fail. |
 
 ### Overall status snapshot
 
 - ✅ **Completed:** Email/password signup & login APIs now mint session+refresh tokens, `/auth/inspect` + `AuthGuard` validate them, logout/refresh endpoints rotate HttpOnly cookies, and the frontend client attaches Bearer headers using the stored tokens. Configurable port/base URL + the opt-in SMTP Jest spec remain green.
-- ⚠️ **In Progress / Needs Fixes:** Backend Google OAuth callback now issues session/refresh cookies and redirects with the access token; frontend needs to consume that redirect and store tokens. Frontend still needs cookie-aware refresh/logout requests, SSR-safe store hydration/guards, and better DX safeguards for SMTP credentials/tests. Forgot-password/OTP UI now exists but remains disconnected from any API/store flow.
+- ⚠️ **In Progress / Needs Fixes:** Frontend still needs cookie-aware refresh/logout requests, SSR-safe store hydration/guards, and better DX safeguards for SMTP credentials/tests. Forgot-password/OTP UI now exists but remains disconnected from any API/store flow.
 - ❌ **Not Started:** Password reset flow, user session UX (loading states, error handling), frontend Google SSO callback/storage.
 
 ---
@@ -156,6 +156,50 @@ await fetch('/auth/refresh', {
 4. **Logout**：後端 revoke refresh token 並清 Cookie，下一次 refresh 會失敗並強迫重新登入。
 
 > 下一步（TODO）：實作 request wrapper（SvelteKit load + fetch 攔截）來統一處理 `401 TOKEN_EXPIRED → refresh → 重送` 的流程。
+
+## Tech Spec — Password Reset Flow
+
+Target UX: email capture → receive a 6-digit code → enter code + new password → success state, with no account enumeration and strict expiry/attempt limits.
+
+### Endpoints & contracts
+- `POST /auth/password-reset/request` `{ email }`  
+  - Always 200 with `{ message: 'If that account exists, check your email for a reset code.' }`.  
+  - If the user exists: create a reset token, send email with code/link, and return `resetId` (UUID) so the UI can advance without exposing account existence.
+- `POST /auth/password-reset/verify` `{ resetId, code }`  
+  - Checks code validity and expiry without changing the password; returns 200 `{ message: 'Code valid' }` so the UI can unlock the password form.  
+  - 400/410 for invalid/expired/consumed; 429 when attempt limit exceeded.
+- `POST /auth/password-reset/confirm` `{ resetId, code, newPassword }`  
+  - Re-validates the code, updates the password (bcrypt), revokes outstanding sessions/refresh tokens, marks the reset token consumed, and returns 200 `{ message: 'Password updated' }`.  
+  - On success, consider issuing a fresh session + refresh cookie to skip a login round-trip.
+
+### Data model (`user_reset_tokens`)
+- `id` (uuid, exposed as `resetId`), `user_id`, `code_hash` (hash of 6-digit code), `expires_at` (default 15 min), `consumed_at`, `attempts` (int, max 5), `created_at`, `ip`, `user_agent`.  
+- Index on `(user_id, created_at desc)`; cleanup job deletes expired/consumed rows.
+
+### Token & code generation
+- Code: random 6-digit numeric; store only a salted hash (e.g., `argon2`/`bcrypt`).  
+- Expiry: 15 minutes default; configurable via env `RESET_CODE_TTL_MINUTES`.  
+- Attempts: decrement on each verify/confirm; lock the token at >5 attempts with 429.
+
+### Email template
+- Subject: `Reset your password`.  
+- Body: include the 6-digit code and a deep link `https://frontend.example/auth/reset?resetId=<id>`.  
+- Copy: remind the user the code expires in 15 minutes; warn to ignore if unsolicited.  
+- Send via existing SMTP/SES client; reuse mail module env vars.
+
+### Frontend flow (SvelteKit UI)
+- Step 1 (email capture): call `/auth/password-reset/request`; store `resetId` + email in local state and move to code entry regardless of existence.  
+- Step 2 (code entry): submit `/auth/password-reset/verify`; on success, enable the new-password form; on failure show generic errors (`Code invalid or expired`).  
+- Step 3 (confirm): submit `/auth/password-reset/confirm` with `resetId`, `code`, `newPassword`; on success show a success screen and clear local state.  
+- UX guards: throttle resends (e.g., one request per 60s per email/IP), lock the form after too many failed codes, and reset the flow if the code expires.
+
+### Security/observability
+- No account enumeration: all request responses are generic; only code/confirm calls reveal validity.  
+- Revoke sessions on password change (`sessions`, `user_refresh_tokens` entries).  
+- Audit events: log reset request/verify/confirm with user id (when known), IP, UA; redact codes.  
+- Rate limits: per-IP and per-email for `request`; attempt counter on the token for `verify/confirm`.  
+- Testing: add e2e covering request→verify→confirm happy path, expired token (410), too many attempts (429), and code reuse after `consumed_at` (should fail).
+
 ## TODO (WBS) — ordered by dependency
 
 - [x] [ backend ] Finalize the session/token strategy (opaque token + HttpOnly refresh cookie + rotation) and document the flow in this spec; implementation work now tracks against refresh/logout tasks.
@@ -166,8 +210,8 @@ await fetch('/auth/refresh', {
 - [x] [ frontend ] Rework `authStore` hydration and API response plumbing so it returns `{ session, status, message }`, fixes `logout` navigation targets, and persists state between refreshes without SSR errors. (Depends on the updated client.)
 - [x] [ frontend ] Convert login & signup forms to `on:submit|preventDefault`, add confirm-password rules, loading spinners, and inline error surfaces that consume the metadata exposed by the store. (Depends on the store rework.)
 - [ ] [ frontend ] Update `src/routes/user/+layout.(svelte|ts)` guards to subscribe to `authStore` properly (no `$authStore` globals), enforce redirects during the server `load`, and share state with the client guard. (Depends on the store rework.)
-- [ ] [ backend ] Implement Google OAuth endpoints (`/auth/google` + callback), persist federated profiles, and emit compatible session tokens. (Depends on the session/token strategy and logout/refresh work.) — login/callback now issues session+refresh cookies; pending: profile persistence refinements and frontend token consumption.
-- [ ] [ frontend ] Implement Google SSO buttons/flows (render, trigger backend redirect, handle callback) that consume the new OAuth endpoints. (Depends on the backend Google OAuth item.)
+- [x] [ backend ] Implement Google OAuth endpoints (`/auth/google` + callback), persist federated profiles, and emit compatible session tokens. (Depends on the session/token strategy and logout/refresh work.)
+- [x] [ frontend ] Implement Google SSO buttons/flows (render, trigger backend redirect, handle callback) that consume the new OAuth endpoints. (Depends on the backend Google OAuth item.)
 - [ ] [ backend ] Add password reset initiation & confirmation endpoints, including token issuance, expiry validation, and email delivery via SMTP/SES.
 - [ ] [ frontend ] Build password reset request/reset routes, forms, and success screens wired through the store once backend reset APIs ship. (Depends on the backend password reset item.)
 - [ ] [ backend ] Harden session lifecycle observability (session read/delete endpoints or admin tooling) so future guards/testing can assert token states. (Depends on the logout/refresh functionality.)
@@ -198,10 +242,6 @@ await fetch('/auth/refresh', {
 - Documented the current guard + refresh-token flow—including the broken refresh-cookie handling and remaining logout gaps—in the backend status table for follow-up fixes.
 - Logged the remaining bugs (refresh cookie misuse, login not persisting tokens, undefined `resolve()` usages in the store) and updated the feature tables/TODO list accordingly.
 - Added a backlog item to normalize `Authorization: Bearer …` handling on both the frontend and backend so Swagger, guards, and httpClient all agree on the contract.
-- Re-checked the backend service/controller spec: `AuthService.CreateSession` still references `crypto.randomUUID()` without importing `crypto`, and `inspectSession` responds with the raw session row instead of `UserIdentityDto`, so swagger-generated clients still break.
-- Audited the frontend client/store state: `authStore.login` never writes to storage, `logout` ignores `removeFromStorage`, and `httpClient.request` does not set `credentials: 'include'`, so refresh/signout flows keep failing even though Bearer headers now exist.
-
-Addressing the dependency-ordered WBS items above will bring the implementation in line with the intended UX (email authentication + Google SSO + reset password) and make the front/back contracts consistent.
 
 ### 2025-11-19
 
@@ -225,3 +265,12 @@ Addressing the dependency-ordered WBS items above will bring the implementation 
 
 - Added Google OAuth `/auth/google/login` redirect + callback that exchanges the code, fetches profile, creates/looks up the user, issues session + refresh tokens via `AuthService.CreateSession`, sets the refresh cookie, and redirects back to the frontend with the access token query param.
 - Next: wire the frontend callback route to read `token`, persist via `authStore`, and handle errors/redirects.
+
+
+### 2025-12-02
+
+- Verified the Google SSO flow end-to-end: Google login button redirects to the OAuth consent, callback exchanges the code, persists/looks up the federated user, mints session + refresh tokens, sets the HttpOnly refresh cookie, and redirects back with the access token that the frontend now stores in the auth state.
+- Re-checked the backend service/controller spec: `AuthService.CreateSession` still references `crypto.randomUUID()` without importing `crypto`, and `inspectSession` responds with the raw session row instead of `UserIdentityDto`, so swagger-generated clients still break.
+- Audited the frontend client/store state: `authStore.login` never writes to storage, `logout` ignores `removeFromStorage`, and `httpClient.request` does not set `credentials: 'include'`, so refresh/signout flows keep failing even though Bearer headers now exist.
+
+- Addressing the dependency-ordered WBS items above will bring the implementation in line with the intended UX (email authentication + Google SSO + reset password) and make the front/back contracts consistent.

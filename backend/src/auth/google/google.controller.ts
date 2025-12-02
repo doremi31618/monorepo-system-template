@@ -69,7 +69,7 @@ export class GoogleController {
 		}
 
 		// create session for user
-		const { refreshToken } = await this.authService.CreateSession(
+		const { refreshToken, sessionToken } = await this.authService.CreateSession(
 			existingUser.id
 		);
 
@@ -79,7 +79,7 @@ export class GoogleController {
 			maxAge: 1000 * 60 * 60 * 24 * 30 // 30 days
 		});
 
-		return res.redirect(`${process.env.FRONTEND_URL}/auth/callback`);
+		return res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${sessionToken}`);
 
 
 		// return { data: { message: 'Google callback successful' } };
