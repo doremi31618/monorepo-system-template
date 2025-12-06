@@ -54,11 +54,7 @@
     "@types/supertest": "^6.0.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
-<<<<<<< HEAD
     "drizzle-kit": "^0.31.7",
-=======
-    "drizzle-kit": "^0.18.1",
->>>>>>> feat/auth
     "eslint": "^8.42.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-prettier": "^5.0.0",

@@ -5,7 +5,6 @@ import {
 	SignupDto,
 	LoginDto,
 	UserIdentityDto,
-<<<<<<< HEAD
 	SignoutDto,
 	ResetRequestDto,
 	ResetConfirmDto
@@ -14,23 +13,13 @@ import { UserRepository } from 'src/user/user.repository';
 import { SessionRepository } from 'src/auth/repository/session.repository';
 import { MailService } from 'src/mail/mail.service';
 // import { BadRequestException } from '@nestjs/common';
-=======
-	SignoutDto
-} from './dto/auth.dto';
-import { UserRepository } from 'src/user/user.repository';
-import { SessionRepository } from 'src/auth/repository/session.repository';
->>>>>>> feat/auth
 
 @Injectable()
 export class AuthService {
 	constructor(
 		private readonly userRepository: UserRepository,
-<<<<<<< HEAD
 		private readonly sessionRepository: SessionRepository,
 		private readonly mailService: MailService
-=======
-		private readonly sessionRepository: SessionRepository
->>>>>>> feat/auth
 	) {}
 
 	async inspectSession(token: string) {
@@ -40,11 +29,7 @@ export class AuthService {
 		}
 		const dto = new SessionDto();
 		dto.userId = session.userId;
-<<<<<<< HEAD
 		dto.sessionToken = session.token;
-=======
-		dto.sessionToken = session.sessionToken;
->>>>>>> feat/auth
 		dto.expiresAt = session.expiresAt;
 		dto.createdAt = session.createdAt;
 		dto.updatedAt = session.updatedAt;
@@ -52,38 +37,23 @@ export class AuthService {
 	}
 
 	async CreateSession(userId: number) {
-<<<<<<< HEAD
 		const _sessionToken = crypto.randomUUID();
 		const _refreshToken = crypto.randomUUID();
-=======
-		const sessionToken = crypto.randomUUID();
->>>>>>> feat/auth
 
 		const [session, refreshToken] = await Promise.all([
 			this.sessionRepository.createSession({
 				userId: userId,
-<<<<<<< HEAD
 				sessionToken: _sessionToken,
 				expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30)
 			}),
 			this.sessionRepository.createRefreshToken(_refreshToken, userId)
-=======
-				sessionToken: sessionToken,
-				expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30)
-			}),
-			this.sessionRepository.createRefreshToken(sessionToken, userId)
->>>>>>> feat/auth
 		]);
 		if (!session || !refreshToken) {
 			throw new BadRequestException(
 				'Failed to create session or refresh token'
 			);
 		}
-<<<<<<< HEAD
 		return { sessionToken: session, refreshToken: refreshToken };
-=======
-		return { sessionToken, refreshToken };
->>>>>>> feat/auth
 	}
 
 	async signout(sessionToken: string) {
@@ -124,11 +94,7 @@ export class AuthService {
 
 		return {
 			data: new UserIdentityDto(
-<<<<<<< HEAD
 				sessionToken.sessionToken,
-=======
-				sessionToken,
->>>>>>> feat/auth
 				refreshToken.refreshToken,
 				user.id,
 				user.name
@@ -137,7 +103,6 @@ export class AuthService {
 	}
 
 	async refresh(_refreshToken: string) {
-<<<<<<< HEAD
 		try {
 			const { userId } =
 				(await this.sessionRepository.deleteRefreshToken(_refreshToken)) ?? null;
@@ -156,20 +121,6 @@ export class AuthService {
 			console.error('refresh failed', error);
 			throw error;
 		}
-=======
-		const { userId } =
-			(await this.sessionRepository.deleteRefreshToken(_refreshToken)) ?? null;
-		if (!userId) {
-			throw new BadRequestException('Invalid refresh token');
-		}
-		const { sessionToken, refreshToken } = await this.CreateSession(userId);
-		return {
-			data: {
-				sessionToken,
-				refreshToken
-			}
-		};
->>>>>>> feat/auth
 	}
 
 	async signup(signupDto: SignupDto) {
@@ -194,18 +145,13 @@ export class AuthService {
 
 		return {
 			data: new UserIdentityDto(
-<<<<<<< HEAD
 				sessionToken.sessionToken,
-=======
-				sessionToken,
->>>>>>> feat/auth
 				refreshToken.refreshToken,
 				user.id,
 				user.name
 			)
 		};
 	}
-<<<<<<< HEAD
 
 	async requestPasswordReset(dto: ResetRequestDto) {
 		const user = await this.userRepository.getUserByEmail(dto.email);
@@ -247,6 +193,4 @@ export class AuthService {
 			}
 		};
 	}
-=======
->>>>>>> feat/auth
 }
