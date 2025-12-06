@@ -175,6 +175,7 @@ export class AuthController {
 			}
 		};
 	}
+<<<<<<< HEAD
 
 	@Post('reset/request')
 	@HttpCode(HttpStatus.OK)
@@ -189,4 +190,6 @@ export class AuthController {
 	async confirmReset(@Body() dto: ResetConfirmDto) {
 		return this.authService.resetPassword(dto);
 	}
+=======
+>>>>>>> feat/auth
 }
