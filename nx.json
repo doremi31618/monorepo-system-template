@@ -1,0 +1,14 @@
+{
+  "installation": {
+    "version": "22.1.3",
+    "plugins": {
+      "@nx/eslint": "22.1.3",
+      "@nx/jest": "22.1.3",
+      "@nx/storybook": "22.1.3",
+      "@nx/vite": "22.1.3"
+    }
+  },
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "defaultBase": "master",
+  "nxCloudId": "6933c198e96a2161b830a46d"
+}
