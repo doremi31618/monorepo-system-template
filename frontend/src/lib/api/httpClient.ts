@@ -24,14 +24,7 @@ import { AppConfig } from '$lib/config';
 //   await addTodo('Buy coffee');
 //--------------------------------
 
-export type ApiResponse<T> = {
-    error?: string | null;
-    statusCode: number;
-    message: string;
-    data?: T | null;
-    timestamp?: string;
-    path?: string;
-}
+import { type ApiResponse } from '@share/contract';
 
 function authorizationHeader(): Record<string, string> {
     if (!browser) return {};
@@ -116,7 +109,7 @@ async function refreshToken(): Promise<string> {
                 return nextToken;
             }
 
-            
+
 
             throw {
                 error: await safeErrorMessage(refreshResponse, refreshData ?? undefined, parsed),

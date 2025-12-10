@@ -8,7 +8,7 @@ import {
 	SignoutDto,
 	ResetRequestDto,
 	ResetConfirmDto
-} from './dto/auth.dto';
+} from '@share/contract';
 import { UserRepository } from 'src/user/user.repository';
 import { SessionRepository } from 'src/auth/repository/session.repository';
 import { MailService } from 'src/mail/mail.service';
@@ -20,7 +20,7 @@ export class AuthService {
 		private readonly userRepository: UserRepository,
 		private readonly sessionRepository: SessionRepository,
 		private readonly mailService: MailService
-	) {}
+	) { }
 
 	async inspectSession(token: string) {
 		const session = await this.sessionRepository.getValidSessionByToken(token);
@@ -29,7 +29,7 @@ export class AuthService {
 		}
 		const dto = new SessionDto();
 		dto.userId = session.userId;
-		dto.sessionToken = session.token;
+		dto.token = session.token;
 		dto.expiresAt = session.expiresAt;
 		dto.createdAt = session.createdAt;
 		dto.updatedAt = session.updatedAt;

@@ -101,9 +101,9 @@ Review action：依 2025-12-05 review，先完成「Pre-M1 Monorepo Bootstrap」
 
 Todo checklist
  - [x] 跑 nx build backend / nx build frontend / nx graph 確認工作區正常
- - [ ] 建立 shared 套件（libs/contracts 或同等路徑），定義 Auth/User 契約與 API base path
- - [ ] Backend DTO/Swagger 改用 shared 型別，補 class-validator wrapper 並更新 tsconfig path
- - [ ] Frontend tsconfig alias 指向 shared，API client 型別改用 shared，移除重複介面
+ - [x] 建立 shared 套件（libs/contracts 或同等路徑），定義 Auth/User 契約與 API base path
+ - [/] Backend DTO/Swagger 改用 shared 型別，補 class-validator wrapper 並更新 tsconfig path
+ - [/] Frontend tsconfig alias 指向 shared，API client 型別改用 shared，移除重複介面
  - [ ] 拆分 auth/user schema 至 core 層級並更新 Drizzle aggregator 與 repository import
  - [ ] 設定 Nx tags + lint 邊界（scope:infra-core/domain-core/feature），跑 lint/graph 驗證
  - [ ] 將 /scripts 映射 Nx target；CI 改用 nx run（build/test/lint/type-check）
@@ -186,4 +186,19 @@ Deliverables
 
 ## Working Diary
 
-No entries yet for Milestone 1; populate as implementation progresses.
+### 2025-12-09
+
+- **Monorepo Shared Library Setup**:
+  - Initialized `@share/contract` package manually for sharing Typescript interfaces between backend and frontend.
+  - Resolved module resolution issues for both frontend (Vite/SvelteKit) and backend (NestJS/CommonJS) to support sourcing directly from `src` (no build step needed for dev).
+    - Frontend: Added `customConditions: ["monorepo-system-template"]` in `tsconfig` and `vite.config.ts`.
+    - Backend: Configured `paths` in root `tsconfig.base.json` and extended it in backend `tsconfig.json`.
+  - Implemented `SessionDto` in shared contract using `class-validator` decorators.
+  - Enabled `experimentalDecorators` in shared library to support `class-validator`.
+  - Updated Frontend `auth.ts` and Backend `auth.dto.ts` to import `SessionDto` from `@share/contract`.
+
+- **Next Steps**:
+  - Continue implementing other DTOs in the shared library.
+  - Refactor other modules to use the monorepo structure.
+  - Consider migrating to full Nx generator workflow for future libraries to automate config management.
+

@@ -26,7 +26,7 @@ import {
 	SignoutDto,
 	ResetRequestDto,
 	ResetConfirmDto
-} from 'src/auth/dto/auth.dto';
+} from '@share/contract';
 import { Response, Request } from 'express';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { extractSessionToken } from 'src/auth/utils/token.util';
@@ -42,7 +42,7 @@ const refreshCookieMaxAge = 1000 * 60 * 60 * 24 * 30; // 30 days
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-	constructor(private readonly authService: AuthService) {}
+	constructor(private readonly authService: AuthService) { }
 
 	@UseGuards(AuthGuard)
 	@Get('testguard')

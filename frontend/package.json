@@ -60,6 +60,7 @@
     "vitest": "^4.0.6"
   },
   "dependencies": {
-    "@share/contract": "*"
+    "@share/contract": "*",
+    "@share/sdk": "*"
   }
 }
