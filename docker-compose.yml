@@ -4,16 +4,17 @@ services:
   frontend:
     container_name: app-frontend
     build:
-      context: ./frontend
-      dockerfile: Dockerfile.dev
-    working_dir: /app
+      context: .
+      dockerfile: frontend/Dockerfile.dev
+    working_dir: /monorepo/frontend
     environment:
       VITE_API_BASE_URL: http://localhost:3333
     ports:
       - "5173:5173"
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - ./frontend:/monorepo/frontend
+      - ./share:/monorepo/share
+      - /monorepo/node_modules
     command: npm run dev -- --host 0.0.0.0 --strictPort
     depends_on:
       - backend
@@ -23,14 +24,15 @@ services:
     env_file:
       - ./backend/.env
     build:
-      context: ./backend
-      dockerfile: Dockerfile.dev
-    working_dir: /app
+      context: .
+      dockerfile: backend/Dockerfile.dev
+    working_dir: /monorepo/backend
     ports:
       - "3333:3333"
     volumes:
-      - ./backend:/app
-      - /app/node_modules
+      - ./backend:/monorepo/backend
+      - ./share:/monorepo/share
+      - /monorepo/node_modules
     environment:
       DATABASE_URL: postgres://postgres:postgres@db:5432/postgres
       API_BASE_URL: http://localhost:3333

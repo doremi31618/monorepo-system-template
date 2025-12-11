@@ -40,7 +40,7 @@ Review action：依 2025-12-05 review，先完成「Pre-M1 Monorepo Bootstrap」
 | Database layer (Drizzle) | 🔄 In Progress | DatabaseModule, Drizzle setup, BaseEntity/BaseRepository, runInTransaction; schema split by layer; aggregator only for DB client/migration. |
 | Logger & error handling | ⏳ Planned | JSON logger, LoggingInterceptor, GlobalExceptionFilter with unified envelope. |
 | Auth base (non-RBAC) | ⏳ Planned | UserIdentity, IUserService token, AuthGuardBase, @CurrentUser decorator; Domain Core supplies IUserService. |
-| Shared utilities | 🔄 In Progress | Pagination/date/id utilities; **Shared HttpClient/StorageService (@share/sdk)**; reused by ≥2 modules. |
+| Shared utilities | ✅ Done | Pagination/date/id utilities; **Shared HttpClient/StorageService (@share/sdk)**; reused by ≥2 modules. |
 | Nx Workspace (backend + frontend) | 🔄 In Progress | Tags scope:infra-core/scope:domain-core/scope:feature; lint boundary rules; nx graph after migration confirms direction; Nx init done in Pre-M1. |
 | CI/CD on Nx | ⏳ Planned | CI pipeline uses nx build/test/lint; Nx cache enabled; nx affected wired for future use; legacy scripts mapped to Nx target. |
 | Development guidelines | ⏳ Planned | DEVELOPMENT_GUIDE.md covering schema ownership, module boundaries, DI, naming/structure, PR checklist. |
@@ -102,10 +102,16 @@ Review action：依 2025-12-05 review，先完成「Pre-M1 Monorepo Bootstrap」
 Todo checklist
  - [x] 跑 nx build backend / nx build frontend / nx graph 確認工作區正常
  - [x] 建立 shared 套件（libs/contracts 或同等路徑），定義 Auth/User 契約與 API base path
- - [/] Backend DTO/Swagger 改用 shared 型別，補 class-validator wrapper 並更新 tsconfig path
+ - [x] Backend DTO/Swagger 改用 shared 型別，補 class-validator wrapper 並更新 tsconfig path
  - [x] Frontend tsconfig alias 指向 shared，API client 型別改用 shared，移除重複介面
  - [x] 拆分 auth/user schema 至 core 層級並更新 Drizzle aggregator 與 repository import
  - [x] 設定 Nx tags + lint 邊界（scope:infra-core/domain-core/feature），跑 lint/graph 驗證 <!-- id: 5 -->
+ - [ ] **Config System**: 實作 Schema/Validation (Zod/Joi) 並移除直接 env 存取
+ - [ ] **Logger & Error Handling**: 實作 JSON Logger, GlobalExceptionFilter, LoggingInterceptor
+ - [ ] **Domain Core Implementation**: 實作 BaseRepository, UserRepository, 並調整 AuthModule 依賴 IUserService
+ - [ ] **Auth Base Refinement**: 確認 @CurrentUser 與 UserIdentity 標準化
+ - [ ] **Documentation**: 撰寫 DEVELOPMENT_GUIDE.md
+ - [ ] **CI/CD**: 設定 GitHub Actions 執行 nx build/test/lint
  - [ ] 驗收後標記 Core v0.1.0 baseline
 
 ⸻
@@ -262,3 +268,9 @@ Deliverables
 - **Schema Refactoring (Runtime Fix)**:
   - Flattened `src/core/infra/db/schema.ts` exports (removed `userModel`/`authModel` nesting) to resolve Drizzle runtime `TypeError`.
   - Updated all usages in repositories/services (e.g. `schema.userModel.users` -> `schema.users`) via migration script.
+
+- **Docker Configuration Fix**:
+  - Resolved `npm error 404` for locally shared packages (`@share/*`) during `docker compose build`.
+  - Updated `docker-compose.yml` build context to Root (`.`) and mapped workspaces volumes.
+  - Refactored `Dockerfile.dev` (Backend & Frontend) to copy full monorepo context (Root package.json + `share/` dir).
+  - Configured build to skip `package-lock.json` copying to force fresh workspace resolution inside containers.

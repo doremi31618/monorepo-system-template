@@ -1,10 +1,23 @@
 FROM node:20-alpine
 
-WORKDIR /app
+WORKDIR /monorepo
 
-# 複製 package 檔案並安裝依賴
-COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* ./
+# 1. Copy root package files (skip lockfile to force workspace resolution)
+COPY package.json ./
+
+# 2. Copy shared libraries
+COPY share ./share
+
+# 3. Copy service package files
+COPY frontend/package.json ./frontend/
+
+# 4. Install dependencies from root
 RUN npm install
 
-# 把整個 frontend 專案丟進來
-COPY . .
+# 5. Copy service source code
+COPY frontend ./frontend
+
+# 6. Set working directory to frontend service
+WORKDIR /monorepo/frontend
+
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--strictPort"]

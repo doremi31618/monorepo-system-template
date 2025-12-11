@@ -1,12 +1,23 @@
 FROM node:20-alpine
 
-WORKDIR /app
+WORKDIR /monorepo
 
-COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* ./
+# 1. Copy root package files (skip lockfile to force workspace resolution)
+COPY package.json ./
+
+# 2. Copy shared libraries (needed for workspace linking)
+COPY share ./share
+
+# 3. Copy service package files
+COPY backend/package.json ./backend/
+
+# 4. Install dependencies from root (this links workspaces correctly)
 RUN npm install
 
-COPY tsconfig*.json nest-cli.json drizzle.config.ts ./
-COPY src ./src
-COPY drizzle ./drizzle
+# 5. Copy service source code
+COPY backend ./backend
+
+# 6. Set working directory to backend service
+WORKDIR /monorepo/backend
 
 CMD ["npm", "run", "start:dev"]
