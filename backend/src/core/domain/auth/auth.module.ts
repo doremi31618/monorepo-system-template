@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { UserModule } from 'src/user/user.module';
-import { SessionRepository } from 'src/auth/repository/session.repository';
-import { SessionCleanupService } from 'src/auth/session-cleanup.service';
-import { DbModule } from 'src/db/db.module';
+import { UserModule } from '../user/user.module';
+import { SessionRepository } from './auth.repository';
+import { SessionCleanupService } from './session-cleanup.service';
+import { DbModule } from '../../infra/db/db.module';
 import { GoogleService } from './google/google.service';
 import { GoogleController } from './google/google.controller';
-import { MailModule } from 'src/mail/mail.module';
+import { MailModule } from '../../infra/mail/mail.module';
 @Module({
 	imports: [UserModule, DbModule, MailModule],
 	controllers: [AuthController, GoogleController],
@@ -20,4 +20,4 @@ import { MailModule } from 'src/mail/mail.module';
 	],
 	exports: [AuthService, SessionCleanupService, SessionRepository]
 })
-export class AuthModule {}
+export class AuthModule { }

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
-import { type DB } from 'src/db/db';
-import { schema } from 'src/db/schema';
+import { type DB } from 'src/core/infra/db/db';
+import { schema } from 'src/core/infra/db/schema';
 
 export type ReturnUser = {
 	id: number;
@@ -20,7 +20,7 @@ export type CreateUser = {
 
 @Injectable()
 export class UserRepository {
-	constructor(@Inject('DB') private readonly db: DB) {}
+	constructor(@Inject('DB') private readonly db: DB) { }
 
 	async getUserByEmail(email: string): Promise<ReturnUser | null> {
 		const user = await this.db

@@ -8,6 +8,9 @@
     },
     {
       "path": "./share/sdk"
+    },
+    {
+      "path": "./backend"
     }
   ]
 }

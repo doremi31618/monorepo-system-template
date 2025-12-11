@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import * as crypto from 'crypto';
-import { type DB } from 'src/db/db';
-import { schema } from 'src/db/schema';
+import { type DB } from 'src/core/infra/db/db';
+import { schema } from 'src/core/infra/db/schema';
 import { lt, eq, and, gt } from 'drizzle-orm';
 
 export type CreateSession = {
@@ -18,7 +18,7 @@ const TOKEN_TYPE = {
 
 @Injectable()
 export class SessionRepository {
-	constructor(@Inject('DB') private readonly db: DB) {}
+	constructor(@Inject('DB') private readonly db: DB) { }
 
 	async deleteRefreshToken(refreshToken: string) {
 		try {

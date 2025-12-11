@@ -34,7 +34,7 @@ Review action：依 2025-12-05 review，先完成「Pre-M1 Monorepo Bootstrap」
 | Feature / capability | Status | Notes |
 | --- | --- | --- |
 | Pre-M1 Monorepo bootstrap | 🔄 In Progress | Root package.json + pnpm workspaces + lockfile；Nx init with backend/frontend apps；scripts → Nx target/alias；nx graph runnable. |
-| Core structure (Domain + Infra) | ⏳ Planned | backend/src/core split into core/domain and core/infra with enforced boundaries. |
+| Core structure (Domain + Infra) | 🔄 In Progress | backend/src/core split into core/domain and core/infra with enforced boundaries. |
 | Domain Core (User) | ⏳ Planned | User schema/repository/service; implements IUserService for AuthBase and feature modules. |
 | Config system | ⏳ Planned | ConfigModule with schema validation, environment profiles, typed getters; no direct process.env. |
 | Database layer (Drizzle) | ⏳ Planned | DatabaseModule, Drizzle setup, BaseEntity/BaseRepository, runInTransaction; schema split by layer; aggregator only for DB client/migration. |
@@ -221,3 +221,19 @@ Deliverables
     - Updated `AppConfig` injection into the shared client.
     - Updated `auth.ts` to import `httpClient` from `../utils`.
   - Verified structure and imports.
+
+- **Backend Core Refactoring**:
+  - Restructured backend references to align with `core` directory structure.
+  - Implemented nested module structure: `InfraModule` (imports `DbModule`, `MailModule`, `AuthModule`) and `DomainModule` (imports `UserModule`).
+  - Cleaned up `AppModule` to delegate to `InfraModule` and `DomainModule`.
+  - Fixed circular dependency handling in `AuthModule`.
+
+- **Coding Standards & Quality**:
+  - Established `doc/coding-standards.md`.
+  - Refactored `AuthService` and `AuthController` to return typed DTOs (`UserIdentity`) instead of raw entities.
+  - Simplified `ResponseInterceptor` to handle uniform API responses.
+
+- **Bug Fixes**:
+  - Fixed `bcrypt` type definition errors in backend.
+  - Resolved `auth.service.spec.ts` unit test failure (`Expected 1 arguments, but got 0` in mock).
+  - Addressed `browser` global variable type error in frontend types.

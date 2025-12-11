@@ -16,6 +16,6 @@
     }
   },
   "dependencies": {
-    "@share/contract": "workspace:*"
+    "@share/contract": "0.0.1"
   }
 }

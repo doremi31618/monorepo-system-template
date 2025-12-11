@@ -1,9 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import type { SessionRepository } from './repository/session.repository';
+import type { SessionRepository } from './auth.repository';
 import type { UserRepository } from '../user/user.repository';
 import { AuthService } from './auth.service';
-import { MailService } from '../mail/mail.service';
+import { MailService } from '../../infra/mail/mail.service';
 
 jest.mock('bcrypt', () => ({
 	compare: jest.fn(),
@@ -18,9 +18,11 @@ describe('AuthService', () => {
 	let mailService: jest.Mocked<MailService>;
 
 	const compareMock = bcrypt.compare as jest.MockedFunction<
-		typeof bcrypt.compare
+		(data: string | Buffer, encrypted: string) => Promise<boolean>
 	>;
-	const hashMock = bcrypt.hash as jest.MockedFunction<typeof bcrypt.hash>;
+	const hashMock = bcrypt.hash as jest.MockedFunction<
+		(data: string | Buffer, saltOrRounds: string | number) => Promise<string>
+	>;
 
 	beforeEach(() => {
 		userRepository = {

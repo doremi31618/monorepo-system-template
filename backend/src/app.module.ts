@@ -2,25 +2,16 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { DbModule } from './db/db.module';
-import { AuthModule } from './auth/auth.module';
-import { RepositoryModule } from './repository/repository.module';
-import { UserModule } from './user/user.module';
 import { ScheduleModule } from '@nestjs/schedule';
-import { MailModule } from './mail/mail.module';
-// import { AuthGoogleService } from './auth.google/auth.google.service';
-import appConfig from './config/app.config';
+import { CoreModule } from './core/core.module';
+import appConfig from './core/infra/config/app.config';
 @Module({
 	imports: [
 		ScheduleModule.forRoot(),
 		ConfigModule.forRoot({ isGlobal: true, load: [appConfig] }),
-		DbModule,
-		AuthModule,
-		RepositoryModule,
-		UserModule,
-		MailModule
+		CoreModule
 	],
 	controllers: [AppController],
 	providers: [AppService]
 })
-export class AppModule {}
+export class AppModule { }

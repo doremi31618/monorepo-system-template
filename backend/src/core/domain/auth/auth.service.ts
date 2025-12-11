@@ -9,11 +9,11 @@ import {
 	ResetRequestDto,
 	ResetConfirmDto,
 	ResetResponseDto,
-	LoginResponseDto, SignoutResponseDto
+	LoginResponseDto
 } from '@share/contract';
-import { UserRepository } from 'src/user/user.repository';
-import { SessionRepository } from 'src/auth/repository/session.repository';
-import { MailService } from 'src/mail/mail.service';
+import { UserRepository } from 'src/core/domain/user/user.repository';
+import { SessionRepository } from './auth.repository';
+import { MailService } from 'src/core/infra/mail/mail.service';
 
 const SESSION_EXPIRATION_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
 const RESET_TOKEN_EXPIRATION_MS = 1000 * 60 * 5; // 5 minutes

@@ -1,7 +1,6 @@
 import {
-    IsEmail,
-    IsNotEmpty,
     IsString,
+    IsNotEmpty,
     IsNumber,
     IsDate
 } from 'class-validator'
@@ -125,3 +124,26 @@ export class ResetConfirmDto {
 
 
 
+export class ResetResponseDto {
+    @IsString()
+    @IsNotEmpty()
+    token!: string;
+
+    @IsDate()
+    @IsNotEmpty()
+    expiresAt!: Date;
+
+    @IsString()
+    @IsNotEmpty()
+    resetLink!: string;
+}
+
+export class LoginResponseDto {
+    @IsNumber()
+    @IsNotEmpty()
+    userId!: number;
+
+    @IsString()
+    @IsNotEmpty()
+    redirect!: string;
+}

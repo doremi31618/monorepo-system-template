@@ -10,10 +10,16 @@
 		"sourceMap": true,
 		"strict": true,
 		"moduleResolution": "bundler",
-		"customConditions": [
-			"monorepo-system-template"
-		]
-	}
+		"customConditions": ["monorepo-system-template"]
+	},
+	"references": [
+		{
+			"path": "../share/sdk"
+		},
+		{
+			"path": "../share/contract"
+		}
+	]
 	// Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
 	// except $lib which is handled by https://svelte.dev/docs/kit/configuration#files
 	//

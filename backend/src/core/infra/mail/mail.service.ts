@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import { Inject } from '@nestjs/common';
-import { type DB, schema } from 'src/db/db';
+import { type DB, schema } from 'src/core/infra/db/db';
 
 @Injectable()
 export class MailService {

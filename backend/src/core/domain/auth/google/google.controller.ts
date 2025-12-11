@@ -1,10 +1,10 @@
 import { Controller, Get, Res, Query } from '@nestjs/common';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { GoogleService } from './google.service';
 
 @Controller('auth/google')
 export class GoogleController {
-	constructor(private readonly googleService: GoogleService) {}
+	constructor(private readonly googleService: GoogleService) { }
 
 	@Get('login')
 	async googleLogin(@Res() res: Response) {

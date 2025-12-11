@@ -2,15 +2,17 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
-import { ResponseInterceptor } from './common/response/response.interceptor';
-import type { AppConfig } from './config/app.config';
-import * as cookieParser from 'cookie-parser';
+import { ResponseInterceptor } from './core/infra/Response/response/response.interceptor';
+import type { AppConfig } from './core/infra/config/app.config';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule);
 	app.enableCors({ origin: true, credentials: true });
 	app.useGlobalInterceptors(new ResponseInterceptor());
 	app.use(cookieParser());
+
+	
 	const configService = app.get(ConfigService);
 	const appConfig = configService.get<AppConfig>('app');
 

@@ -2,9 +2,9 @@ import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { randomUUID } from 'crypto';
-import { AuthService } from 'src/auth/auth.service';
-import { UserRepository } from 'src/user/user.repository';
-import { type DB, schema } from 'src/db/db';
+import { AuthService } from '../auth.service';
+import { UserRepository } from 'src/core/domain/user/user.repository';
+import { type DB, schema } from 'src/core/infra/db/db';
 import { and, eq } from 'drizzle-orm';
 
 type FlowMode = 'login' | 'signup';
@@ -60,7 +60,7 @@ export class GoogleService {
 			);
 		}
 
-		const session = await this.authService.CreateSession(user.id);
+		const session = await this.authService.createSession(user.id);
 		return { session, user };
 	}
 
@@ -90,7 +90,7 @@ export class GoogleService {
 			await this.createProviderLink(userId, profile.id);
 		}
 
-		const session = await this.authService.CreateSession(userId);
+		const session = await this.authService.createSession(userId);
 		return { session };
 	}
 
