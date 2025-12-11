@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { MailController } from './mail.controller';
+import { MailController } from './mail.controller.js';
 
 describe('MailController', () => {
 	let controller: MailController;

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
-import { type DB } from 'src/core/infra/db/db';
-import { schema } from 'src/core/infra/db/schema';
+import { type DB } from '../../infra/db/db.js';
+import { schema } from '../../infra/db/schema.js';
 
 export type ReturnUser = {
 	id: number;
@@ -25,48 +25,48 @@ export class UserRepository {
 	async getUserByEmail(email: string): Promise<ReturnUser | null> {
 		const user = await this.db
 			.select({
-				id: schema.userModel.users.id,
-				email: schema.userModel.users.email,
-				name: schema.userModel.users.name,
-				password: schema.userModel.users.password,
-				createdAt: schema.userModel.users.createdAt,
-				updatedAt: schema.userModel.users.updatedAt
+				id: schema.users.id,
+				email: schema.users.email,
+				name: schema.users.name,
+				password: schema.users.password,
+				createdAt: schema.users.createdAt,
+				updatedAt: schema.users.updatedAt
 			})
-			.from(schema.userModel.users)
-			.where(eq(schema.userModel.users.email, email));
+			.from(schema.users)
+			.where(eq(schema.users.email, email));
 
 		return user[0] ?? null;
 	}
 
 	async createUser(user: CreateUser): Promise<ReturnUser> {
 		const [newUser] = await this.db
-			.insert(schema.userModel.users)
+			.insert(schema.users)
 			.values({
 				email: user.email,
 				name: user.name,
 				password: user.password
 			})
 			.returning({
-				id: schema.userModel.users.id,
-				email: schema.userModel.users.email,
-				name: schema.userModel.users.name,
-				password: schema.userModel.users.password,
-				createdAt: schema.userModel.users.createdAt,
-				updatedAt: schema.userModel.users.updatedAt
+				id: schema.users.id,
+				email: schema.users.email,
+				name: schema.users.name,
+				password: schema.users.password,
+				createdAt: schema.users.createdAt,
+				updatedAt: schema.users.updatedAt
 			});
 		return newUser;
 	}
 
 	async updatePassword(userId: number, hashedPassword: string) {
 		const [updated] = await this.db
-			.update(schema.userModel.users)
+			.update(schema.users)
 			.set({
 				password: hashedPassword,
 				updatedAt: new Date()
 			})
-			.where(eq(schema.userModel.users.id, userId))
+			.where(eq(schema.users.id, userId))
 			.returning({
-				id: schema.userModel.users.id
+				id: schema.users.id
 			});
 		return updated ?? null;
 	}

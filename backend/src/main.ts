@@ -1,9 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
-import { AppModule } from './app.module';
-import { ResponseInterceptor } from './core/infra/Response/response/response.interceptor';
-import type { AppConfig } from './core/infra/config/app.config';
+import { AppModule } from './app.module.js';
+import { ResponseInterceptor } from './core/infra/Response/response/response.interceptor.js';
+import type { AppConfig } from './core/infra/config/app.config.js';
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
@@ -12,7 +12,7 @@ async function bootstrap() {
 	app.useGlobalInterceptors(new ResponseInterceptor());
 	app.use(cookieParser());
 
-	
+
 	const configService = app.get(ConfigService);
 	const appConfig = configService.get<AppConfig>('app');
 

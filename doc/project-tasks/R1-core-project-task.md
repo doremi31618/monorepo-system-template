@@ -104,9 +104,8 @@ Todo checklist
  - [x] 建立 shared 套件（libs/contracts 或同等路徑），定義 Auth/User 契約與 API base path
  - [/] Backend DTO/Swagger 改用 shared 型別，補 class-validator wrapper 並更新 tsconfig path
  - [x] Frontend tsconfig alias 指向 shared，API client 型別改用 shared，移除重複介面
- - [ ] 拆分 auth/user schema 至 core 層級並更新 Drizzle aggregator 與 repository import
- - [ ] 設定 Nx tags + lint 邊界（scope:infra-core/domain-core/feature），跑 lint/graph 驗證
- - [ ] 將 /scripts 映射 Nx target；CI 改用 nx run（build/test/lint/type-check）
+ - [x] 拆分 auth/user schema 至 core 層級並更新 Drizzle aggregator 與 repository import
+ - [x] 設定 Nx tags + lint 邊界（scope:infra-core/domain-core/feature），跑 lint/graph 驗證 <!-- id: 5 -->
  - [ ] 驗收後標記 Core v0.1.0 baseline
 
 ⸻
@@ -241,3 +240,25 @@ Deliverables
 - **DB Schema Architecture**:
   - Refactored `drizzle.config.ts` to use glob patterns (`src/**/*.schema.ts`) for automatic schema discovery during migrations.
   - Verified with `db:generate` and build checks.
+  - Moved schema files to "owned" modules:
+    - `src/core/domain/user/user.schema.ts`
+    - `src/core/domain/auth/auth.schema.ts`
+    - `src/core/infra/mail/mail.schema.ts`
+  - Updated `src/core/infra/db/schema.ts` to export from new locations.
+
+- **Linting Infrastructure & Governance**:
+  - **Migrated Backend to ESLint 9 (Flat Config)**: Converted `.eslintrc.js` to `eslint.config.mjs` to resolve version mismatch with root workspace (ESLint 9 vs 8).
+  - **Enforced Module Boundaries**: Configured `import/no-restricted-paths` to prevent architectural violations:
+    - Infra Core cannot import Domain/Feature.
+    - Domain Core cannot import Feature.
+    - Shared cannot import Backend logic.
+  - **Exempted Schema Aggregator**: Configured `src/core/infra/db/schema.ts` to bypass boundary rules (required for Drizzle Runtime).
+
+- **ESM Migration (Backend)**:
+  - Enabled `"type": "module"` in `backend/package.json` to support ESM-only `@share/contract`.
+  - Ran migration script to append `.js` extensions to all relative imports and resolve `src/` aliases.
+  - Disabled `@nestjs/swagger` CLI plugin temporarily (incompatible with ESM build) to resolve `Debug Failure` crash.
+  
+- **Schema Refactoring (Runtime Fix)**:
+  - Flattened `src/core/infra/db/schema.ts` exports (removed `userModel`/`authModel` nesting) to resolve Drizzle runtime `TypeError`.
+  - Updated all usages in repositories/services (e.g. `schema.userModel.users` -> `schema.users`) via migration script.

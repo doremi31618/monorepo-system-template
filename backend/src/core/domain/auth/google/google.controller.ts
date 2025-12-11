@@ -1,6 +1,6 @@
 import { Controller, Get, Res, Query } from '@nestjs/common';
 import type { Response } from 'express';
-import { GoogleService } from './google.service';
+import { GoogleService } from './google.service.js';
 
 @Controller('auth/google')
 export class GoogleController {
@@ -27,7 +27,7 @@ export class GoogleController {
 			return res.redirect(
 				`${process.env.FRONTEND_URL}/auth/callback?token=${session.sessionToken}&userId=${user?.id}`
 			);
-		} catch (error) {
+		} catch {
 			// 若使用者不存在或未綁定 provider，導向註冊頁
 			return res.redirect(`${process.env.FRONTEND_URL}/auth/signup`);
 		}

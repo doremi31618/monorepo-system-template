@@ -1,7 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger , Inject } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
-import { Inject } from '@nestjs/common';
-import { type DB, schema } from 'src/core/infra/db/db';
+import { type DB, schema } from '../db/db.js';
 
 @Injectable()
 export class MailService {
@@ -70,7 +69,7 @@ export class MailService {
 		status: string;
 	}) {
 		try {
-			await this.db.insert(schema.mailModel.mailLogs).values({
+			await this.db.insert(schema.mailLogs).values({
 				mailFrom,
 				mailTo,
 				cc: cc ?? undefined,

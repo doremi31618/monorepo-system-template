@@ -1,9 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import type { SessionRepository } from './auth.repository';
-import type { UserRepository } from '../user/user.repository';
-import { AuthService } from './auth.service';
-import { MailService } from '../../infra/mail/mail.service';
+import type { SessionRepository } from './auth.repository.js';
+import type { UserRepository } from '../user/user.repository.js';
+import { AuthService } from './auth.service.js';
+import { MailService } from '../../infra/mail/mail.service.js';
 
 jest.mock('bcrypt', () => ({
 	compare: jest.fn(),

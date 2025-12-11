@@ -2,9 +2,9 @@ import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { randomUUID } from 'crypto';
-import { AuthService } from '../auth.service';
-import { UserRepository } from 'src/core/domain/user/user.repository';
-import { type DB, schema } from 'src/core/infra/db/db';
+import { AuthService } from '../auth.service.js';
+import { UserRepository } from '../../user/user.repository.js';
+import { type DB, schema } from '../../../infra/db/db.js';
 import { and, eq } from 'drizzle-orm';
 
 type FlowMode = 'login' | 'signup';
@@ -124,18 +124,18 @@ export class GoogleService {
 	private async findProviderLink(userId: number, providerId: string) {
 		const rows = await this.db
 			.select()
-			.from(schema.authModel.authProviders)
+			.from(schema.authProviders)
 			.where(
 				and(
-					eq(schema.authModel.authProviders.userId, userId),
-					eq(schema.authModel.authProviders.providerId, providerId)
+					eq(schema.authProviders.userId, userId),
+					eq(schema.authProviders.providerId, providerId)
 				)
 			);
 		return rows[0] ?? null;
 	}
 
 	private async createProviderLink(userId: number, providerId: string) {
-		await this.db.insert(schema.authModel.authProviders).values({
+		await this.db.insert(schema.authProviders).values({
 			userId,
 			provider: 'google',
 			providerId

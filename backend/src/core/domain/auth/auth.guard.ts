@@ -4,8 +4,8 @@ import {
 	Injectable,
 	UnauthorizedException
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { extractSessionToken } from './utils/token.util';
+import { AuthService } from './auth.service.js';
+import { extractSessionToken } from './utils/token.util.js';
 
 @Injectable()
 export class AuthGuard implements CanActivate {

@@ -11,9 +11,9 @@ import {
 	ResetResponseDto,
 	LoginResponseDto
 } from '@share/contract';
-import { UserRepository } from 'src/core/domain/user/user.repository';
-import { SessionRepository } from './auth.repository';
-import { MailService } from 'src/core/infra/mail/mail.service';
+import { UserRepository } from '../user/user.repository.js';
+import { SessionRepository } from './auth.repository.js';
+import { MailService } from '../../infra/mail/mail.service.js';
 
 const SESSION_EXPIRATION_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
 const RESET_TOKEN_EXPIRATION_MS = 1000 * 60 * 5; // 5 minutes

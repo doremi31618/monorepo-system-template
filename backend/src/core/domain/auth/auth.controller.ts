@@ -18,7 +18,7 @@ import {
 	ApiResponse,
 	ApiTags
 } from '@nestjs/swagger';
-import { AuthService } from './auth.service';
+import { AuthService } from './auth.service.js';
 import {
 	LoginDto,
 	SignupDto,
@@ -28,8 +28,8 @@ import {
 	ResetConfirmDto
 } from '@share/contract';
 import type { Response, Request } from 'express';
-import { AuthGuard } from './auth.guard';
-import { extractSessionToken } from './utils/token.util';
+import { AuthGuard } from './auth.guard.js';
+import { extractSessionToken } from './utils/token.util.js';
 
 const refreshCookieBaseOptions = {
 	httpOnly: true,

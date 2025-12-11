@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { DbModule } from './db/db.module';
-import { MailModule } from './mail/mail.module';
+import { DbModule } from './db/db.module.js';
+import { MailModule } from './mail/mail.module.js';
 
 @Module({
     imports: [DbModule, MailModule],

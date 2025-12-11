@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { db, pool } from './db';
+import { db, pool } from './db.js';
 
 @Module({
 	providers: [

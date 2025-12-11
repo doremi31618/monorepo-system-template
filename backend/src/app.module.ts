@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { AppController } from './app.controller.js';
+import { AppService } from './app.service.js';
 import { ScheduleModule } from '@nestjs/schedule';
-import { CoreModule } from './core/core.module';
-import appConfig from './core/infra/config/app.config';
+import { CoreModule } from './core/core.module.js';
+import appConfig from './core/infra/config/app.config.js';
 @Module({
 	imports: [
 		ScheduleModule.forRoot(),

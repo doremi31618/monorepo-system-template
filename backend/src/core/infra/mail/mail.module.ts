@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { MailController } from './mail.controller';
-import { MailService } from './mail.service';
-import { DbModule } from 'src/core/infra/db/db.module';
+import { MailController } from './mail.controller.js';
+import { MailService } from './mail.service.js';
+import { DbModule } from '../db/db.module.js';
 
 @Module({
 	imports: [DbModule],
