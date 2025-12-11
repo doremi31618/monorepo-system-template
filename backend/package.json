@@ -79,7 +79,9 @@
     ],
     "rootDir": "src",
     "moduleNameMapper": {
-      "^src/(.*)$": "<rootDir>/$1"
+      "^src/(.*)$": "<rootDir>/$1",
+      "^@share/contract$": "<rootDir>/../../share/contract/src/index.ts",
+      "^(\\.{1,2}/.*)\\.js$": "$1"
     },
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {

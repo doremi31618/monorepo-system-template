@@ -1,5 +1,15 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { SDK } from '@share/sdk';
+import { AppConfig } from '$lib/config';
+import { browser } from '$app/environment';
+
+export const httpClient = new SDK.Frontend.HttpClient(AppConfig.apiBaseUrl, {
+	useLocalStorage: browser,
+	storageKey: AppConfig.sessionStorageKey,
+	refreshPath: '/auth/refresh',
+});
+
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));

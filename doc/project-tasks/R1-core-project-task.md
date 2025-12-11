@@ -33,15 +33,15 @@ Review action：依 2025-12-05 review，先完成「Pre-M1 Monorepo Bootstrap」
 
 | Feature / capability | Status | Notes |
 | --- | --- | --- |
-| Pre-M1 Monorepo bootstrap | ⏳ Planned | Root package.json + pnpm workspaces + lockfile；Nx init with backend/frontend apps；scripts → Nx target/alias；nx graph runnable. |
+| Pre-M1 Monorepo bootstrap | 🔄 In Progress | Root package.json + pnpm workspaces + lockfile；Nx init with backend/frontend apps；scripts → Nx target/alias；nx graph runnable. |
 | Core structure (Domain + Infra) | ⏳ Planned | backend/src/core split into core/domain and core/infra with enforced boundaries. |
 | Domain Core (User) | ⏳ Planned | User schema/repository/service; implements IUserService for AuthBase and feature modules. |
 | Config system | ⏳ Planned | ConfigModule with schema validation, environment profiles, typed getters; no direct process.env. |
 | Database layer (Drizzle) | ⏳ Planned | DatabaseModule, Drizzle setup, BaseEntity/BaseRepository, runInTransaction; schema split by layer; aggregator only for DB client/migration. |
 | Logger & error handling | ⏳ Planned | JSON logger, LoggingInterceptor, GlobalExceptionFilter with unified envelope. |
 | Auth base (non-RBAC) | ⏳ Planned | UserIdentity, IUserService token, AuthGuardBase, @CurrentUser decorator; Domain Core supplies IUserService. |
-| Shared utilities | ⏳ Planned | Pagination/date/id utilities reused by ≥2 modules. |
-| Nx Workspace (backend + frontend) | ⏳ Planned | Tags scope:infra-core/scope:domain-core/scope:feature; lint boundary rules; nx graph after migration confirms direction; Nx init done in Pre-M1. |
+| Shared utilities | 🔄 In Progress | Pagination/date/id utilities; **Shared HttpClient/StorageService (@share/sdk)**; reused by ≥2 modules. |
+| Nx Workspace (backend + frontend) | 🔄 In Progress | Tags scope:infra-core/scope:domain-core/scope:feature; lint boundary rules; nx graph after migration confirms direction; Nx init done in Pre-M1. |
 | CI/CD on Nx | ⏳ Planned | CI pipeline uses nx build/test/lint; Nx cache enabled; nx affected wired for future use; legacy scripts mapped to Nx target. |
 | Development guidelines | ⏳ Planned | DEVELOPMENT_GUIDE.md covering schema ownership, module boundaries, DI, naming/structure, PR checklist. |
 | Migration (auth/user + schema) | ⏳ Planned | src/user → core/domain/user；src/auth → core/infra/auth；src/db/schema.ts split; imports updated; Nx graph clean. |
@@ -103,7 +103,7 @@ Todo checklist
  - [x] 跑 nx build backend / nx build frontend / nx graph 確認工作區正常
  - [x] 建立 shared 套件（libs/contracts 或同等路徑），定義 Auth/User 契約與 API base path
  - [/] Backend DTO/Swagger 改用 shared 型別，補 class-validator wrapper 並更新 tsconfig path
- - [/] Frontend tsconfig alias 指向 shared，API client 型別改用 shared，移除重複介面
+ - [x] Frontend tsconfig alias 指向 shared，API client 型別改用 shared，移除重複介面
  - [ ] 拆分 auth/user schema 至 core 層級並更新 Drizzle aggregator 與 repository import
  - [ ] 設定 Nx tags + lint 邊界（scope:infra-core/domain-core/feature），跑 lint/graph 驗證
  - [ ] 將 /scripts 映射 Nx target；CI 改用 nx run（build/test/lint/type-check）
@@ -137,6 +137,12 @@ Deliverables
  • [infra/logger] JSON CoreLogger, LoggingInterceptor, GlobalExceptionFilter.
  • [infra/auth-base] UserIdentity, IUserService token, AuthGuardBase, @CurrentUser decorator.
  • [infra/utils] Shared utilities (pagination/date/id) reused across modules.
+
+**Shared SDK (@share/sdk)**
+ • [x] Setup `@share/sdk` package and structure.
+ • [x] `StorageService`: Generic storage wrapper with localStorage support.
+ • [x] `HttpClient`: Generic HTTP client with token refresh logic (migrated from frontend).
+ • [x] Export `SDK` namespace and configure tsconfig paths.
 
 **Domain Core (User)**
  • [domain/user] UserEntity schema; UserRepository extends BaseRepository; UserService implements IUserService.
@@ -202,3 +208,16 @@ Deliverables
   - Refactor other modules to use the monorepo structure.
   - Consider migrating to full Nx generator workflow for future libraries to automate config management.
 
+
+### 2025-12-11
+
+- **Refactor `HttpClient` to Shared SDK**:
+  - Moved generic generic `StorageService` and `HttpClient` logic from frontend to `@share/sdk`.
+  - Implemented `SDK.Frontend.HttpClient` in `@share/sdk` with generic support, internal `StorageService` usage, and automatic token refresh logic.
+  - Updated `@share/sdk` to export `SDK` namespace containing `Frontend` modules.
+  - Added `@share/sdk` to `tsconfig.base.json` paths for monorepo resolution.
+  - **Frontend Update**:
+    - Replaced `frontend/src/lib/api/httpClient.ts` with instantiation in `frontend/src/lib/utils.ts` using `SDK.Frontend.HttpClient`.
+    - Updated `AppConfig` injection into the shared client.
+    - Updated `auth.ts` to import `httpClient` from `../utils`.
+  - Verified structure and imports.

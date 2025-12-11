@@ -20,7 +20,7 @@ export class ResponseInterceptor implements NestInterceptor {
 				return {
 					statusCode, // ✅ HTTP 狀態碼
 					message: data?.message || 'Request successful',
-					data: data?.data ?? data,
+					data: data,
 					timestamp: new Date().toISOString(),
 					path: ctx.getRequest().url
 				};

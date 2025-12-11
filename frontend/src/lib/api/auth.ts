@@ -1,14 +1,6 @@
-import { httpClient } from './httpClient';
+import { httpClient } from '../utils';
 import {type Session} from '@share/contract';
 
-// export type UserBasicInfo = {
-//     userId: number;
-//     name: string;
-// }
-
-// export type Session = UserBasicInfo & {
-//     token: string;
-// }
 
 export async function InspectSession(){
     return await httpClient.get<Session>('/auth/inspect');

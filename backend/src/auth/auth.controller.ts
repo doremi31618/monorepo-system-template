@@ -82,16 +82,14 @@ export class AuthController {
 		console.log('body', dto);
 		const result = await this.authService.login(dto);
 		// set refresh token in cookie
-		response.cookie('refreshToken', result.data.refreshToken, {
+		response.cookie('refreshToken', result.refreshToken, {
 			...refreshCookieBaseOptions,
 			maxAge: refreshCookieMaxAge
 		});
 		return {
-			data: {
-				token: result.data.token,
-				userId: result.data.userId,
-				name: result.data.name
-			}
+			token: result.token,
+			userId: result.userId,
+			name: result.name
 		};
 	}
 
@@ -105,16 +103,14 @@ export class AuthController {
 	) {
 		const result = await this.authService.signup(signupDto);
 		// set refresh token in cookie
-		response.cookie('refreshToken', result.data.refreshToken, {
+		response.cookie('refreshToken', result.refreshToken, {
 			...refreshCookieBaseOptions,
 			maxAge: refreshCookieMaxAge
 		});
 		return {
-			data: {
-				token: result.data.token,
-				userId: result.data.userId,
-				name: result.data.name
-			}
+			token: result.token,
+			userId: result.userId,
+			name: result.name
 		};
 	}
 
@@ -141,10 +137,8 @@ export class AuthController {
 		});
 
 		return {
-			data: {
-				userId: result.data.userId,
-				message: 'Sign out successful'
-			}
+			userId: result.userId,
+			message: 'Sign out successful'
 		};
 	}
 
@@ -160,19 +154,17 @@ export class AuthController {
 		}
 
 		const result = await this.authService.refresh(refreshToken);
-		if (!result.data) {
+		if (!result) {
 			throw new UnauthorizedException('Invalid refresh token');
 		}
 		// set new refresh token cookie
-		response.cookie('refreshToken', result.data.refreshToken.refreshToken, {
+		response.cookie('refreshToken', result.refreshToken.refreshToken, {
 			...refreshCookieBaseOptions,
 			maxAge: refreshCookieMaxAge
 		});
 
 		return {
-			data: {
-				sessionToken: result.data.sessionToken
-			}
+			sessionToken: result.sessionToken
 		};
 	}
 

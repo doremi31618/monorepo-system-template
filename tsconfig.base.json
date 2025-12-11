@@ -25,6 +25,9 @@
     "paths": {
       "@share/contract": [
         "./share/contract/src/index.ts"
+      ],
+      "@share/sdk": [
+        "./share/sdk/src/index.ts"
       ]
     }
   }

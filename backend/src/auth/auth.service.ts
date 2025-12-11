@@ -7,12 +7,16 @@ import {
 	UserIdentityDto,
 	SignoutDto,
 	ResetRequestDto,
-	ResetConfirmDto
+	ResetConfirmDto,
+	ResetResponseDto,
+	LoginResponseDto, SignoutResponseDto
 } from '@share/contract';
 import { UserRepository } from 'src/user/user.repository';
 import { SessionRepository } from 'src/auth/repository/session.repository';
 import { MailService } from 'src/mail/mail.service';
-// import { BadRequestException } from '@nestjs/common';
+
+const SESSION_EXPIRATION_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
+const RESET_TOKEN_EXPIRATION_MS = 1000 * 60 * 5; // 5 minutes
 
 @Injectable()
 export class AuthService {
@@ -22,7 +26,7 @@ export class AuthService {
 		private readonly mailService: MailService
 	) { }
 
-	async inspectSession(token: string) {
+	async inspectSession(token: string): Promise<SessionDto> {
 		const session = await this.sessionRepository.getValidSessionByToken(token);
 		if (!session) {
 			throw new BadRequestException('Invalid token');
@@ -33,10 +37,10 @@ export class AuthService {
 		dto.expiresAt = session.expiresAt;
 		dto.createdAt = session.createdAt;
 		dto.updatedAt = session.updatedAt;
-		return { data: dto };
+		return dto;
 	}
 
-	async CreateSession(userId: number) {
+	async createSession(userId: number) {
 		const _sessionToken = crypto.randomUUID();
 		const _refreshToken = crypto.randomUUID();
 
@@ -44,7 +48,7 @@ export class AuthService {
 			this.sessionRepository.createSession({
 				userId: userId,
 				sessionToken: _sessionToken,
-				expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30)
+				expiresAt: new Date(Date.now() + SESSION_EXPIRATION_MS)
 			}),
 			this.sessionRepository.createRefreshToken(_refreshToken, userId)
 		]);
@@ -56,7 +60,7 @@ export class AuthService {
 		return { sessionToken: session, refreshToken: refreshToken };
 	}
 
-	async signout(sessionToken: string) {
+	async signout(sessionToken: string): Promise<SignoutDto> {
 		const userId = await this.sessionRepository.getUserIdByToken(sessionToken);
 		if (!userId) {
 			throw new BadRequestException('Session not found');
@@ -64,17 +68,16 @@ export class AuthService {
 		const { deletedSession, deletedRefreshTokens } =
 			await this.sessionRepository.deleteSessionAndRefreshTokens(userId.userId);
 
-		// const deleteRefreshToken =
 		if (!deletedSession || !deletedRefreshTokens) {
 			throw new BadRequestException('Session or refresh token not found');
 		}
 
 		const dto = new SignoutDto();
 		dto.userId = userId.userId;
-		return { data: dto };
+		return dto;
 	}
 
-	async login(loginDto: LoginDto) {
+	async login(loginDto: LoginDto): Promise<UserIdentityDto> {
 		const { email, password } = loginDto;
 
 		// check if user exists
@@ -90,16 +93,14 @@ export class AuthService {
 		}
 
 		// create session for user
-		const { sessionToken, refreshToken } = await this.CreateSession(user.id);
+		const { sessionToken, refreshToken } = await this.createSession(user.id);
 
-		return {
-			data: new UserIdentityDto(
-				sessionToken.sessionToken,
-				refreshToken.refreshToken,
-				user.id,
-				user.name
-			)
-		};
+		return new UserIdentityDto(
+			sessionToken.sessionToken,
+			refreshToken.refreshToken,
+			user.id,
+			user.name
+		);
 	}
 
 	async refresh(_refreshToken: string) {
@@ -109,12 +110,10 @@ export class AuthService {
 			if (!userId) {
 				throw new BadRequestException('Invalid refresh token');
 			}
-			const { sessionToken, refreshToken } = await this.CreateSession(userId);
+			const { sessionToken, refreshToken } = await this.createSession(userId);
 			return {
-				data: {
-					sessionToken,
-					refreshToken
-				}
+				sessionToken,
+				refreshToken
 			};
 		}
 		catch (error) {
@@ -123,7 +122,7 @@ export class AuthService {
 		}
 	}
 
-	async signup(signupDto: SignupDto) {
+	async signup(signupDto: SignupDto): Promise<UserIdentityDto> {
 		// check if user already exists
 		const existingUser = await this.userRepository.getUserByEmail(
 			signupDto.email
@@ -140,27 +139,24 @@ export class AuthService {
 			password: hashedPassword,
 			name
 		});
-		const { sessionToken, refreshToken } = await this.CreateSession(user.id);
-		// const sessionToken = await this.CreateSession(user.id);
+		const { sessionToken, refreshToken } = await this.createSession(user.id);
 
-		return {
-			data: new UserIdentityDto(
-				sessionToken.sessionToken,
-				refreshToken.refreshToken,
-				user.id,
-				user.name
-			)
-		};
+		return new UserIdentityDto(
+			sessionToken.sessionToken,
+			refreshToken.refreshToken,
+			user.id,
+			user.name
+		);
 	}
 
-	async requestPasswordReset(dto: ResetRequestDto) {
+	async requestPasswordReset(dto: ResetRequestDto): Promise<ResetResponseDto> {
 		const user = await this.userRepository.getUserByEmail(dto.email);
 		if (!user) {
 			throw new BadRequestException('User not found');
 		}
 		const token = await this.sessionRepository.createResetToken(
 			user.id,
-			1000 * 60 * 5
+			RESET_TOKEN_EXPIRATION_MS
 		);
 		const resetLink = `${process.env.FRONTEND_URL}/auth/reset?token=${token.token}`;
 		try {
@@ -170,15 +166,13 @@ export class AuthService {
 			console.error('sendResetPasswordEmail failed', error);
 		}
 		return {
-			data: {
-				token: token.token,
-				expiresAt: token.expiresAt,
-				resetLink
-			}
+			token: token.token,
+			expiresAt: token.expiresAt,
+			resetLink
 		};
 	}
 
-	async resetPassword(dto: ResetConfirmDto) {
+	async resetPassword(dto: ResetConfirmDto): Promise<LoginResponseDto> {
 		const consumed = await this.sessionRepository.consumeResetToken(dto.token);
 		if (!consumed) {
 			throw new BadRequestException('Invalid or expired reset token');
@@ -187,10 +181,8 @@ export class AuthService {
 		await this.userRepository.updatePassword(consumed.userId, hashedPassword);
 		await this.sessionRepository.deleteAllTokensByUser(consumed.userId);
 		return {
-			data: {
-				userId: consumed.userId,
-				redirect: `${process.env.FRONTEND_URL}/auth/login`
-			}
+			userId: consumed.userId,
+			redirect: `${process.env.FRONTEND_URL}/auth/login`
 		};
 	}
 }
