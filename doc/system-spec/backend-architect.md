@@ -31,21 +31,19 @@
 
 ```
 backend/src
-├── auth/
-│   ├── dto/                  # LoginDto, SignupDto, UserIdentityDto, SignoutDto
-│   ├── auth.controller.ts
-│   ├── auth.service.ts
-│   └── repository/session.repository.ts
-├── user/
-│   └── user.repository.ts
-├── common/
-│   └── response/response.interceptor.ts
-├── db/
-│   ├── db.ts                 # Drizzle 初始化
-│   └── schema.ts             # 資料表定義
-├── mail/                     # 寄信與 SES 測試模組
-├── main.ts                   # 應用程式進入點
-└── app.module.ts             # 模組組合、DI 設定
+├── core/
+│   ├── domain/               # 商業邏輯 (Pure Business Logic)
+│   │   ├── auth/             # Auth Domain (Service, Repo, Entities)
+│   │   ├── user/             # User Domain
+│   │   └── domain.module.ts
+│   ├── infra/                # 技術實作 (Technical Implementation)
+│   │   ├── config/           # Configuration & Validation
+│   │   ├── db/               # Database (Drizzle, Schema Aggregator)
+│   │   ├── mail/             # Mail Adapters
+│   │   └── infra.module.ts
+│   └── core.module.ts        # Aggregates Domain & Infra
+├── main.ts                   # App Entry Point
+└── app.module.ts             # App Root Module
 ```
 
 ---
@@ -87,3 +85,48 @@ backend/src
 3. **DTO 標記欄位**：在 `auth/dto/*.ts` 內為每個欄位加 `@ApiProperty`（含 example），Swagger 才能生成對應 schema。
 
 完成後重新啟動 backend，即可在 `http://localhost:<PORT>/openapi` 看到完整的路由、Schema，以及可輸入 token 的 Authorize modal。
+
+---
+
+## Architecture Decision Records (ADR)
+
+> **決策紀錄 (ADR) - 001: Monorepo Core 架構與邊界治理**
+>
+> *   **Context:**
+>     隨著專案擴展，原始扁平結構 (`src/auth`, `src/user`) 導致依賴混亂。需建立清晰的依賴邊界，並支援前後端共用邏輯。
+>
+> *   **Decision:**
+>     1.  **Core 分層架構**:
+>         *   **`core/domain`**: 純淨的商業邏輯與介面 (Service, Repository Interface, Entity)。不依賴 Infra 細節。
+>         *   **`core/infra`**: 技術實作細節 (Database, Config, Adapters, Logger)。提供 Domain 所需的實作。
+>         *   **`share/lib`**: 前後端共用的邏輯 (Contracts, DTOs, Utils)，位於獨立 package。
+>     2.  **依賴方向規範 (Governance)**:
+>         *   `Feature / App` → `Domain Core` → `Infra Core`。
+>         *   禁止反向依賴 (e.g. Infra 不可 import Domain 業務邏輯，僅透過 Interface 互動)。
+>     3.  **Monorepo 工具**:
+>         *   引入 **Nx** 進行工作區管理與 Task 執行。
+>         *   利用 `nx project` 與 Tags (`scope:domain-core`, `scope:infra-core`) 搭配 ESLint 強制執行架構邊界。
+>
+> *   **Status:** Accepted
+
+> **決策紀錄 (ADR) - 002: 任務排程機制 (Backend Scheduling scaling)**
+>
+> *   **Context:**
+>     系統需支援水平擴展 (Horizontal Scaling)，避免多實例 (Container Replicas) 同時執行相同 Cron Job 導致重複任務，且需保持架構簡單。
+>
+> *   **Decision:**
+>     1.  **架構模式**: 採用 **Database-backed Queue** 模式，利用現有 PostgreSQL，暫不引入 Redis 以降低維運複雜度。
+>     2.  **介面設計**: 實作 `JobSchedulerPort` (Port & Adapter)，將排程邏輯解耦，保留未來遷移至 Redis/BullMQ 的彈性。
+>     3.  **生產端 (Producer)**: 利用 `UNIQUE KEY (job_name, scheduled_time)` + `ON CONFLICT DO NOTHING` 確保任務不重複建立 (Idempotency)。
+>     4.  **消費端 (Consumer)**: 利用 `SELECT ... FOR UPDATE SKIP LOCKED` 確保任務單一執行 (Mutual Exclusion)。
+>
+> *   **Status:** Accepted
+>
+> *   **Alternatives Considered:**
+>     *   **Redis / BullMQ**: 標準的分散式隊列方案。
+>         *   *Pros*: 高吞吐量、原生 Pub/Sub、豐富的 Job 管理 UI。
+>         *   *Cons*: 需維護額外的 Redis 服務，增加基礎設施成本與運維負擔 (Maintenance Overhead)。在此階段被否決。
+>
+> *   **Consequences:**
+>     *   **Positive**: 零新增基礎設施 (Zero new infra dependency)，利用 ACID 特性保證資料一致性。
+>     *   **Negative**: 資料庫負載略微增加 (Row locking)。若未來任務量極大 (e.g. >1000 jobs/sec)，可能需遷移至 Redis (已預留 Interface)。

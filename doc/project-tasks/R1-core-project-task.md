@@ -45,6 +45,7 @@ Review action：依 2025-12-05 review，先完成「Pre-M1 Monorepo Bootstrap」
 | CI/CD on Nx | ⏳ Planned | CI pipeline uses nx build/test/lint; Nx cache enabled; nx affected wired for future use; legacy scripts mapped to Nx target. |
 | Development guidelines | ⏳ Planned | DEVELOPMENT_GUIDE.md covering schema ownership, module boundaries, DI, naming/structure, PR checklist. |
 | Migration (auth/user + schema) | ⏳ Planned | src/user → core/domain/user；src/auth → core/infra/auth；src/db/schema.ts split; imports updated; Nx graph clean. |
+| Backend Scheduling (PG-Queue) | ⏳ Planned | **ADR-002**: JobSchedulerPort interface; Producer (Unique Key idempotency); Consumer (SELECT FOR UPDATE SKIP LOCKED); No Redis needed. |
 
 ⸻
 
@@ -112,6 +113,7 @@ Todo checklist
  - [ ] **Auth Base Refinement**: 確認 @CurrentUser 與 UserIdentity 標準化
  - [ ] **Documentation**: 撰寫 DEVELOPMENT_GUIDE.md
  - [ ] **CI/CD**: 設定 GitHub Actions 執行 nx build/test/lint
+ - [ ] **Backend Scheduling**: 實作 JobSchedulerPort, Producer (Idempotency), Consumer (Locking) [ADR-002]
  - [ ] 驗收後標記 Core v0.1.0 baseline
 
 ⸻
@@ -306,3 +308,32 @@ Deliverables
     - Created detailed implementation guide: `doc/implementation-guides/logger-and-error-handling.md`.
     - Guide covers: `LoggerService`, `GlobalExceptionFilter`, `LoggingInterceptor`, and `main.ts` integration.
     - Archived plan for future implementation by team.
+
+### 2025-12-19
+
+- **Backend Scheduling Strategy (Scaling Best Practices)**:
+  - **Context**: Preventing duplicate execution of `@Cron` jobs when horizontally scaling backend containers (e.g., 3 replicas).
+  - **Decision**: Hybrid Approach (PG-Queue). Avoid Redis complexity; use PostgreSQL for idempotency and queueing.
+  - **Technical Specs**:
+    1. **Architecture**: Decouple logic via `JobSchedulerPort` interface (allows future migration to Redis/BullMQ).
+    2. **Producer (Idempotency)**: Use `UNIQUE KEY (job_name, scheduled_time)` + `ON CONFLICT DO NOTHING`.
+    3. **Consumer (locking)**: Use `SELECT ... FOR UPDATE SKIP LOCKED` to ensure single worker execution.
+  - **Status**: Documented as ADR-002 in `backend-architect.md`.
+
+### 2025-12-20
+
+- **Logger & Error Handling Implementation (Complete)**:
+  - **LoggerService**:
+    - Implemented smart logging: Switches between Pretty Print (Dev) and JSON (Prod) based on `AppConfig`.
+    - Integrated with NestJS dependency injection (`ConsoleLogger` extension with `SCOPE.TRANSIENT`).
+  - **GlobalExceptionFilter**:
+    - Implemented standardized error handling using `@share/contract` `ApiResponse` type.
+    - Registered via `APP_FILTER` in `ExceptionModule` to support dependency injection (LoggerService).
+  - **Interceptors**:
+    - **LoggingInterceptor**: Implemented request timing and system logging (Before/After logic) using RxJS `tap`.
+    - **ResponseInterceptor**: Implemented standardized response wrapping using RxJS `map`.
+    - **InterceptorModule**: Centralized registration of both interceptors using `APP_INTERCEPTOR` to ensure correct execution order (Logging -> Response).
+  - **Integration**:
+    - Registered `ExceptionModule` and `InterceptorModule` in `InfraModule`.
+    - Configured `main.ts` to use `LoggerService` as the global application logger.
+    - Verified architectural correctness (Module boundaries and DI patterns).
