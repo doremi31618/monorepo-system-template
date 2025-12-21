@@ -64,7 +64,54 @@ Swagger 文件位於 `http://localhost:<PORT>/openapi`。
 
 ---
 
-## 6. 上線前檢查清單
+## 6. Logger & Error Handling
+
+專案採用統一的 `LoggerService` 與 `GlobalExceptionFilter` 確保日誌格式（JSON in Prod）與錯誤回應一致。
+
+### 如何使用 Logger
+本專案的 `LoggerService` (`core/infra/logger`) 繼承自 NestJS `ConsoleLogger` 並實作了環境感知 (JSON/Pretty)。
+
+**在 Service / Controller 中使用 (推薦)**：
+請透過 Dependency Injection (DI) 注入：
+```typescript
+import { LoggerService } from '@/core/infra/logger/logger.service';
+
+@Injectable()
+export class MyService {
+  constructor(private readonly logger: LoggerService) {
+    this.logger.setContext(MyService.name);
+  }
+
+  doSomething() {
+    this.logger.log('Starting operation...', { userId: 123 }); // 支援結構化物件
+    this.logger.warn('Something suspicious happened');
+    this.logger.error('Operation failed', error.stack);
+  }
+}
+```
+
+### Log Levels 原則
+- **Error**: 系統異常、預期外的錯誤 (5xx)。
+- **Warn**: 業務邏輯拒絕、驗證失敗 (4xx)、可恢復的錯誤。
+- **Log**: 關鍵流程節點 (e.g. 登入成功、訂單建立)。
+- **Debug**: 開發除錯用的詳細資訊 (Production 預設不顯示)。
+
+### Exception Handling
+已全域啟用 `GlobalExceptionFilter`，所有拋出的例外皆會轉為 `ApiResponse<null>` 格式。
+
+- **一般錯誤**：直接拋出 NestJS 內建 Exception。
+  ```typescript
+  throw new BadRequestException('Invalid input');
+  // Response: { statusCode: 400, message: 'Invalid input', error: 'Bad Request', ... }
+  ```
+- **未知錯誤**：任何非 HttpException 的錯誤都會被捕捉並記錄為 500 (Internal Server Error)，以避免敏感資訊外洩。
+
+### Request Logging
+已啟用 `LoggingInterceptor`，自動記錄所有請求的 Method / URL / Status Code / Duration (ms)。
+
+---
+
+## 7. 上線前檢查清單
 
 - [ ] `npm run lint`、`npm run test` 均通過；若有覆蓋率要求需附報告。
 - [ ] 相關 Drizzle 遷移已產生並在本機套用成功。

@@ -108,7 +108,7 @@ Todo checklist
  - [x] 拆分 auth/user schema 至 core 層級並更新 Drizzle aggregator 與 repository import
  - [x] 設定 Nx tags + lint 邊界（scope:infra-core/domain-core/feature），跑 lint/graph 驗證 <!-- id: 5 -->
  - [x] **Config System**: 實作 Schema/Validation (Zod/Joi) 並移除直接 env 存取
- - [/] **Logger & Error Handling**: 實作 JSON Logger, GlobalExceptionFilter, LoggingInterceptor (Design & Guide Completed)
+ - [x] **Logger & Error Handling**: 實作 JSON Logger, GlobalExceptionFilter, LoggingInterceptor (Design & Guide Completed)
  - [ ] **Domain Core Implementation**: 實作 BaseRepository, UserRepository, 並調整 AuthModule 依賴 IUserService
  - [ ] **Auth Base Refinement**: 確認 @CurrentUser 與 UserIdentity 標準化
  - [ ] **Documentation**: 撰寫 DEVELOPMENT_GUIDE.md
