@@ -8,6 +8,7 @@
 > **Guides**:
 > - [01. Logger & Error Handling](../implementation-guides/R1-01-logger-and-error-handling.md)
 > - [02. Domain Core & Auth Base](../implementation-guides/R1-02-domain-core-and-auth-base.md)
+> - [03. CI/CD & Scheduling](../implementation-guides/R1-03-cicd-and-scheduling.md)
 
 Last updated: 2025-12-05
 
@@ -114,9 +115,9 @@ Todo checklist
  - [x] 設定 Nx tags + lint 邊界（scope:infra-core/domain-core/feature），跑 lint/graph 驗證 <!-- id: 5 -->
  - [x] **Config System**: 實作 Schema/Validation (Zod/Joi) 並移除直接 env 存取
  - [x] **Logger & Error Handling**: 實作 JSON Logger, GlobalExceptionFilter, LoggingInterceptor (Design & Guide Completed)
- - [ ] **Domain Core Implementation**: 實作 BaseRepository, UserRepository, 並調整 AuthModule 依賴 IUserService
- - [ ] **Auth Base Refinement**: 確認 @CurrentUser 與 UserIdentity 標準化
- - [ ] **Documentation**: 撰寫 DEVELOPMENT_GUIDE.md
+ - [x] **Domain Core Implementation**: 實作 BaseRepository, UserRepository, 並調整 AuthModule 依賴 IUserService
+ - [x] **Auth Base Refinement**: 確認 @CurrentUser 與 UserIdentity 標準化
+ - [x] **Documentation**: 撰寫 DEVELOPMENT_GUIDE.md (Merged into backend-onboarding.md)
  - [ ] **CI/CD**: 設定 GitHub Actions 執行 nx build/test/lint
  - [ ] **Backend Scheduling**: 實作 JobSchedulerPort, Producer (Idempotency), Consumer (Locking) [ADR-002]
  - [ ] 驗收後標記 Core v0.1.0 baseline
@@ -342,3 +343,22 @@ Deliverables
     - Registered `ExceptionModule` and `InterceptorModule` in `InfraModule`.
     - Configured `main.ts` to use `LoggerService` as the global application logger.
     - Verified architectural correctness (Module boundaries and DI patterns).
+
+### 2025-12-27
+
+- **Domain Core & Auth Base Implementation (R1-02)**:
+  - **Base Infrastructure**:
+    - Created `BaseRepository` in `core/infra/db` to encapsulate common Drizzle operations.
+    - Refactored `UserRepository` to extend `BaseRepository`, adhering to the new architecture.
+  - **Dependency Inversion**:
+    - Defined `IUserService` interface in `core/domain/user` to decouple `AuthModule` from `UserModule` implementation details.
+    - Updated `AuthService` to inject `IUserService` instead of concrete `UserRepository`.
+    - Configured `UserModule` to provide and export `IUserService`.
+  - **Auth Base Enhancement**:
+    - Implemented `UserIdentity` standardization.
+    - Enhanced `AuthGuard` to safely populate `request.user` with essential user details (ID, Name, Email) from `IUserService`.
+    - Added `@CurrentUser` decorator for Type-Safe user access in controllers.
+  - **Safety & Quality**:
+    - Addressed potential runtime crash in `AuthGuard` with proper null checks for user lookup.
+    - Verified Dependency Injection wiring to prevent module resolution failures.
+

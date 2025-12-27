@@ -64,7 +64,38 @@ Swagger 文件位於 `http://localhost:<PORT>/openapi`。
 
 ---
 
-## 6. Logger & Error Handling
+## 6. Architecture & Governance (Core R1)
+
+本專案採用嚴格的分層架構 (Hexagonal-like) 與模組邊界治理。
+
+### 6-1. Module Layers & Boundaries (Nx Tags)
+專案模組分為三個層級，透過 Nx Tags 強制隔離：
+
+| Scope | Tag | Description | Dependencies Allowed |
+| :--- | :--- | :--- | :--- |
+| **Infra Core** | `scope:infra-core` | 底層技術實作 (DB, Logger, Config, AuthBase)。 | 🚫 **無** (不可依賴 Domain 或 Feature)。 |
+| **Domain Core** | `scope:domain-core` | 純粹商業邏輯 (User)。包含 Entity, Repository Interface。 | ✅ Depends on `scope:infra-core`。<br>🚫 **不可依賴 Feature**。 |
+| **Feature** | `scope:feature` | 具體應用模組 (Controller, App Logic)。組合 Domain 與 Infra 完成功能。 | ✅ Depends on `scope:infra-core`, `scope:domain-core`。 |
+
+**重要規則**：
+- `UserModule` (Domain) **不可** 依賴 `AuthModule` (Infra)。
+- 任何 Module 均可依賴 `@share/contract` (Shared)。
+
+### 6-2. Drizzle Schema Governance
+- **Ownership**: Schema 定義必須放在各自的 Module 中 (e.g. `core/domain/user/user.schema.ts`)。
+- **Aggregator**: `core/infra/db/schema.ts` 僅作為 Drizzle **Runtime & Migration** 的聚合點。
+    - ❌ **禁止** 任何 Feature Module import `core/infra/db/schema.ts`。
+    - ✅ Feature 應直接 import 該領域的 Schema (e.g. `import { users } from '@/core/domain/user/user.schema'`)。
+
+### 6-3. Dependency Injection (DI) Rules
+- **Interface Segregation**: 在跨層級依賴時，優先依賴 **Interface** 而非實作。
+    - ✅ `AuthService` injects `IUserService` (Interface)。
+    - ❌ `AuthService` injects `UserRepository` (Concrete Class)。
+- **Provider Export**: `UserModule` 必須 `exports: [IUserService]` 才能讓其他模組使用。
+
+---
+
+## 7. Logger & Error Handling
 
 專案採用統一的 `LoggerService` 與 `GlobalExceptionFilter` 確保日誌格式（JSON in Prod）與錯誤回應一致。
 
@@ -111,7 +142,7 @@ export class MyService {
 
 ---
 
-## 7. 上線前檢查清單
+## 8. 上線前檢查清單
 
 - [ ] `npm run lint`、`npm run test` 均通過；若有覆蓋率要求需附報告。
 - [ ] 相關 Drizzle 遷移已產生並在本機套用成功。
