@@ -4,7 +4,7 @@
 		versions: ["1.0.1", "1.1.0-alpha", "2.0.0-beta1"],
 		navMain: [
 			{
-				title: "Getting Started",
+				title: "Admin",
 				url: "#",
 				items: [
 					{
@@ -15,6 +15,26 @@
 					{
 						title: "Project Structure",
 						url: "#",
+                        isActive: false
+					},
+					{
+						title: "Users",
+						url: appRoutePath.admin.users,
+                        isActive: false
+					},
+					{
+						title: "Roles",
+						url: appRoutePath.admin.roles,
+                        isActive: false
+					},
+					{
+						title: "CMS",
+						url: appRoutePath.admin.cms,
+                        isActive: false
+					},
+					{
+						title: "Assets",
+						url: appRoutePath.admin.assets,
                         isActive: false
 					},
 				],

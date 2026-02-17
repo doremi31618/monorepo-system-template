@@ -17,5 +17,7 @@ export const appRoutePath = {
         dashboard: '/admin',
         users: '/admin/users',
         roles: '/admin/roles',
+        cms: '/admin/cms',
+        assets: '/admin/assets',
     }
 } as const;

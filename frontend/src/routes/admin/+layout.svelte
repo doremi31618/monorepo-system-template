@@ -1,6 +1,6 @@
 
 <script lang="ts">
-  import { LayoutDashboard, LogOut, Menu, Users, Shield } from 'lucide-svelte';
+  import { LayoutDashboard, LogOut, Menu, Users, Shield, FileText, Image } from 'lucide-svelte';
   import {Button} from '$lib/components/ui/button/index.js';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
@@ -20,6 +20,8 @@
     { label: 'Dashboard', href: appRoutePath.admin.dashboard, icon: 'dashboard' },
     { label: 'Users', href: appRoutePath.admin.users, icon: 'users' },
     { label: 'Roles', href: appRoutePath.admin.roles, icon: 'shield' },
+    { label: 'CMS', href: appRoutePath.admin.cms, icon: 'cms' },
+    { label: 'Assets', href: appRoutePath.admin.assets, icon: 'assets' },
   ];
 
   function toggleSidebar() {
@@ -103,6 +105,8 @@
                  {#if item.icon === 'dashboard'} <LayoutDashboard />
                  {:else if item.icon === 'users'} <Users />
                  {:else if item.icon === 'shield'} <Shield />
+                 {:else if item.icon === 'cms'} <FileText />
+                 {:else if item.icon === 'assets'} <Image />
                  {/if}
               </span>
               
@@ -169,6 +173,8 @@
                                         {#if item.icon === 'dashboard'} <LayoutDashboard />
                                         {:else if item.icon === 'users'} <Users />
                                         {:else if item.icon === 'shield'} <Shield />
+                                        {:else if item.icon === 'cms'} <FileText />
+                                        {:else if item.icon === 'assets'} <Image />
                                         {/if}
                                     </span>
                                     <span class="ml-3 truncate">{item.label}</span>

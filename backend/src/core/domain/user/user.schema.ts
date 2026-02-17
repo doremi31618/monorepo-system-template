@@ -1,6 +1,6 @@
 import { pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
-import { userRoles } from '../access-control/access-control.schema.js';
+// import { relations } from 'drizzle-orm';
+// import { userRoles } from '../access-control/access-control.schema.js';
 
 export const users = pgTable('users', {
 	id: serial('id').primaryKey(),
@@ -11,7 +11,5 @@ export const users = pgTable('users', {
 	updatedAt: timestamp('updated_at').notNull().defaultNow()
 });
 
-export const usersRelations = relations(users, ({ many }) => ({
-	userRoles: many(userRoles),
-}));
+
 

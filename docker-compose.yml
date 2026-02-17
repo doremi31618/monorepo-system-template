@@ -8,7 +8,7 @@ services:
       dockerfile: frontend/Dockerfile.dev
     working_dir: /monorepo/frontend
     environment:
-      VITE_API_BASE_URL: http://localhost:3333
+      VITE_API_BASE_URL: http://localhost:3333/v1
     ports:
       - "5173:5173"
     volumes:
@@ -36,9 +36,41 @@ services:
     environment:
       DATABASE_URL: postgres://postgres:postgres@db:5432/postgres
       API_BASE_URL: http://localhost:3333
+      STORAGE_ENDPOINT: http://minio:9000
+      STORAGE_BUCKET: r3-assets
+      STORAGE_ACCESS_KEY: minioadmin
+      STORAGE_SECRET_KEY: minioadmin
+      STORAGE_FORCE_PATH_STYLE: "true"
     command: sh -c "npm install && npm run start:dev"
     depends_on:
       - db
+      - minio
+      - createbuckets
+
+  minio:
+    image: minio/minio
+    container_name: app-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: "minioadmin"
+      MINIO_ROOT_PASSWORD: "minioadmin"
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin; do echo 'Waiting for MinIO to be ready...'; sleep 1; done;
+      /usr/bin/mc mb --ignore-existing myminio/r3-assets;
+      /usr/bin/mc anonymous set download myminio/r3-assets;
+      exit 0;
+      "
   db:
     image: postgres:16-alpine
     container_name: app-db
@@ -53,3 +85,4 @@ services:
       - db_data:/var/lib/postgresql/data
 volumes:
   db_data:
+  minio_data:

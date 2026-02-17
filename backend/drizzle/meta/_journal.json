@@ -71,6 +71,20 @@
       "when": 1768624612831,
       "tag": "0009_volatile_zzzax",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1771321138223,
+      "tag": "0010_abnormal_leper_queen",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1771326912524,
+      "tag": "0011_stormy_avengers",
+      "breakpoints": true
     }
   ]
 }
