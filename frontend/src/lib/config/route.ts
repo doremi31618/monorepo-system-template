@@ -13,6 +13,9 @@ export const appRoutePath = {
     user: {
         home: '/user/home',
     },
+    blog: {
+        list: '/blog',
+    },
     admin: {
         dashboard: '/admin',
         users: '/admin/users',

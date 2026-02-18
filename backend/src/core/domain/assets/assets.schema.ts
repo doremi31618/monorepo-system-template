@@ -6,6 +6,7 @@ export const assets = pgTable('assets', {
     storageProvider: varchar('storage_provider', { length: 20 }).notNull(), // 's3', 'minio', 'gcs'
     bucket: varchar('bucket', { length: 255 }).notNull(),
     storageKey: varchar('storage_key', { length: 255 }).notNull(),
+    originalName: varchar('original_name', { length: 255 }),
     status: varchar('status', { length: 20 }).default('pending').notNull(), // 'pending', 'ready', 'deleted'
     mimeType: varchar('mime_type', { length: 100 }),
     size: bigint('size', { mode: 'number' }),

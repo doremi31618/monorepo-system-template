@@ -47,15 +47,8 @@
          try {
              // Use our upload service
              const asset = await uploadAsset({ file });
-             // Fetch URL (assumption same as Tiptap logic)
-             const { getDownloadUrl } = await import('$lib/api/assets');
-             const urlRes = await getDownloadUrl(asset.id);
-
-             const downloadUrl = urlRes.data?.url ?? (urlRes as { url?: string }).url;
-
-             if (downloadUrl) {
-                 updateBlock(id, { content: downloadUrl });
-             }
+             const { getAssetPublicUrl } = await import('$lib/api/assets');
+             updateBlock(id, { content: getAssetPublicUrl(asset.id) });
          } catch (e) {
              console.error(e);
              alert('Upload failed');

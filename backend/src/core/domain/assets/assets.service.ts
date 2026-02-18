@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { eq } from 'drizzle-orm';
+import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { assets } from './assets.schema.js';
 import type { IStorageStrategy } from './storage/storage.interface.js';
@@ -39,6 +39,7 @@ export class AssetsService {
             storageProvider: this.configService.get('STORAGE_PROVIDER', 's3'),
             bucket: this.bucket,
             storageKey: storageKey,
+            originalName: filename,
             status: 'pending',
             mimeType: mimeType,
             size: size,
@@ -82,7 +83,7 @@ export class AssetsService {
 
             return { ...asset, status: 'ready', size: metadata.size };
 
-        } catch (error) {
+        } catch {
             // If HEAD fails, it means upload didn't happen or failed
             throw new BadRequestException('File verification failed on storage');
         }
@@ -99,12 +100,97 @@ export class AssetsService {
         return { url };
     }
 
-    async listAssets(page = 1, limit = 20) {
+    async listAssets(
+        page = 1,
+        limit = 20,
+        options: { query?: string; status?: string; mimePrefix?: string } = {}
+    ) {
         const offset = (page - 1) * limit;
-        // Simple mock list for now
-        const results = await this.db.select().from(assets).limit(limit).offset(offset);
-        return { data: results, page, limit };
+        const normalizedQuery = options.query?.trim();
+        const normalizedStatus = options.status?.trim();
+        const normalizedMimePrefix = options.mimePrefix?.trim();
+        const conditions: any[] = [];
+
+        if (normalizedStatus && normalizedStatus !== 'all') {
+            conditions.push(eq(assets.status, normalizedStatus));
+        }
+
+        if (normalizedMimePrefix && normalizedMimePrefix !== 'all') {
+            conditions.push(ilike(assets.mimeType, `${normalizedMimePrefix}%`));
+        }
+
+        if (normalizedQuery) {
+            const keyword = `%${normalizedQuery}%`;
+            conditions.push(or(
+                ilike(assets.originalName, keyword),
+                ilike(assets.storageKey, keyword),
+            ));
+        }
+
+        const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+        const results = await this.db
+            .select()
+            .from(assets)
+            .where(whereClause)
+            .orderBy(desc(assets.createdAt))
+            .limit(limit)
+            .offset(offset);
+
+        const [totalResult] = await this.db
+            .select({ total: sql<number>`count(*)::int` })
+            .from(assets)
+            .where(whereClause);
+
+        return {
+            data: results,
+            page,
+            limit,
+            total: Number(totalResult?.total ?? 0),
+        };
     }
+
+    async updateAsset(
+        assetId: string,
+        data: { originalName?: string; status?: string }
+    ) {
+        const [asset] = await this.db.select().from(assets).where(eq(assets.id, assetId));
+
+        if (!asset) {
+            throw new NotFoundException('Asset not found');
+        }
+
+        const nextOriginalName = data.originalName?.trim();
+        if (data.originalName !== undefined && !nextOriginalName) {
+            throw new BadRequestException('Asset name is required');
+        }
+
+        const nextStatus = data.status?.trim();
+        if (nextStatus !== undefined && !['pending', 'ready'].includes(nextStatus)) {
+            throw new BadRequestException('Invalid asset status');
+        }
+
+        const payload: Record<string, unknown> = {
+            updatedAt: new Date(),
+        };
+
+        if (nextOriginalName !== undefined) {
+            payload.originalName = nextOriginalName;
+        }
+
+        if (nextStatus !== undefined) {
+            payload.status = nextStatus;
+        }
+
+        const [updated] = await this.db
+            .update(assets)
+            .set(payload)
+            .where(eq(assets.id, assetId))
+            .returning();
+
+        return updated;
+    }
+
     async uploadFile(file: Express.Multer.File, ownerId: number) {
         const assetId = uuidv4();
         const extension = file.originalname.split('.').pop();
@@ -119,6 +205,7 @@ export class AssetsService {
             storageProvider: this.configService.get('STORAGE_PROVIDER', 's3'),
             bucket: this.bucket,
             storageKey: storageKey,
+            originalName: file.originalname,
             status: 'ready', // Direct upload is ready immediately
             mimeType: file.mimetype,
             size: file.size,

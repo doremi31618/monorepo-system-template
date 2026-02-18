@@ -6,12 +6,13 @@
 	import type { ComponentProps } from "svelte";
 	import { authStore } from "$lib/store/authStore";
 	import { appRoutePath } from "$lib/config/route";
+	import { resolve } from "$app/paths";
 	import type { AuthState } from "$lib/store/authStore";
 	import { onDestroy } from "svelte";
 	import { Spinner } from "$lib/components/ui/spinner/index.js";
 
 
-	let authState = $state<AuthState>({ session: null, status: "idle", message: null });
+	let authState = $state<AuthState>({ session: null, user: null, status: "idle", message: null });
 	const unsubscribe = authStore.subscribe((value) => (authState = value));
 	onDestroy(unsubscribe);
 	const { register } = authStore;
@@ -152,9 +153,9 @@
 							Sign up with Google
 						</Button>
 						<!-- <Button variant="outline" type="button">Sign up with Google</Button> -->
-						<Field.Description class="px-6 text-center">
-							Already have an account? <a href={appRoutePath.auth.login}>Sign in</a>
-						</Field.Description>
+							<Field.Description class="px-6 text-center">
+								Already have an account? <a href={resolve(appRoutePath.auth.login)}>Sign in</a>
+							</Field.Description>
 					</Field.Field>
 				</Field.Group>
 			</Field.Group>

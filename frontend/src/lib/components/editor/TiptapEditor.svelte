@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte';
-    import { Editor, Mark, mergeAttributes } from '@tiptap/core';
+    import { Editor, Mark, Node, mergeAttributes } from '@tiptap/core';
     import StarterKit from '@tiptap/starter-kit';
     import Image from '@tiptap/extension-image';
     import Placeholder from '@tiptap/extension-placeholder';
@@ -20,6 +20,461 @@
         Trash2, Copy, ArrowUp, ArrowDown, Table as TableIcon,
         Code2, PanelTop, PanelLeft, Minus
     } from 'lucide-svelte';
+
+    type LinkPreviewSize = 'small' | 'medium' | 'large';
+
+    type LinkPreviewPayload = {
+        url: string;
+        title?: string | null;
+        description?: string | null;
+        image?: string | null;
+        siteName?: string | null;
+    };
+
+    type LinkPreviewResolver = (url: string) => Promise<LinkPreviewPayload | null>;
+
+    const isHttpUrl = (value: string) => {
+        try {
+            const parsed = new URL(value);
+            return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+        } catch {
+            return false;
+        }
+    };
+
+    const LinkPreviewNode = Node.create({
+        name: 'linkPreview',
+        group: 'block',
+        atom: true,
+        selectable: true,
+        draggable: true,
+        addOptions() {
+            return {
+                editable: true,
+                resolvePreview: (async (_url: string) => null) as LinkPreviewResolver,
+            };
+        },
+        addAttributes() {
+            return {
+                url: {
+                    default: '',
+                },
+                title: {
+                    default: null,
+                },
+                description: {
+                    default: null,
+                },
+                image: {
+                    default: null,
+                },
+                siteName: {
+                    default: null,
+                },
+                size: {
+                    default: 'medium',
+                    parseHTML: (element) => {
+                        const value = element.getAttribute('data-size');
+                        if (value === 'small' || value === 'medium' || value === 'large') {
+                            return value;
+                        }
+                        return 'medium';
+                    },
+                    renderHTML: (attributes) => {
+                        const value = attributes.size;
+                        if (value === 'small' || value === 'medium' || value === 'large') {
+                            return { 'data-size': value };
+                        }
+                        return { 'data-size': 'medium' };
+                    },
+                },
+            };
+        },
+        parseHTML() {
+            return [
+                {
+                    tag: 'div[data-link-preview]',
+                },
+            ];
+        },
+        renderHTML({ HTMLAttributes }) {
+            return [
+                'div',
+                mergeAttributes({ 'data-link-preview': 'true' }, HTMLAttributes),
+            ];
+        },
+        addNodeView() {
+            return ({ node, getPos, editor }) => {
+                let currentNode = node;
+                let loading = false;
+                let errorText = '';
+                let lastRequestedUrl: string | null = null;
+
+                const dom = document.createElement('div');
+                dom.className = 'editor-link-preview';
+                dom.setAttribute('contenteditable', 'false');
+
+                const card = document.createElement('article');
+                card.className = 'editor-link-preview-card';
+
+                const imageWrap = document.createElement('div');
+                imageWrap.className = 'editor-link-preview-image-wrap';
+
+                const imageElement = document.createElement('img');
+                imageElement.className = 'editor-link-preview-image';
+                imageElement.alt = 'Link preview image';
+                imageWrap.appendChild(imageElement);
+
+                const body = document.createElement('div');
+                body.className = 'editor-link-preview-body';
+
+                const titleElement = document.createElement('p');
+                titleElement.className = 'editor-link-preview-title';
+
+                const descriptionElement = document.createElement('p');
+                descriptionElement.className = 'editor-link-preview-description';
+
+                const urlElement = document.createElement('a');
+                urlElement.className = 'editor-link-preview-url';
+                urlElement.target = '_blank';
+                urlElement.rel = 'noreferrer';
+
+                const statusElement = document.createElement('p');
+                statusElement.className = 'editor-link-preview-status';
+
+                const actionRow = document.createElement('div');
+                actionRow.className = 'editor-link-preview-actions';
+
+                const sizeGroup = document.createElement('div');
+                sizeGroup.className = 'editor-link-preview-size-group';
+
+                const sizeOptions: Array<{ value: LinkPreviewSize; label: string }> = [
+                    { value: 'small', label: 'S' },
+                    { value: 'medium', label: 'M' },
+                    { value: 'large', label: 'L' },
+                ];
+
+                const sizeButtons = sizeOptions.map((option) => {
+                    const button = document.createElement('button');
+                    button.className = 'editor-link-preview-size-btn';
+                    button.type = 'button';
+                    button.textContent = option.label;
+                    button.title = `${option.value} size`;
+                    button.dataset.size = option.value;
+                    sizeGroup.appendChild(button);
+                    return { value: option.value, button };
+                });
+
+                const editButton = document.createElement('button');
+                editButton.className = 'editor-link-preview-edit-btn';
+                editButton.type = 'button';
+                editButton.textContent = 'Change URL';
+
+                actionRow.appendChild(sizeGroup);
+                actionRow.appendChild(editButton);
+                body.appendChild(titleElement);
+                body.appendChild(descriptionElement);
+                body.appendChild(urlElement);
+                body.appendChild(statusElement);
+                body.appendChild(actionRow);
+                card.appendChild(imageWrap);
+                card.appendChild(body);
+                dom.appendChild(card);
+
+                const currentAttrs = () => currentNode.attrs as Record<string, unknown>;
+                const normalizeSize = (value: unknown): LinkPreviewSize => {
+                    if (value === 'small' || value === 'medium' || value === 'large') {
+                        return value;
+                    }
+                    return 'medium';
+                };
+
+                const resolveNodePos = () => {
+                    if (typeof getPos !== 'function') return null;
+                    const next = getPos();
+                    return typeof next === 'number' ? next : null;
+                };
+
+                const updateNodeAttrs = (nextAttrs: Record<string, unknown>) => {
+                    const pos = resolveNodePos();
+                    if (pos === null) return;
+
+                    const latestNode = editor.state.doc.nodeAt(pos);
+                    if (!latestNode) return;
+
+                    editor.view.dispatch(
+                        editor.state.tr.setNodeMarkup(pos, undefined, {
+                            ...latestNode.attrs,
+                            ...nextAttrs,
+                        })
+                    );
+                };
+
+                const refreshView = () => {
+                    const attrs = currentAttrs();
+                    const url = typeof attrs.url === 'string' ? attrs.url : '';
+                    const title = typeof attrs.title === 'string' ? attrs.title : '';
+                    const description = typeof attrs.description === 'string' ? attrs.description : '';
+                    const image = typeof attrs.image === 'string' ? attrs.image : '';
+                    const size = normalizeSize(attrs.size);
+
+                    card.dataset.size = size;
+
+                    const shouldShowImage = size !== 'small' && Boolean(image);
+                    imageWrap.style.display = shouldShowImage ? 'block' : 'none';
+                    if (shouldShowImage) {
+                        imageElement.src = image;
+                    } else {
+                        imageElement.removeAttribute('src');
+                    }
+
+                    titleElement.textContent = title || (loading ? 'Loading link preview...' : 'Untitled link');
+                    descriptionElement.textContent = description || '';
+                    descriptionElement.style.display = description ? 'block' : 'none';
+
+                    if (url) {
+                        urlElement.href = url;
+                        urlElement.textContent = url;
+                        urlElement.style.display = 'inline';
+                    } else {
+                        urlElement.removeAttribute('href');
+                        urlElement.textContent = '';
+                        urlElement.style.display = 'none';
+                    }
+
+                    sizeButtons.forEach(({ value, button }) => {
+                        const isCurrent = value === size;
+                        button.dataset.active = isCurrent ? 'true' : 'false';
+                        button.setAttribute('aria-pressed', isCurrent ? 'true' : 'false');
+                        button.disabled = loading;
+                    });
+
+                    const showActions = this.options.editable;
+                    actionRow.style.display = showActions ? 'flex' : 'none';
+                    editButton.style.display = this.options.editable ? 'inline-flex' : 'none';
+                    editButton.disabled = loading;
+
+                    if (loading) {
+                        statusElement.textContent = 'Fetching preview...';
+                    } else if (errorText) {
+                        statusElement.textContent = errorText;
+                    } else {
+                        statusElement.textContent = '';
+                    }
+                };
+
+                const fetchPreview = async (rawUrl: string) => {
+                    const url = rawUrl.trim();
+                    if (!isHttpUrl(url)) {
+                        errorText = 'Invalid URL';
+                        refreshView();
+                        return;
+                    }
+
+                    loading = true;
+                    errorText = '';
+                    refreshView();
+
+                    try {
+                        const preview = await this.options.resolvePreview(url);
+                        if (!preview) {
+                            errorText = 'Preview unavailable';
+                            return;
+                        }
+
+                        updateNodeAttrs({
+                            url: preview.url || url,
+                            title: preview.title ?? null,
+                            description: preview.description ?? null,
+                            image: preview.image ?? null,
+                            siteName: preview.siteName ?? null,
+                        });
+                    } catch {
+                        errorText = 'Preview unavailable';
+                    } finally {
+                        loading = false;
+                        refreshView();
+                    }
+                };
+
+                const maybeFetchIfNeeded = () => {
+                    const attrs = currentAttrs();
+                    const url = typeof attrs.url === 'string' ? attrs.url.trim() : '';
+                    const hasMeta = Boolean(attrs.title || attrs.description || attrs.image);
+
+                    if (!url || !isHttpUrl(url) || hasMeta) {
+                        return;
+                    }
+
+                    if (lastRequestedUrl === url) {
+                        return;
+                    }
+
+                    lastRequestedUrl = url;
+                    void fetchPreview(url);
+                };
+
+                editButton.addEventListener('click', () => {
+                    const attrs = currentAttrs();
+                    const currentUrl = typeof attrs.url === 'string' ? attrs.url : '';
+                    const nextUrl = window.prompt('Update link URL', currentUrl)?.trim();
+                    if (!nextUrl || nextUrl === currentUrl) return;
+
+                    updateNodeAttrs({
+                        url: nextUrl,
+                        title: null,
+                        description: null,
+                        image: null,
+                        siteName: null,
+                    });
+                    lastRequestedUrl = null;
+                });
+
+                sizeButtons.forEach(({ value, button }) => {
+                    button.addEventListener('click', () => {
+                        if (loading) return;
+                        const attrs = currentAttrs();
+                        const currentSize = normalizeSize(attrs.size);
+                        if (currentSize === value) return;
+                        updateNodeAttrs({ size: value });
+                    });
+                });
+
+                refreshView();
+                maybeFetchIfNeeded();
+
+                return {
+                    dom,
+                    update: (updatedNode) => {
+                        if (updatedNode.type.name !== this.name) {
+                            return false;
+                        }
+
+                        currentNode = updatedNode;
+                        refreshView();
+                        maybeFetchIfNeeded();
+                        return true;
+                    },
+                };
+            };
+        },
+    });
+
+    const TableOfContentsNode = Node.create({
+        name: 'tableOfContents',
+        group: 'block',
+        atom: true,
+        selectable: true,
+        draggable: true,
+        parseHTML() {
+            return [
+                {
+                    tag: 'div[data-table-of-contents]',
+                },
+            ];
+        },
+        renderHTML({ HTMLAttributes }) {
+            return [
+                'div',
+                mergeAttributes({ 'data-table-of-contents': 'true' }, HTMLAttributes),
+            ];
+        },
+        addNodeView() {
+            return ({ editor }) => {
+                const dom = document.createElement('div');
+                dom.className = 'editor-toc-block';
+                dom.setAttribute('contenteditable', 'false');
+
+                const title = document.createElement('p');
+                title.className = 'editor-toc-title';
+                title.textContent = 'Table of Contents';
+
+                const description = document.createElement('p');
+                description.className = 'editor-toc-description';
+                description.textContent = 'Click an entry to jump to the heading.';
+
+                const list = document.createElement('div');
+                list.className = 'editor-toc-list';
+
+                const collectHeadings = () => {
+                    const headings: Array<{ text: string; level: number; index: number }> = [];
+                    let headingIndex = 0;
+
+                    editor.state.doc.descendants((node) => {
+                        if (node.type.name !== 'heading') return;
+                        const level = Number(node.attrs.level ?? 0);
+                        if (![1, 2, 3].includes(level)) return;
+
+                        const text = node.textContent?.trim();
+                        if (!text) return;
+
+                        headings.push({
+                            text,
+                            level,
+                            index: headingIndex,
+                        });
+                        headingIndex += 1;
+                    });
+
+                    return headings;
+                };
+
+                const jumpToHeading = (index: number) => {
+                    const headingElements = Array.from(
+                        editor.view.dom.querySelectorAll('h1, h2, h3'),
+                    ) as HTMLElement[];
+                    const target = headingElements[index];
+                    if (!target) return;
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                };
+
+                const renderHeadingList = () => {
+                    list.innerHTML = '';
+                    const headings = collectHeadings();
+
+                    if (headings.length === 0) {
+                        const empty = document.createElement('p');
+                        empty.className = 'editor-toc-empty';
+                        empty.textContent = 'Add H1/H2/H3 blocks to generate the TOC.';
+                        list.appendChild(empty);
+                        return;
+                    }
+
+                    headings.forEach((item) => {
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.className = 'editor-toc-item';
+                        button.style.paddingLeft = item.level === 1 ? '0.5rem' : item.level === 2 ? '1rem' : '1.5rem';
+                        button.textContent = item.text;
+                        button.addEventListener('click', () => jumpToHeading(item.index));
+                        list.appendChild(button);
+                    });
+                };
+
+                const handleEditorTransaction = () => {
+                    renderHeadingList();
+                };
+
+                dom.appendChild(title);
+                dom.appendChild(description);
+                dom.appendChild(list);
+
+                renderHeadingList();
+                editor.on('transaction', handleEditorTransaction);
+
+                return {
+                    dom,
+                    update: () => {
+                        renderHeadingList();
+                        return true;
+                    },
+                    destroy: () => {
+                        editor.off('transaction', handleEditorTransaction);
+                    },
+                };
+            };
+        },
+    });
 
     const TextColorMark = Mark.create({
         name: 'textColor',
@@ -90,11 +545,19 @@
     });
 
     // --- Svelte 5 Runes ---
-    let { 
-        content = '', 
+    let {
+        content = '',
         editable = true,
-        onchange = () => {} 
-    } = $props();
+        onchange = () => {},
+        onRequestImage = async () => null,
+        onRequestLinkPreview = async (_url: string) => null,
+    } = $props<{
+        content?: unknown;
+        editable?: boolean;
+        onchange?: (content: unknown) => void;
+        onRequestImage?: () => Promise<string | null>;
+        onRequestLinkPreview?: LinkPreviewResolver;
+    }>();
 
     let element: HTMLElement | undefined = $state();
     let editor: Editor | undefined = $state();
@@ -124,15 +587,63 @@
         return selection.empty && textBefore.endsWith('/');
     };
 
+    const requestLinkPreview = async (url: string) => {
+        const normalized = url.trim();
+        if (!normalized) return null;
+
+        try {
+            return await onRequestLinkPreview(normalized);
+        } catch (error) {
+            console.error('onRequestLinkPreview callback failed', error);
+            return null;
+        }
+    };
+
     onMount(() => {
+        const insertLinkPreview = async (
+            targetEditor: Editor,
+            url: string,
+            mode: 'insert' | 'replaceParagraph' = 'insert'
+        ) => {
+            const normalizedUrl = url.trim();
+            if (!isHttpUrl(normalizedUrl)) return false;
+
+            const preview = await requestLinkPreview(normalizedUrl);
+            const attrs: LinkPreviewPayload = {
+                url: preview?.url || normalizedUrl,
+                title: preview?.title ?? null,
+                description: preview?.description ?? null,
+                image: preview?.image ?? null,
+                siteName: preview?.siteName ?? null,
+            };
+
+            if (mode === 'replaceParagraph') {
+                const { selection } = targetEditor.state;
+                const parentNode = selection.$from.parent;
+                if (parentNode.type.name === 'paragraph') {
+                    const from = selection.$from.start() - 1;
+                    const to = from + parentNode.nodeSize;
+                    targetEditor
+                        .chain()
+                        .focus()
+                        .deleteRange({ from, to })
+                        .insertContentAt(from, [{ type: 'linkPreview', attrs }, { type: 'paragraph' }])
+                        .run();
+                    return true;
+                }
+            }
+
+            targetEditor.chain().focus().insertContent({ type: 'linkPreview', attrs }).run();
+            return true;
+        };
+
         // 確保在編輯器初始化前 DOM 元素已存在
         const editorInstance = new Editor({
             element: element,
             extensions: [
                 StarterKit.configure({
                     heading: { levels: [1, 2, 3] },
-                    codeBlock: false, 
-                    blockquote: true,
+                    codeBlock: false,
                 }),
                 // 設定 CodeBlock，移除這裡的 class 改由 CSS 統一管理以避免衝突
                 CodeBlock.configure({
@@ -149,24 +660,24 @@
                 TextColorMark,
                 TextBackgroundMark,
                 Image.configure({ inline: false, allowBase64: true }),
+                LinkPreviewNode.configure({
+                    editable,
+                    resolvePreview: requestLinkPreview,
+                }),
+                TableOfContentsNode,
                 Table.configure({ resizable: true }),
                 TableRow,
                 TableHeader,
                 TableCell,
                 BubbleMenuInfo.configure({
                     element: bubbleMenuElement,
-                    tippyOptions: { duration: 150 },
                     shouldShow: ({ editor: activeEditor, state }) => {
+                        if (!editable || !activeEditor.isEditable) return false;
                         return !state.selection.empty || activeEditor.isActive('table');
                     }
                 }),
                 FloatingMenuInfo.configure({
                     element: floatingMenuElement,
-                    tippyOptions: { 
-                        duration: 150, 
-                        placement: 'bottom-start',
-                        offset: [0, 8]
-                    },
                     shouldShow: ({ state }) => {
                         if (isMobileView) return false;
                         const { selection } = state;
@@ -211,7 +722,33 @@
                         }
                     }
                     return false;
-                }
+                },
+                handlePaste(view, event) {
+                    if (!editable || !event.clipboardData) return false;
+
+                    const pastedText = event.clipboardData.getData('text/plain')?.trim();
+                    if (!pastedText || !isHttpUrl(pastedText)) return false;
+
+                    event.preventDefault();
+                    void insertLinkPreview(editorInstance, pastedText);
+                    return true;
+                },
+                handleKeyDown(view, event) {
+                    if (!editable || event.key !== 'Enter') return false;
+
+                    const { selection } = view.state;
+                    if (!selection.empty) return false;
+
+                    const currentParagraph = selection.$from.parent;
+                    if (currentParagraph.type.name !== 'paragraph') return false;
+
+                    const maybeUrl = currentParagraph.textContent.trim();
+                    if (!isHttpUrl(maybeUrl)) return false;
+
+                    event.preventDefault();
+                    void insertLinkPreview(editorInstance, maybeUrl, 'replaceParagraph');
+                    return true;
+                },
             },
             onUpdate: ({ editor: currentEditor }) => {
                 onchange(currentEditor.getJSON());
@@ -340,7 +877,7 @@
         setTimeout(() => editor?.commands.focus(), 10);
     };
 
-    const convertTo = (type: string) => {
+    const convertTo = async (type: string) => {
         if (!editor) return;
 
         const { state } = editor;
@@ -363,8 +900,37 @@
         else if (type === 'blockquote') editor.chain().toggleBlockquote().run();
         else if (type === 'codeBlock') editor.chain().toggleCodeBlock().run();
         else if (type === 'table') editor.chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+        else if (type === 'tableOfContents') editor.chain().focus().insertContent({ type: 'tableOfContents' }).run();
+        else if (type === 'linkPreview') {
+            const url = window.prompt('請輸入連結網址');
+            if (url && isHttpUrl(url)) {
+                const preview = await requestLinkPreview(url);
+                editor
+                    .chain()
+                    .focus()
+                    .insertContent({
+                        type: 'linkPreview',
+                        attrs: {
+                            url: preview?.url || url,
+                            title: preview?.title ?? null,
+                            description: preview?.description ?? null,
+                            image: preview?.image ?? null,
+                            siteName: preview?.siteName ?? null,
+                        },
+                    })
+                    .run();
+            }
+        }
         else if (type === 'image') {
-            const url = window.prompt('請輸入圖片網址');
+            let url: string | null = null;
+            try {
+                url = await onRequestImage();
+            } catch (error) {
+                console.error('onRequestImage callback failed', error);
+            }
+            if (!url) {
+                url = window.prompt('請輸入圖片網址');
+            }
             if (url) editor.chain().setImage({ src: url }).run();
         }
         
@@ -381,6 +947,23 @@
     const btnClass = "w-8 h-8 flex items-center justify-center rounded hover:bg-slate-100 text-slate-500 transition-all duration-200";
     const menuBtnClass = "w-full flex items-center gap-2 px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-50 transition-colors rounded-xl font-medium text-left";
     const mobileFloatingBtnClass = "inline-flex shrink-0 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors";
+
+    const isEditorActive = (name: string, attrs?: Record<string, unknown>) => {
+        void editorStateToken;
+        if (!editor) return false;
+        return editor.isActive(name, attrs);
+    };
+
+    const isTableActive = () => {
+        void editorStateToken;
+        if (!editor) return false;
+        return editor.isActive('table');
+    };
+
+    const isMobileSlashMenuVisible = () => {
+        void editorStateToken;
+        return isSlashTriggerActive();
+    };
 </script>
 
 <!-- 將選單元素移出 {#if isMounted} 並放入隱藏容器，確保初始化時存在 -->
@@ -389,13 +972,13 @@
     <div bind:this={bubbleMenuElement} class="flex items-center gap-1 bg-white border border-slate-200 shadow-xl rounded-lg p-1 z-50">
         {#if editor}
             <button 
-                class="{btnClass} {(editorStateToken, editor.isActive('bold')) ? 'bg-indigo-50 text-indigo-600 font-bold' : ''}" 
+                class="{btnClass} {isEditorActive('bold') ? 'bg-indigo-50 text-indigo-600 font-bold' : ''}" 
                 onclick={() => editor?.chain().focus().toggleBold().run()}
             >
                 <Bold size={16} />
             </button>
             <button 
-                class="{btnClass} {(editorStateToken, editor.isActive('italic')) ? 'bg-indigo-50 text-indigo-600 font-bold' : ''}" 
+                class="{btnClass} {isEditorActive('italic') ? 'bg-indigo-50 text-indigo-600 font-bold' : ''}" 
                 onclick={() => editor?.chain().focus().toggleItalic().run()}
             >
                 <Italic size={16} />
@@ -404,7 +987,7 @@
             <div class="flex items-center gap-1">
                 {#each textColorOptions as color (color)}
                     <button
-                        class="color-swatch-btn {(editorStateToken, editor.isActive('textColor', { color })) ? 'ring-2 ring-indigo-500 ring-offset-1' : ''}"
+                        class="color-swatch-btn {isEditorActive('textColor', { color }) ? 'ring-2 ring-indigo-500 ring-offset-1' : ''}"
                         title={`文字色 ${color}`}
                         onclick={() => editor?.chain().focus().setMark('textColor', { color }).run()}
                     >
@@ -424,7 +1007,7 @@
             <div class="flex items-center gap-1">
                 {#each textBackgroundOptions as backgroundColor (backgroundColor)}
                     <button
-                        class="color-swatch-btn {(editorStateToken, editor.isActive('textBackground', { backgroundColor })) ? 'ring-2 ring-indigo-500 ring-offset-1' : ''}"
+                        class="color-swatch-btn {isEditorActive('textBackground', { backgroundColor }) ? 'ring-2 ring-indigo-500 ring-offset-1' : ''}"
                         title="背景色"
                         onclick={() => editor?.chain().focus().setMark('textBackground', { backgroundColor }).run()}
                     >
@@ -440,12 +1023,12 @@
                 </button>
             </div>
 
-            {#if (editorStateToken, editor.isActive('table'))}
+            {#if isTableActive()}
                 <div class="w-[1px] h-4 bg-slate-200 mx-1"></div>
-                <button class="{btnClass} {(editorStateToken, editor.isActive('table', { headerRow: true })) ? 'bg-indigo-50 text-indigo-600' : ''}" title="標題列" onclick={() => editor?.chain().focus().toggleHeaderRow().run()}>
+                <button class="{btnClass} {isEditorActive('table', { headerRow: true }) ? 'bg-indigo-50 text-indigo-600' : ''}" title="標題列" onclick={() => editor?.chain().focus().toggleHeaderRow().run()}>
                     <PanelTop size={16} />
                 </button>
-                <button class="{btnClass} {(editorStateToken, editor.isActive('table', { headerColumn: true })) ? 'bg-indigo-50 text-indigo-600' : ''}" title="標題欄" onclick={() => editor?.chain().focus().toggleHeaderColumn().run()}>
+                <button class="{btnClass} {isEditorActive('table', { headerColumn: true }) ? 'bg-indigo-50 text-indigo-600' : ''}" title="標題欄" onclick={() => editor?.chain().focus().toggleHeaderColumn().run()}>
                     <PanelLeft size={16} />
                 </button>
                 <div class="w-[1px] h-4 bg-slate-100 mx-1"></div>
@@ -475,6 +1058,8 @@
         <div class="h-[1px] bg-slate-100 my-1 mx-2"></div>
         <p class="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">進階內容</p>
         <button class={menuBtnClass} onclick={() => convertTo('table')}><TableIcon size={16} class="text-slate-400" /> 建立表格</button>
+        <button class={menuBtnClass} onclick={() => convertTo('tableOfContents')}><PanelLeft size={16} class="text-slate-400" /> 目錄區塊</button>
+        <button class={menuBtnClass} onclick={() => convertTo('linkPreview')}><Quote size={16} class="text-slate-400" /> 連結預覽</button>
         <button class={menuBtnClass} onclick={() => convertTo('blockquote')}><Quote size={16} class="text-slate-400" /> 插入引言</button>
         <button class={menuBtnClass} onclick={() => convertTo('codeBlock')}><Code2 size={16} class="text-slate-400" /> 程式碼區塊</button>
         <button class={menuBtnClass} onclick={() => convertTo('image')}><ImageIcon size={16} class="text-slate-400" /> 插入圖片</button>
@@ -512,11 +1097,11 @@
             </div>
         {/if}
 
-        <div bind:this={element} class="tiptap-editor prose prose-slate max-w-none focus:outline-none" />
+        <div bind:this={element} class="tiptap-editor prose prose-slate max-w-none focus:outline-none"></div>
     </div>
 </div>
 
-{#if editor && editable && isMobileView && (editorStateToken, isSlashTriggerActive())}
+{#if editor && editable && isMobileView && isMobileSlashMenuVisible()}
     <div class="mobile-floating-menu fixed inset-x-0 bottom-0 z-[60] border-t border-slate-200 bg-white/95 px-2 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] shadow-[0_-8px_24px_rgba(15,23,42,0.12)] backdrop-blur md:hidden">
         <div class="mobile-floating-menu-scroll flex items-center gap-2 overflow-x-auto">
             <button class={mobileFloatingBtnClass} onclick={() => convertTo('h1')}>
@@ -542,6 +1127,12 @@
             </button>
             <button class={mobileFloatingBtnClass} onclick={() => convertTo('table')}>
                 <TableIcon size={14} /> 表格
+            </button>
+            <button class={mobileFloatingBtnClass} onclick={() => convertTo('tableOfContents')}>
+                <PanelLeft size={14} /> 目錄
+            </button>
+            <button class={mobileFloatingBtnClass} onclick={() => convertTo('linkPreview')}>
+                <Quote size={14} /> 連結
             </button>
             <button class={mobileFloatingBtnClass} onclick={() => convertTo('image')}>
                 <ImageIcon size={14} /> 圖片
@@ -606,6 +1197,261 @@
     :global(.tiptap-editor table) { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 1.5rem 0; overflow: hidden; }
     :global(.tiptap-editor th, .tiptap-editor td) { border: 1px solid #e2e8f0; padding: 0.75rem; vertical-align: top; position: relative; }
     :global(.tiptap-editor th) { background-color: #f8fafc; font-weight: bold; text-align: left; }
+
+    :global(.tiptap-editor .editor-link-preview) {
+        margin: 0.75rem 0;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-card) {
+        width: 100%;
+        max-width: 52rem;
+        overflow: hidden;
+        border-radius: 0.9rem;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    :global(.tiptap-editor .editor-link-preview-image-wrap) {
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-image) {
+        display: block;
+        width: 100%;
+        max-height: 220px;
+        object-fit: cover;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-body) {
+        padding: 0.85rem 1rem;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-title) {
+        margin: 0 0 0.35rem;
+        color: #0f172a;
+        font-size: 0.98rem;
+        font-weight: 700;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-description) {
+        margin: 0 0 0.45rem;
+        color: #475569;
+        font-size: 0.86rem;
+        line-height: 1.45;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-url) {
+        color: #2563eb;
+        font-size: 0.78rem;
+        text-decoration: none;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-url:hover) {
+        text-decoration: underline;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-status) {
+        min-height: 1rem;
+        margin: 0.35rem 0 0;
+        color: #64748b;
+        font-size: 0.75rem;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-actions) {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-top: 0.45rem;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-size-group) {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 9999px;
+        background: #f8fafc;
+        padding: 0.12rem;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-size-btn) {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 1.35rem;
+        height: 1.35rem;
+        border: 0;
+        border-radius: 9999px;
+        background: transparent;
+        color: #475569;
+        font-size: 0.68rem;
+        font-weight: 700;
+        line-height: 1;
+        padding: 0 0.32rem;
+        cursor: pointer;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-size-btn:hover) {
+        background: #e2e8f0;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-size-btn[data-active='true']) {
+        background: #1e293b;
+        color: #f8fafc;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-size-btn:disabled) {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-edit-btn) {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #cbd5e1;
+        border-radius: 9999px;
+        padding: 0.2rem 0.65rem;
+        background: #f8fafc;
+        color: #334155;
+        font-size: 0.72rem;
+        font-weight: 600;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-edit-btn:hover) {
+        background: #eef2ff;
+        border-color: #a5b4fc;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-edit-btn:disabled) {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-card[data-size='small']) {
+        max-width: 32rem;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-card[data-size='small'] .editor-link-preview-image-wrap) {
+        display: none;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-card[data-size='small'] .editor-link-preview-body) {
+        padding: 0.68rem 0.78rem;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-card[data-size='small'] .editor-link-preview-title) {
+        font-size: 0.9rem;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-card[data-size='small'] .editor-link-preview-description) {
+        font-size: 0.8rem;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-card[data-size='small'] .editor-link-preview-url) {
+        font-size: 0.72rem;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-card[data-size='medium']) {
+        max-width: 40rem;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-card[data-size='medium'] .editor-link-preview-image) {
+        max-height: 140px;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-card[data-size='medium'] .editor-link-preview-body) {
+        padding: 0.75rem 0.9rem;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-card[data-size='medium'] .editor-link-preview-title) {
+        font-size: 0.93rem;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-card[data-size='medium'] .editor-link-preview-description) {
+        font-size: 0.82rem;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-card[data-size='medium'] .editor-link-preview-url) {
+        font-size: 0.74rem;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-card[data-size='large']) {
+        max-width: 52rem;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-card[data-size='large'] .editor-link-preview-image) {
+        max-height: 220px;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-card[data-size='large'] .editor-link-preview-body) {
+        padding: 0.85rem 1rem;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-card[data-size='large'] .editor-link-preview-title) {
+        font-size: 0.98rem;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-card[data-size='large'] .editor-link-preview-description) {
+        font-size: 0.86rem;
+    }
+
+    :global(.tiptap-editor .editor-link-preview-card[data-size='large'] .editor-link-preview-url) {
+        font-size: 0.78rem;
+    }
+
+    :global(.tiptap-editor .editor-toc-block) {
+        margin: 0.75rem 0;
+        border: 1px dashed #cbd5e1;
+        border-radius: 0.75rem;
+        background: #f8fafc;
+        padding: 0.85rem 1rem;
+    }
+
+    :global(.tiptap-editor .editor-toc-title) {
+        margin: 0;
+        font-size: 0.92rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    :global(.tiptap-editor .editor-toc-description) {
+        margin: 0.25rem 0 0;
+        font-size: 0.8rem;
+        color: #64748b;
+    }
+
+    :global(.tiptap-editor .editor-toc-list) {
+        margin-top: 0.6rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    :global(.tiptap-editor .editor-toc-item) {
+        width: 100%;
+        border: 0;
+        border-radius: 0.35rem;
+        background: transparent;
+        padding: 0.2rem 0.5rem;
+        text-align: left;
+        font-size: 0.78rem;
+        color: #475569;
+        cursor: pointer;
+    }
+
+    :global(.tiptap-editor .editor-toc-item:hover) {
+        background: #e2e8f0;
+    }
+
+    :global(.tiptap-editor .editor-toc-empty) {
+        margin: 0;
+        padding: 0.3rem 0.5rem;
+        font-size: 0.78rem;
+        color: #94a3b8;
+    }
 
     :global(.tiptap-editor .ProseMirror-selectednode) { background: rgba(99, 102, 241, 0.04); outline: 2px solid rgba(99, 102, 241, 0.15); border-radius: 6px; }
 

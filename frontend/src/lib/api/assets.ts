@@ -1,10 +1,12 @@
 
 import { httpClient } from '../utils';
+import { AppConfig } from '$lib/config';
 
 export interface Asset {
     id: string;
     storageKey: string;
-    status: 'pending' | 'ready';
+    originalName?: string;
+    status: 'pending' | 'ready' | 'deleted';
     mimeType: string;
     size: number;
     visibility: string;
@@ -16,6 +18,7 @@ export interface ListAssetsResponse {
     data: Asset[];
     page: number;
     limit: number;
+    total?: number;
 }
 
 export interface InitUploadResponse {
@@ -24,11 +27,31 @@ export interface InitUploadResponse {
     storageKey: string;
 }
 
-export async function listAssets(page: number = 1, limit: number = 20) {
-    const query = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString()
-    }).toString();
+export async function listAssets(params: {
+    page?: number;
+    limit?: number;
+    query?: string;
+    status?: string;
+    mimePrefix?: string;
+} = {}) {
+    const queryParams = new URLSearchParams({
+        page: String(params.page ?? 1),
+        limit: String(params.limit ?? 20),
+    });
+
+    if (params.query?.trim()) {
+        queryParams.set('query', params.query.trim());
+    }
+
+    if (params.status && params.status !== 'all') {
+        queryParams.set('status', params.status);
+    }
+
+    if (params.mimePrefix && params.mimePrefix !== 'all') {
+        queryParams.set('mimePrefix', params.mimePrefix);
+    }
+
+    const query = queryParams.toString();
     return await httpClient.get<ListAssetsResponse>(`/cms/assets?${query}`);
 }
 
@@ -48,6 +71,14 @@ export async function getDownloadUrl(id: string) {
     return await httpClient.get<{ url: string }>(`/cms/assets/${id}/url`);
 }
 
+export function getAssetPublicUrl(id: string) {
+    return `${AppConfig.apiBaseUrl}/cms/assets/${id}/public`;
+}
+
 export async function deleteAsset(id: string) {
     return await httpClient.delete<{ id: string; deleted: boolean }>(`/cms/assets/${id}`);
+}
+
+export async function updateAsset(id: string, data: { originalName?: string; status?: 'pending' | 'ready' }) {
+    return await httpClient.put<Asset>(`/cms/assets/${id}`, data);
 }
