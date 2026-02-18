@@ -1,6 +1,9 @@
 <script lang="ts">
     import { page } from '$app/stores';
+    import { resolve } from '$app/paths';
     import { onMount } from 'svelte';
+    import { Settings } from 'lucide-svelte';
+    import * as Sheet from '$lib/components/ui/sheet';
     import { getPost, updatePostContent, updatePostStatus, type CmsPost } from '$lib/api/cms';
     import { getDownloadUrl } from '$lib/api/assets';
     import { uploadAsset } from '$lib/services/upload.service';
@@ -8,10 +11,11 @@
 
     const id = $page.params.id ?? '';
     let post: CmsPost | null = null;
-    let content: any = {};
+    let content: unknown = {};
     let locale = 'en';
     let loading = true;
     let saving = false;
+    let isSettingsDrawerOpen = false;
 
     async function loadPost() {
         loading = true;
@@ -56,6 +60,64 @@
             saving = false;
         }
     }
+
+    async function handleStatusChange(e: Event) {
+        if (!post) return;
+        const target = e.currentTarget as HTMLSelectElement;
+        const newStatus = target.value;
+        try {
+            const res = await updatePostStatus(post.id, newStatus);
+            if (res.data) {
+                post.status = newStatus as CmsPost['status'];
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Failed to update status');
+        }
+    }
+
+    async function handleCoverImageUpload(e: Event) {
+        const target = e.currentTarget as HTMLInputElement;
+        const file = target.files?.[0];
+        if (!file) return;
+
+        try {
+            const asset = await uploadAsset({ file });
+            const urlRes = await getDownloadUrl(asset.id);
+            const coverImageUrl = urlRes.data?.url ?? (urlRes as { url?: string }).url;
+
+            if (!coverImageUrl) {
+                throw new Error('Uploaded asset URL not found');
+            }
+
+            if (!post) return;
+            if (!post.content) post.content = {};
+            post.content.coverImage = coverImageUrl;
+        } catch (err) {
+            console.error(err);
+            alert('Upload failed');
+        } finally {
+            target.value = '';
+        }
+    }
+
+    function clearCoverImage() {
+        if (post && post.content) {
+            post.content.coverImage = undefined;
+        }
+    }
+
+    function handleSeoTitleInput(e: Event) {
+        if (!post) return;
+        if (!post.content) post.content = {};
+        post.content.seoTitle = (e.currentTarget as HTMLInputElement).value;
+    }
+
+    function handleSeoDescInput(e: Event) {
+        if (!post) return;
+        if (!post.content) post.content = {};
+        post.content.seoDesc = (e.currentTarget as HTMLTextAreaElement).value;
+    }
     
     function onEditorChange(e: CustomEvent) {
         content = e.detail.content;
@@ -69,7 +131,7 @@
 <div class="flex h-[calc(100vh-64px)] overflow-hidden">
     <!-- Main Editor Area -->
     <div class="flex-1 flex flex-col min-w-0 bg-white">
-        <header class="border-b px-6 py-4 flex justify-between items-center">
+        <header class="border-b px-4 py-4 md:px-6 md:py-4 flex flex-col gap-3 md:flex-row md:justify-between md:items-center">
              <div class="flex-1 mr-4">
                  <input 
                     type="text" 
@@ -83,12 +145,12 @@
                     }}
                  />
              </div>
-             <div class="flex items-center space-x-3">
+             <div class="flex items-center flex-wrap justify-end gap-2">
                  <select bind:value={locale} on:change={loadPost} class="border rounded px-2 py-1 text-sm bg-white">
                      <option value="en">English</option>
                      <option value="zh-TW">Traditional Chinese</option>
                  </select>
-                 <a href={`/cms/preview/${id}`} target="_blank" class="px-4 py-2 border rounded hover:bg-gray-100 text-sm">
+                 <a href={resolve(`/cms/preview/${id}`)} target="_blank" class="px-4 py-2 border rounded hover:bg-gray-100 text-sm">
                     Preview
                  </a>
                  <button 
@@ -98,6 +160,90 @@
                  >
                     {saving ? 'Saving...' : 'Save'}
                  </button>
+
+                 <Sheet.Root bind:open={isSettingsDrawerOpen}>
+                    <Sheet.Trigger
+                        class="inline-flex h-9 w-9 items-center justify-center rounded border bg-white text-slate-600 hover:bg-slate-50 lg:hidden"
+                        aria-label="Open settings"
+                        title="Settings"
+                    >
+                        <Settings size={16} />
+                    </Sheet.Trigger>
+                    <Sheet.Content side="right" class="w-[90vw] max-w-sm overflow-y-auto p-4 sm:p-5 lg:hidden">
+                        <h3 class="font-semibold text-gray-700 mb-4">Settings</h3>
+
+                        <!-- Status -->
+                        <div class="mb-6 bg-white p-4 rounded shadow-sm border">
+                            <label class="block text-sm font-medium text-gray-600 mb-2">Status</label>
+                            <select
+                                class="w-full border rounded px-3 py-2 bg-white"
+                                value={post?.status}
+                                on:change={handleStatusChange}
+                            >
+                                <option value="draft">Draft</option>
+                                <option value="published">Published</option>
+                                <option value="archived">Archived</option>
+                            </select>
+                        </div>
+
+                        <!-- Cover Image -->
+                        <div class="mb-6 bg-white p-4 rounded shadow-sm border">
+                            <label class="block text-sm font-medium text-gray-600 mb-2">Cover Image</label>
+                            {#if post?.content?.coverImage}
+                                <div class="mb-2 relative group">
+                                    <img src={post.content.coverImage} alt="Cover" class="w-full h-32 object-cover rounded border" />
+                                    <button
+                                        class="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition shadow-sm"
+                                        on:click={clearCoverImage}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                          <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            {/if}
+                            <div class="relative">
+                                 <input
+                                    type="file"
+                                    accept="image/*"
+                                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                    on:change={handleCoverImageUpload}
+                                />
+                                <button class="w-full border-2 border-dashed border-gray-300 rounded p-2 text-sm text-gray-500 hover:bg-gray-50 text-center">
+                                    {post?.content?.coverImage ? 'Change Image' : 'Upload Image'}
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- SEO -->
+                        <div class="mb-6 bg-white p-4 rounded shadow-sm border space-y-4">
+                             <h4 class="font-medium text-gray-700 border-b pb-2">SEO Settings</h4>
+                             <div>
+                                <label class="block text-sm font-medium text-gray-600 mb-1">SEO Title</label>
+                                <input
+                                    type="text"
+                                    class="w-full border rounded px-3 py-2 text-sm"
+                                    value={post?.content?.seoTitle || ''}
+                                    on:input={handleSeoTitleInput}
+                                />
+                             </div>
+                             <div>
+                                <label class="block text-sm font-medium text-gray-600 mb-1">SEO Description</label>
+                                <textarea
+                                    class="w-full border rounded px-3 py-2 text-sm h-24"
+                                    value={post?.content?.seoDesc || ''}
+                                    on:input={handleSeoDescInput}
+                                ></textarea>
+                             </div>
+                        </div>
+
+                        <!-- Slug -->
+                         <div class="mb-6 bg-white p-4 rounded shadow-sm border">
+                            <label class="block text-sm font-medium text-gray-600 mb-1">Slug</label>
+                            <input type="text" class="w-full border rounded px-3 py-2 text-sm bg-gray-50" value={post?.slug || ''} disabled />
+                         </div>
+                    </Sheet.Content>
+                 </Sheet.Root>
              </div>
         </header>
         
@@ -122,19 +268,7 @@
             <select 
                 class="w-full border rounded px-3 py-2 bg-white" 
                 value={post?.status}
-                on:change={async (e) => {
-                     if (!post) return;
-                     const newStatus = e.currentTarget.value;
-                     try {
-                         const res = await updatePostStatus(post.id, newStatus);
-                         if (res.data) {
-                             post.status = newStatus as any;
-                         }
-                     } catch (err) {
-                         console.error(err);
-                         alert('Failed to update status');
-                     }
-                }}
+                on:change={handleStatusChange}
             >
                 <option value="draft">Draft</option>
                 <option value="published">Published</option>
@@ -150,7 +284,7 @@
                     <img src={post.content.coverImage} alt="Cover" class="w-full h-32 object-cover rounded border" />
                     <button 
                         class="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition shadow-sm"
-                        on:click={() => { if(post && post.content) post.content.coverImage = undefined; }}
+                        on:click={clearCoverImage}
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                           <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
@@ -163,26 +297,7 @@
                     type="file" 
                     accept="image/*"
                     class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                    on:change={async (e) => {
-                        const file = e.currentTarget.files?.[0];
-                        if (!file) return;
-                        try {
-                            const asset = await uploadAsset({ file });
-                            const urlRes = await getDownloadUrl(asset.id);
-                            const coverImageUrl = urlRes.data?.url ?? (urlRes as { url?: string }).url;
-
-                            if (!coverImageUrl) {
-                                throw new Error('Uploaded asset URL not found');
-                            }
-
-                            if (!post) return;
-                            if (!post.content) post.content = {};
-                            post.content.coverImage = coverImageUrl;
-                        } catch (err) {
-                            console.error(err);
-                            alert('Upload failed');
-                        }
-                    }}
+                    on:change={handleCoverImageUpload}
                 />
                 <button class="w-full border-2 border-dashed border-gray-300 rounded p-2 text-sm text-gray-500 hover:bg-gray-50 text-center">
                     {post?.content?.coverImage ? 'Change Image' : 'Upload Image'}
@@ -199,11 +314,7 @@
                     type="text" 
                     class="w-full border rounded px-3 py-2 text-sm"
                     value={post?.content?.seoTitle || ''}
-                    on:input={(e) => {
-                        if (post && post.content) {
-                            post.content.seoTitle = e.currentTarget.value;
-                        }
-                    }}
+                    on:input={handleSeoTitleInput}
                 />
              </div>
              <div>
@@ -211,11 +322,7 @@
                 <textarea 
                     class="w-full border rounded px-3 py-2 text-sm h-24"
                     value={post?.content?.seoDesc || ''}
-                    on:input={(e) => {
-                        if (post && post.content) {
-                            post.content.seoDesc = e.currentTarget.value;
-                        }
-                    }}
+                    on:input={handleSeoDescInput}
                 ></textarea>
              </div>
         </div>

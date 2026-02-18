@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Param, Get, Query, Req, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Post, Body, Param, Get, Query, Req, UseInterceptors, UploadedFile, Delete } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AssetsService } from './assets.service.js';
 // import { z } from 'zod'; // Assuming Zod is used for validation, or generic pipes
@@ -52,5 +52,10 @@ export class AssetsController {
         // file type is Express.Multer.File but using any to avoid type issues if types are missing
         const ownerId = req.user?.id || 1;
         return this.assetsService.uploadFile(file, ownerId);
+    }
+
+    @Delete(':id')
+    async deleteAsset(@Param('id') id: string) {
+        return this.assetsService.deleteAsset(id);
     }
 }

@@ -1,10 +1,13 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
-    import { getPosts, createPost, type CmsPost } from '$lib/api/cms';
+    import { resolve } from '$app/paths';
+    import { Loader2, Pencil, Trash2 } from 'lucide-svelte';
+    import { getPosts, createPost, deletePost, type CmsPost } from '$lib/api/cms';
 
     let posts: CmsPost[] = [];
     let loading = true;
+    let deletingPostId: string | null = null;
 
     async function loadPosts() {
         loading = true;
@@ -27,13 +30,30 @@
         try {
             const res = await createPost(title, 'en');
             if (res.data) {
-                 goto(`/admin/cms/${res.data.id}`);
+                 goto(resolve(`/admin/cms/${res.data.id}`));
             } else {
                  alert(res.message || 'Failed to create post');
             }
         } catch (e) {
             console.error(e);
             alert('Error creating post');
+        }
+    }
+
+    async function handleDeletePost(post: CmsPost) {
+        const title = post.title || post.slug || 'this post';
+        const confirmed = window.confirm(`Delete "${title}"? This action cannot be undone.`);
+        if (!confirmed) return;
+
+        deletingPostId = post.id;
+        try {
+            await deletePost(post.id);
+            posts = posts.filter((p) => p.id !== post.id);
+        } catch (e) {
+            console.error(e);
+            alert('Failed to delete post');
+        } finally {
+            deletingPostId = null;
         }
     }
 
@@ -67,7 +87,7 @@
                 </tr>
             </thead>
             <tbody>
-                {#each posts as post}
+                {#each posts as post (post.id)}
                     <tr class="border-b hover:bg-gray-50">
                         <td class="py-3 px-4 font-medium">{post.title || '(No Title)'}</td>
                         <td class="py-3 px-4 text-gray-500">{post.slug}</td>
@@ -78,7 +98,29 @@
                         </td>
                         <td class="py-3 px-4 text-gray-400 text-sm">{new Date(post.updatedAt).toLocaleDateString()}</td>
                         <td class="text-right py-3 px-4">
-                             <a href="/admin/cms/{post.id}" class="text-blue-600 hover:underline">Edit</a>
+                             <div class="flex items-center justify-end gap-2">
+                                <a
+                                    href={resolve(`/admin/cms/${post.id}`)}
+                                    class="inline-flex h-8 w-8 items-center justify-center rounded text-blue-600 transition-colors hover:bg-blue-50"
+                                    aria-label="Edit post"
+                                    title="Edit"
+                                >
+                                    <Pencil size={16} />
+                                </a>
+                                <button
+                                    class="inline-flex h-8 w-8 items-center justify-center rounded transition-colors hover:bg-red-50 disabled:opacity-50"
+                                    disabled={deletingPostId === post.id}
+                                    on:click={() => handleDeletePost(post)}
+                                    aria-label="Delete post"
+                                    title="Delete"
+                                >
+                                    {#if deletingPostId === post.id}
+                                        <Loader2 size={16} class="animate-spin text-red-600" />
+                                    {:else}
+                                        <Trash2 size={16} class="text-red-600" />
+                                    {/if}
+                                </button>
+                             </div>
                         </td>
                     </tr>
                 {/each}

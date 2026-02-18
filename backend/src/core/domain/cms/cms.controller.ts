@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Param, Get, Query, Put, Patch, Req } from '@nestjs/common';
+import { Controller, Post, Body, Param, Get, Query, Put, Patch, Req, Delete } from '@nestjs/common';
 import { CmsService } from './cms.service.js';
 
 @Controller('cms/posts')
@@ -33,5 +33,10 @@ export class CmsController {
     @Patch(':id/status')
     async updateStatus(@Param('id') id: string, @Body() body: { status: string; slug?: string }) {
         return this.cmsService.updatePostStatus(id, body.status, body.slug);
+    }
+
+    @Delete(':id')
+    async delete(@Param('id') id: string) {
+        return this.cmsService.deletePost(id);
     }
 }

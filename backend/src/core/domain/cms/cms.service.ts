@@ -101,4 +101,16 @@ export class CmsService {
 
         return { data: enriched, page, limit };
     }
+
+    async deletePost(id: string) {
+        const [post] = await this.db.select().from(posts).where(eq(posts.id, id));
+        if (!post) {
+            throw new NotFoundException('Post not found');
+        }
+
+        await this.db.delete(postContents).where(eq(postContents.postId, id));
+        await this.db.delete(posts).where(eq(posts.id, id));
+
+        return { id, deleted: true };
+    }
 }

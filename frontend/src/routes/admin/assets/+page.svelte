@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { getDownloadUrl, listAssets, type Asset } from '$lib/api/assets';
+    import { Download, Loader2, Trash2 } from 'lucide-svelte';
+    import { deleteAsset as deleteAssetApi, getDownloadUrl, listAssets, type Asset } from '$lib/api/assets';
     import { uploadAsset } from '$lib/services/upload.service';
 
     let assets: Asset[] = [];
@@ -8,6 +9,7 @@
     let isUploading = false;
     let uploadProgress = 0;
     let fileInput: HTMLInputElement;
+    let deletingAssetId: string | null = null;
     let previewUrls: Record<string, string> = {};
     let previewLoading: Record<string, boolean> = {};
     let previewFailed: Record<string, boolean> = {};
@@ -98,6 +100,23 @@
         }
     }
 
+    async function handleDeleteAsset(asset: Asset) {
+        const confirmed = window.confirm(`Delete asset "${asset.storageKey}"? This action cannot be undone.`);
+        if (!confirmed) return;
+
+        deletingAssetId = asset.id;
+        try {
+            await deleteAssetApi(asset.id);
+            assets = assets.filter((current) => current.id !== asset.id);
+            prunePreviewState(assets);
+        } catch (e) {
+            console.error(e);
+            alert('Failed to delete asset');
+        } finally {
+            deletingAssetId = null;
+        }
+    }
+
     async function getSignedUrl(id: string) {
         const res = await getDownloadUrl(id);
         const url = res.data?.url ?? extractUrl(res);
@@ -176,12 +195,29 @@
                     </div>
                     <div class="text-sm font-medium truncate w-full text-center" title={asset.storageKey}>{asset.mimeType}</div>
                     <div class="text-xs text-gray-400">{(asset.size / 1024).toFixed(1)} KB</div>
-                    <button 
-                        class="text-xs text-blue-500 mt-2 hover:underline"
-                        on:click={() => getSignedUrl(asset.id)}
-                    >
-                        Download
-                    </button>
+                    <div class="mt-2 flex items-center gap-3">
+                        <button 
+                            class="inline-flex h-8 w-8 items-center justify-center rounded text-blue-600 transition-colors hover:bg-blue-50"
+                            on:click={() => getSignedUrl(asset.id)}
+                            aria-label="Download asset"
+                            title="Download"
+                        >
+                            <Download size={16} />
+                        </button>
+                        <button
+                            class="inline-flex h-8 w-8 items-center justify-center rounded transition-colors hover:bg-red-50 disabled:opacity-50"
+                            disabled={deletingAssetId === asset.id}
+                            on:click={() => handleDeleteAsset(asset)}
+                            aria-label="Delete asset"
+                            title="Delete"
+                        >
+                            {#if deletingAssetId === asset.id}
+                                <Loader2 size={16} class="animate-spin text-red-600" />
+                            {:else}
+                                <Trash2 size={16} class="text-red-600" />
+                            {/if}
+                        </button>
+                    </div>
                 </div>
             {/each}
         </div>

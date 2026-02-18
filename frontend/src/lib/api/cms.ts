@@ -11,7 +11,7 @@ export interface CmsPost {
     title?: string;
     content?: {
         title?: string;
-        body?: any;
+        body?: unknown;
         coverImage?: string;
         seoTitle?: string;
         seoDesc?: string;
@@ -44,11 +44,15 @@ export async function getPost(id: string, locale: string = 'en') {
 export async function updatePostContent(
     id: string,
     locale: string,
-    data: { title?: string; body?: any; seoTitle?: string; seoDesc?: string; coverImage?: string }
+    data: { title?: string; body?: unknown; seoTitle?: string; seoDesc?: string; coverImage?: string }
 ) {
     return await httpClient.put<CmsPost>(`/cms/posts/${id}/content?locale=${locale}`, data);
 }
 
 export async function updatePostStatus(id: string, status: string, slug?: string) {
     return await httpClient.patch<CmsPost>(`/cms/posts/${id}/status`, { status, slug });
+}
+
+export async function deletePost(id: string) {
+    return await httpClient.delete<{ id: string; deleted: boolean }>(`/cms/posts/${id}`);
 }

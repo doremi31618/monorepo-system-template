@@ -128,4 +128,17 @@ export class AssetsService {
 
         return asset;
     }
+
+    async deleteAsset(assetId: string) {
+        const [asset] = await this.db.select().from(assets).where(eq(assets.id, assetId));
+
+        if (!asset) {
+            throw new NotFoundException('Asset not found');
+        }
+
+        await this.storage.delete(asset.storageKey);
+        await this.db.delete(assets).where(eq(assets.id, assetId));
+
+        return { id: assetId, deleted: true };
+    }
 }

@@ -47,3 +47,7 @@ export async function completeUpload(id: string) {
 export async function getDownloadUrl(id: string) {
     return await httpClient.get<{ url: string }>(`/cms/assets/${id}/url`);
 }
+
+export async function deleteAsset(id: string) {
+    return await httpClient.delete<{ id: string; deleted: boolean }>(`/cms/assets/${id}`);
+}

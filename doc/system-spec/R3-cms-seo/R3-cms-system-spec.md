@@ -136,6 +136,16 @@
 - `DELETE /assets/:id` - Delete file.
 - `GET /assets` - List files.
 
+#### Delete Behavior (新增規格)
+- `DELETE /v1/cms/posts/:id`
+  - 行為: Hard delete `posts` 與該文章所有 `post_contents` (所有 locale)。
+  - 回傳: `{ id, deleted: true }`。
+  - UI: Admin 文章列表需顯示刪除按鈕與確認視窗。
+- `DELETE /v1/cms/assets/:id`
+  - 行為: 刪除 object storage 檔案後，移除 `assets` 資料列。
+  - 回傳: `{ id, deleted: true }`。
+  - UI: Asset 管理列表需顯示刪除按鈕與確認視窗。
+
 ### 5.2 Public API (Optimized)
 
 * `GET /v1/public/posts/slug/:slug?locale=zh-TW`
