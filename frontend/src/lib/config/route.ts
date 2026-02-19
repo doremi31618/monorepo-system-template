@@ -13,9 +13,14 @@ export const appRoutePath = {
     user: {
         home: '/user/home',
     },
+    blog: {
+        list: '/blog',
+    },
     admin: {
         dashboard: '/admin',
         users: '/admin/users',
         roles: '/admin/roles',
+        cms: '/admin/cms',
+        assets: '/admin/assets',
     }
 } as const;

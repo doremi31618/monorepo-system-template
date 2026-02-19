@@ -18,6 +18,16 @@ const permissions = [
 
     // Permissions
     { id: PermissionSchema.Permissions.Read, module: 'permissions', action: 'read', description: 'View permissions' },
+
+    // Assets
+    { id: 'assets.create', module: 'assets', action: 'create', description: 'Upload assets' },
+    { id: 'assets.read', module: 'assets', action: 'read', description: 'View assets' },
+
+    // CMS
+    { id: 'cms.posts.create', module: 'cms', action: 'create', description: 'Create posts' },
+    { id: 'cms.posts.read', module: 'cms', action: 'read', description: 'View posts' },
+    { id: 'cms.posts.update', module: 'cms', action: 'update', description: 'Update posts' },
+    { id: 'cms.posts.publish', module: 'cms', action: 'publish', description: 'Publish posts' },
 ];
 
 export const ACCESS_CONTROL_CONFIG = {

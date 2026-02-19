@@ -41,6 +41,7 @@ export interface CreateUserDto {
     name: string;
     email: string;
     password?: string;
+    roleIds?: string[];
 }
 
 export interface UpdateUserDto {
@@ -56,7 +57,14 @@ export interface UserQueryParams {
 }
 
 export async function getUsers(params?: UserQueryParams) {
-    const query = params ? '?' + new URLSearchParams(params as any).toString() : '';
+    const queryParams = new URLSearchParams();
+    if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+            if (value === undefined || value === null) return;
+            queryParams.set(key, String(value));
+        });
+    }
+    const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
     // Returns PaginatedResponse
     return await httpClient.get<PaginatedResponse<UserWithRoles>>('/admin/users' + query);
 }

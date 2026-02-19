@@ -232,4 +232,8 @@ export class HttpClient<T = { token?: string }> {
     public delete<R>(path: string): Promise<ApiResponse<R>> {
         return this.request<R>(path, { method: 'DELETE' });
     }
+
+    public patch<R>(path: string, data: unknown): Promise<ApiResponse<R>> {
+        return this.request<R>(path, { method: 'PATCH', body: JSON.stringify(data) });
+    }
 }

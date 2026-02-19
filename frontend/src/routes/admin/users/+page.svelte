@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import * as api from '$lib/api/admin';
-  import { goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
   import { page } from '$app/stores';
   import { Button } from '$lib/components/ui/button';
   import { Plus, Search } from 'lucide-svelte';
@@ -82,11 +82,11 @@
 
   // Handlers
   function handleSearch() {
-      goto(`?page=1&q=${searchQuery}`);
+      window.location.href = `${resolve('/admin/users')}?page=1&q=${encodeURIComponent(searchQuery)}`;
   }
 
   function handlePageChange(newPage: number) {
-      goto(`?page=${newPage}&q=${searchQuery}`);
+      window.location.href = `${resolve('/admin/users')}?page=${newPage}&q=${encodeURIComponent(searchQuery)}`;
   }
 
   function openCreate() {
@@ -117,7 +117,7 @@
           await api.deleteUser(userToDelete.id);
           toast.success('User deleted successfully');
           loadUsers();
-      } catch(e) {
+      } catch {
           toast.error('Failed to delete user');
       } finally {
           showDeleteDialog = false;
@@ -134,7 +134,7 @@
       loading = true;
       try {
           if (isCreating) {
-               const res = await api.createUser({
+               await api.createUser({
                    name: data.name,
                    email: data.email,
                    password: data.password,
@@ -150,9 +150,10 @@
           showSheet = false;
           loadUsers();
           toast.success(isCreating ? 'User created' : 'User updated');
-      } catch(e: any) {
-          console.error(e);
-          toast.error(e.message || 'Operation failed');
+      } catch(error: unknown) {
+          console.error(error);
+          const message = error instanceof Error ? error.message : 'Operation failed';
+          toast.error(message);
       } finally {
           loading = false;
       }

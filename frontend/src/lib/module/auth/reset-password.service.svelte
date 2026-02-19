@@ -1,6 +1,6 @@
 <script lang="ts">
 	import GalleryVerticalEndIcon from "@lucide/svelte/icons/gallery-vertical-end";
-	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
 	import { page } from "$app/stores";
 	import * as authApi from "$lib/api/auth";
     import { appRoutePath } from "$lib/config/route";
@@ -32,12 +32,19 @@
 		successMsg = null;
 		try {
 			const res = await authApi.confirmPasswordReset(token, password);
-			if (res.statusCode < 200 || res.statusCode >= 300) {
+			const statusCode = res.statusCode ?? 500;
+			if (statusCode < 200 || statusCode >= 300) {
 				throw new Error(res.message ?? "Reset failed");
 			}
 			successMsg = "Password reset successful. You can now log in.";
 			const next = res.data?.redirect ?? appRoutePath.auth.login;
-			await goto(next);
+			const target = new URL(next, window.location.origin);
+			if (target.origin !== window.location.origin) {
+				window.location.href = target.toString();
+				return;
+			}
+			window.location.href = resolve(appRoutePath.auth.login);
+			return;
 		} catch (err) {
 			errorMsg = (err as Error)?.message ?? "Failed to reset password";
 		} finally {

@@ -112,6 +112,18 @@ Swagger 文件位於 `http://localhost:<PORT>/openapi`。
 
 ---
 
+### 6-5. Asset & Storage Strategy
+本專案採用 **Object Storage First** 策略 (MinIO/S3)，嚴禁使用本地檔案系統儲存使用者上傳內容。
+- **詳見指南**：[Asset Upload & Storage Guide](../how-to-asset-upload-and-storage.md)
+- **核心原則**：Frontend Direct Upload (Init -> Upload -> Complete)。
+
+### 6-6. Multilingual Strategy
+採用 `posts` (Shared Metadata) + `post_contents` (Localized Content) 的資料庫設計模式。
+- **詳見指南**：[Multilingual Implementation Guide](../how-to-multilingual-implementation.md)
+- **API 原則**：使用 Upsert 邏輯處理多語系內容更新。
+
+---
+
 ## 7. Logger & Error Handling
 
 專案採用統一的 `LoggerService` 與 `GlobalExceptionFilter` 確保日誌格式（JSON in Prod）與錯誤回應一致。

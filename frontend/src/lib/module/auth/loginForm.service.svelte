@@ -4,6 +4,7 @@
 	import * as Card from "$lib/components/ui/card/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import { appRoutePath } from "$lib/config/route";
+	import { resolve } from "$app/paths";
 	import type { AuthState } from "$lib/store/authStore";
 	import {
 		FieldGroup,
@@ -13,12 +14,11 @@
 		FieldError,
 	} from "$lib/components/ui/field/index.js";
 	import { onDestroy } from "svelte";
-	import { goto } from "$app/navigation";
 
 
 	const id = $props.id();
 
-	let authState = $state<AuthState>({ session: null, status: "idle", message: null });
+	let authState = $state<AuthState>({ session: null, user: null, status: "idle", message: null });
 	const unsubscribe = authStore.subscribe((value) => (authState = value));
 	onDestroy(unsubscribe);
 	const { login } = authStore;
@@ -63,7 +63,7 @@
 				<Field data-invalid={Boolean(apiError)}>
 					<div class="flex items-center">
 						<FieldLabel for="password-{id}">Password</FieldLabel>
-						<a href={appRoutePath.auth.forgotPassword} class="ml-auto inline-block text-sm underline">
+							<a href={resolve(appRoutePath.auth.forgotPassword)} class="ml-auto inline-block text-sm underline">
 							Forgot your password?
 						</a>
 					</div>
@@ -103,9 +103,9 @@
 							{apiSuccess}
 						</FieldDescription>
 					{/if}
-					<FieldDescription class="text-center">
-						Don't have an account? <a href={appRoutePath.auth.register}>Sign up</a>
-					</FieldDescription>
+						<FieldDescription class="text-center">
+							Don't have an account? <a href={resolve(appRoutePath.auth.register)}>Sign up</a>
+						</FieldDescription>
 				</Field>
 			</FieldGroup>
 		</form>

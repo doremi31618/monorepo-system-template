@@ -11,6 +11,10 @@
   import { Textarea } from '$lib/components/ui/textarea';
   import type { Role, Permission } from '@share/contract';
 
+  type RoleWithPermissions = Role & {
+    rolePermissions?: Array<{ permission: { id: string } }>;
+  };
+
   let roles: Role[] = [];
   
   // Edit/Create Sheet
@@ -68,8 +72,8 @@
       // Shared `Role` only has basic fields.
       // We should probably check if `api.getRoles` returns enriched objects.
       
-      const r = role as any; 
-      selectedPermissionIds = r.rolePermissions?.map((rp: any) => rp.permission.id) || [];
+      const roleWithPermissions = role as RoleWithPermissions;
+      selectedPermissionIds = roleWithPermissions.rolePermissions?.map((rp) => rp.permission.id) || [];
       showSheet = true;
   }
 
@@ -80,21 +84,24 @@
 
   async function saveRole() {
       try {
-          let saved: Role;
+          let saved: Role | null = null;
           if (isCreating) {
-              const res = await api.createRole(currentRole as any);
-              saved = res.data;
+              const res = await api.createRole({
+                  name: currentRole.name ?? '',
+                  description: currentRole.description,
+              });
+              saved = res.data ?? null;
           } else {
               const res = await api.updateRole(currentRole.id!, currentRole);
-              saved = res.data;
+              saved = res.data ?? null;
           }
 
-          if (saved && saved.id) {
+          if (saved?.id) {
               await api.updateRolePermissions(saved.id, selectedPermissionIds);
           }
           await loadRoles();
           showSheet = false;
-      } catch(e) {
+      } catch {
           alert('Failed to save role');
       }
   }
@@ -104,7 +111,7 @@
           try {
               await api.deleteRole(roleToDelete.id);
               await loadRoles();
-          } catch(e) {
+          } catch {
               alert('Failed to delete role');
           } finally {
               showDeleteDialog = false;

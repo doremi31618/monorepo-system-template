@@ -87,6 +87,16 @@ npm run dev        # 預設 http://localhost:5173
     -   進階保護：在 `+page.ts` load function 中檢查 `permissionStore`，若 `!hasPermission` 則 throw redirect/error。
 
 
+### 5-2. Asset Handling & Direct Upload
+前端負責將檔案直接上傳至 Object Storage (MinIO/S3)，不經過後端 Server。
+- **詳見指南**：[Asset Upload & Storage Guide](../guides/asset-upload-and-storage.md)
+- **流程**：取得 Presigned URL (`/init`) -> PUT 上傳 -> 通知後端 (`/complete`)。
+
+### 5-3. Multilingual Support
+編輯器與公開頁面需支援多語系切換。
+- **詳見指南**：[Multilingual Implementation Guide](../guides/multilingual-implementation.md)
+- **原則**：URL 作為語系狀態的 Source of Truth (`?locale=zh-TW`)。
+
 ---
 
 ## 6. 上線前檢查清單

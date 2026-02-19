@@ -4,13 +4,13 @@ import { z } from 'zod';
 export const envSchema = z.object({
 	//App 
 	PORT: z.string().optional().default('3333'),
-    NODE_ENV: z.enum(['dev', 'prd']).optional().default('dev'),
+	NODE_ENV: z.enum(['dev', 'prd']).optional().default('dev'),
 	API_PROTOCOL: z.string().optional().default('http'),
 	API_HOST: z.string().optional().default('localhost'),
 
-    //Connecting Info
+	//Connecting Info
 	HOST_URL: z.url().optional().default('http://localhost:3333'),//compute if missing
-    FRONTEND_URL: z.url().optional().default('http://localhost:5173'),//compute if missing
+	FRONTEND_URL: z.url().optional().default('http://localhost:5173'),//compute if missing
 	DATABASE_URL: z.string().optional().default('postgres://postgres:postgres@localhost:5432/postgres'),
 
 	//Mail
@@ -21,10 +21,19 @@ export const envSchema = z.object({
 	SMTP_FROM: z.string().nonempty(),
 
 	//Google sso
-	GOOGLE_SSO_CLIENT_ID: z.string().nonempty(),
-	GOOGLE_SSO_CLIENT_SECRET: z.string().nonempty(),
+	GOOGLE_SSO_CLIENT_ID: z.string().optional(),
+	GOOGLE_SSO_CLIENT_SECRET: z.string().optional(),
+	GOOGLE_CALLBACK_URL: z.string().optional(),
 
-})
+	// Storage
+	STORAGE_PROVIDER: z.string().default('s3'),
+	STORAGE_REGION: z.string().default('us-east-1'),
+	STORAGE_ENDPOINT: z.string().default('http://localhost:9000'),
+	STORAGE_ACCESS_KEY: z.string().default('minioadmin'),
+	STORAGE_SECRET_KEY: z.string().default('minioadmin'),
+	STORAGE_BUCKET: z.string().default('r3-assets'),
+	STORAGE_FORCE_PATH_STYLE: z.string().default('true'),
+});
 
 export type Env = z.infer<typeof envSchema>;
 
