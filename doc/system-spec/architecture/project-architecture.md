@@ -40,7 +40,7 @@ monorepo-auth-fullstack/
                                                          └─ (可選) AWS SES / SMTP for emails
 ```
 
-- Frontend 透過 `AppConfig.apiBaseUrl` 指向 backend；預設 `http://localhost:3333`。
+- Frontend 透過 `AppConfig.apiBaseUrl` 指向 backend；預設 `http://localhost:3333/v1`。
 - Backend 暴露 `/auth/*` API，並透過 Drizzle 讀寫 PostgreSQL。`SessionCleanupService` 以 cron 刪除過期 session。
 - Swagger (`/openapi`) 提供 API 文件；未來可用同一 repo 進行 CI/CD，部署到容器或 serverless。
 

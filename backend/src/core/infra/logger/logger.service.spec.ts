@@ -1,15 +1,24 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { LoggerService } from './logger.service';
+import appConfig from '../config/app.config';
 
 describe('LoggerService', () => {
   let service: LoggerService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [LoggerService],
+      providers: [
+        LoggerService,
+        {
+          provide: appConfig.KEY,
+          useValue: {
+            env: 'dev'
+          }
+        }
+      ],
     }).compile();
 
-    service = module.get<LoggerService>(LoggerService);
+    service = await module.resolve<LoggerService>(LoggerService);
   });
 
   it('should be defined', () => {

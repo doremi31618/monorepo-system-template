@@ -3,6 +3,7 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import * as Card from "$lib/components/ui/card/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
+	import { AppConfig } from "$lib/config";
 	import { appRoutePath } from "$lib/config/route";
 	import { resolve } from "$app/paths";
 	import type { AuthState } from "$lib/store/authStore";
@@ -36,7 +37,7 @@
 	}
 
 	async function handleGoogleLogin() {
-		window.location.href = 'http://localhost:3333/auth/google/login';
+		window.location.href = `${AppConfig.apiBaseUrl.replace(/\/$/, "")}/auth/google/login`;
 	}
 
 </script>

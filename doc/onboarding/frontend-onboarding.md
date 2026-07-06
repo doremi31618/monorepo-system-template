@@ -20,7 +20,7 @@ npm install
 npm run dev        # 預設 http://localhost:5173
 ```
 
-前端會使用 `src/lib/config/index.ts` 的 `AppConfig.apiBaseUrl` 與後端溝通，預設為 `http://localhost:3333`。如後端埠號不同，請於此檔調整。
+前端會使用 `src/lib/config/index.ts` 的 `AppConfig.apiBaseUrl` 與後端溝通，預設為 `http://localhost:3333/v1`。如後端埠號不同，請透過 `frontend/.env` 的 `VITE_API_BASE_URL` 調整。
 
 ---
 

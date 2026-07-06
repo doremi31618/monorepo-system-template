@@ -49,6 +49,7 @@ monorepo-auth-fullstack/
 ### 3.1 使用 Docker Compose 一次啟動全部服務
 
 - 先決條件：已安裝 Docker Desktop / Docker Engine（包含 Compose v2）。
+- 本機 Node.js 請使用 22.12+ 或 24.x；專案根目錄提供 `.nvmrc`，可執行 `nvm use`。
 - 第一次啟動前，確認 `backend/.env` 已存在；若沒有，可執行 `cp backend/.env.example backend/.env` 並依需求調整 `PORT / API_BASE_URL`（後端對外位址）。
 - 在專案根目錄執行：
 
@@ -58,7 +59,7 @@ docker compose up --build
 
 - 服務啟動後：
   - 前端（SvelteKit）位於 `http://localhost:5173`
-  - 後端（NestJS）位於 `http://localhost:3333`（或 .env 設定的 `PORT`）
+  - 後端（NestJS）位於 `http://localhost:3333`（或 .env 設定的 `PORT`），API 預設路徑為 `http://localhost:3333/v1`
   - Postgres 位於 `localhost:5432`
 
 **常用指令**
@@ -118,7 +119,7 @@ npm install
 npm run dev
 ```
 
-4. 前端會連線到 `AppConfig.apiBaseUrl`（以 `VITE_API_BASE_URL` 為準，預設 `http://localhost:3333`）。
+4. 前端會連線到 `AppConfig.apiBaseUrl`（以 `VITE_API_BASE_URL` 為準，預設 `http://localhost:3333/v1`）。
 5. 瀏覽 `http://localhost:5173` 進行開發。
 
 ---

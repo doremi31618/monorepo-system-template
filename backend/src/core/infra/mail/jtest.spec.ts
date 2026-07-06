@@ -8,10 +8,10 @@ const describeIntegration = shouldRunIntegration ? describe : describe.skip;
 
 describeIntegration('SMTP integration test', () => {
 	it('sends an email using the configured SMTP server', async () => {
-		const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, MAIL_FROM } =
+		const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM } =
 			process.env;
 
-		if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS || !MAIL_FROM) {
+		if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS || !SMTP_FROM) {
 			throw new Error('Missing SMTP configuration in environment variables.');
 		}
 
@@ -30,9 +30,9 @@ describeIntegration('SMTP integration test', () => {
 			}
 		});
 
-		const to = process.env.MAIL_TEST_TO ?? MAIL_FROM;
+		const to = process.env.MAIL_TEST_TO ?? SMTP_FROM;
 		const info = await transporter.sendMail({
-			from: MAIL_FROM,
+			from: SMTP_FROM,
 			to,
 			subject: '[SMTP integration] Hello via Jest',
 			text: `Hi (sent at ${new Date().toISOString()})`,

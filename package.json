@@ -2,6 +2,10 @@
   "name": "monorepo-system-template",
   "version": "0.0.0",
   "private": true,
+  "engines": {
+    "node": ">=22.12.0 <25",
+    "npm": ">=10 <12"
+  },
   "scripts": {
     "start": "nx run-many --target=start",
     "build": "nx run-many --target=build",

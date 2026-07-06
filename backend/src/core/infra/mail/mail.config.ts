@@ -10,10 +10,10 @@ export type MailConfig = {
 
 export default registerAs('mail', ():MailConfig => {
     return {
-        host: process.env.MAIL_HOST,
-        port: Number(process.env.MAIL_PORT),
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASS,
-        from: process.env.MAIL_FROM
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT ?? 465),
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+        from: process.env.SMTP_FROM
     }
 })

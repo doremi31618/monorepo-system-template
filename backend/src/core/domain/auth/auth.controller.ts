@@ -33,7 +33,7 @@ import { extractSessionToken } from './utils/token.util.js';
 
 const refreshCookieBaseOptions = {
 	httpOnly: true,
-	secure: process.env.NODE_ENV === 'production',
+	secure: process.env.NODE_ENV === 'prd',
 	sameSite: 'lax' as const,
 	path: '/'
 };

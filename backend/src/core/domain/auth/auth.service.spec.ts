@@ -4,11 +4,7 @@ import type { SessionRepository } from './auth.repository.js';
 import type { UserRepository } from '../user/user.repository.js';
 import { AuthService } from './auth.service.js';
 import { MailService } from '../../infra/mail/mail.service.js';
-
-jest.mock('bcrypt', () => ({
-	compare: jest.fn(),
-	hash: jest.fn()
-}));
+import { LoggerService } from '../../infra/logger/logger.service.js';
 
 describe('AuthService', () => {
 
@@ -16,13 +12,7 @@ describe('AuthService', () => {
 	let userRepository: jest.Mocked<UserRepository>;
 	let sessionRepository: jest.Mocked<SessionRepository>;
 	let mailService: jest.Mocked<MailService>;
-
-	const compareMock = bcrypt.compare as jest.MockedFunction<
-		(data: string | Buffer, encrypted: string) => Promise<boolean>
-	>;
-	const hashMock = bcrypt.hash as jest.MockedFunction<
-		(data: string | Buffer, saltOrRounds: string | number) => Promise<string>
-	>;
+	let logger: jest.Mocked<LoggerService>;
 
 	beforeEach(() => {
 		userRepository = {
@@ -47,7 +37,18 @@ describe('AuthService', () => {
 			sendResetPasswordEmail: jest.fn()
 		} as unknown as jest.Mocked<MailService>;
 
-		service = new AuthService(userRepository, sessionRepository, mailService);
+		logger = {
+			setContext: jest.fn(),
+			log: jest.fn(),
+			error: jest.fn()
+		} as unknown as jest.Mocked<LoggerService>;
+
+		service = new AuthService(
+			userRepository,
+			sessionRepository,
+			mailService,
+			logger
+		);
 		jest.clearAllMocks();
 	});
 
@@ -65,7 +66,13 @@ describe('AuthService', () => {
 			sessionRepository.createSession.mockResolvedValue({
 				id: 'session-id',
 				userId: 1,
-				sessionToken: 'session-token',
+			sessionToken: 'session-token',
+			expiresAt: new Date()
+			} as any);
+			sessionRepository.createRefreshToken.mockResolvedValue({
+				id: 'refresh-token-id',
+				userId: 1,
+				refreshToken: 'refresh-token',
 				expiresAt: new Date()
 			} as any);
 
@@ -90,12 +97,18 @@ describe('AuthService', () => {
 
 		it('returns user identity when credentials are valid', async () => {
 			const user = buildUser();
+			user.password = await bcrypt.hash(loginDto.password, 10);
 			userRepository.getUserByEmail.mockResolvedValue(user);
-			compareMock.mockResolvedValue(true);
 			sessionRepository.createSession.mockResolvedValue({
 				id: 'session-id',
 				userId: user.id,
 				sessionToken: 'session-token',
+				expiresAt: new Date()
+			} as any);
+			sessionRepository.createRefreshToken.mockResolvedValue({
+				id: 'refresh-token-id',
+				userId: user.id,
+				refreshToken: 'refresh-token',
 				expiresAt: new Date()
 			} as any);
 
@@ -103,10 +116,6 @@ describe('AuthService', () => {
 
 			expect(userRepository.getUserByEmail).toHaveBeenCalledWith(
 				loginDto.email
-			);
-			expect(compareMock).toHaveBeenCalledWith(
-				loginDto.password,
-				user.password
 			);
 			expect(sessionRepository.createSession).toHaveBeenCalledTimes(1);
 			expect(result).toEqual(
@@ -124,14 +133,13 @@ describe('AuthService', () => {
 			await expect(service.login(loginDto)).rejects.toThrow(
 				new BadRequestException('Invalid credentials')
 			);
-			expect(compareMock).not.toHaveBeenCalled();
 			expect(sessionRepository.createSession).not.toHaveBeenCalled();
 		});
 
 		it('throws when the password is invalid', async () => {
 			const user = buildUser();
+			user.password = await bcrypt.hash('different-password', 10);
 			userRepository.getUserByEmail.mockResolvedValue(user);
-			compareMock.mockResolvedValue(false);
 			sessionRepository.createSession.mockResolvedValue({
 				id: 'session-id',
 				userId: user.id,
@@ -141,10 +149,6 @@ describe('AuthService', () => {
 
 			await expect(service.login(loginDto)).rejects.toThrow(
 				new BadRequestException('Invalid credentials')
-			);
-			expect(compareMock).toHaveBeenCalledWith(
-				loginDto.password,
-				user.password
 			);
 		});
 	});
@@ -158,12 +162,11 @@ describe('AuthService', () => {
 
 		it('hashes the password, creates the user, and returns identity', async () => {
 			userRepository.getUserByEmail.mockResolvedValue(null);
-			hashMock.mockResolvedValue('hashed-password');
 			userRepository.createUser.mockResolvedValue({
 				id: 2,
 				email: signupDto.email,
 				name: signupDto.name,
-				password: 'hashed-password',
+				password: 'stored-hash',
 				createdAt: new Date(),
 				updatedAt: new Date()
 			});
@@ -173,18 +176,29 @@ describe('AuthService', () => {
 				sessionToken: 'session-token',
 				expiresAt: new Date()
 			} as any);
+			sessionRepository.createRefreshToken.mockResolvedValue({
+				id: 'refresh-token-id',
+				userId: 2,
+				refreshToken: 'refresh-token',
+				expiresAt: new Date()
+			} as any);
 
 			const result = await service.signup(signupDto);
 
 			expect(userRepository.getUserByEmail).toHaveBeenCalledWith(
 				signupDto.email
 			);
-			expect(hashMock).toHaveBeenCalledWith(signupDto.password, 10);
-			expect(userRepository.createUser).toHaveBeenCalledWith({
-				email: signupDto.email,
-				password: 'hashed-password',
-				name: signupDto.name
-			});
+			expect(userRepository.createUser).toHaveBeenCalledWith(
+				expect.objectContaining({
+					email: signupDto.email,
+					name: signupDto.name
+				})
+			);
+			const createdUser = userRepository.createUser.mock.calls[0][0];
+			expect(createdUser.password).not.toBe(signupDto.password);
+			await expect(
+				bcrypt.compare(signupDto.password, createdUser.password)
+			).resolves.toBe(true);
 			expect(sessionRepository.createSession).toHaveBeenCalledWith(
 				expect.objectContaining({
 					userId: 2
@@ -205,7 +219,6 @@ describe('AuthService', () => {
 			await expect(service.signup(signupDto)).rejects.toThrow(
 				new BadRequestException('User already exists')
 			);
-			expect(hashMock).not.toHaveBeenCalled();
 			expect(userRepository.createUser).not.toHaveBeenCalled();
 			expect(sessionRepository.createSession).not.toHaveBeenCalled();
 		});

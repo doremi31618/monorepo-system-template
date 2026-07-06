@@ -63,21 +63,16 @@ export class S3StorageStrategy implements IStorageStrategy {
     }
 
     async head(key: string): Promise<{ size: number; etag?: string; contentType?: string }> {
-        try {
-            const command = new HeadObjectCommand({
-                Bucket: this.bucket,
-                Key: key,
-            });
-            const response = await this.s3Client.send(command);
-            return {
-                size: response.ContentLength || 0,
-                etag: response.ETag,
-                contentType: response.ContentType,
-            };
-        } catch (error) {
-            // Re-throw or handle "NotFound" specifically if needed
-            throw error;
-        }
+        const command = new HeadObjectCommand({
+            Bucket: this.bucket,
+            Key: key,
+        });
+        const response = await this.s3Client.send(command);
+        return {
+            size: response.ContentLength || 0,
+            etag: response.ETag,
+            contentType: response.ContentType,
+        };
     }
 
     async upload(buffer: Buffer, key: string, mimeType: string): Promise<void> {

@@ -5,6 +5,7 @@
 	import { Input } from "$lib/components/ui/input/index.js";
 	import type { ComponentProps } from "svelte";
 	import { authStore } from "$lib/store/authStore";
+	import { AppConfig } from "$lib/config";
 	import { appRoutePath } from "$lib/config/route";
 	import { resolve } from "$app/paths";
 	import type { AuthState } from "$lib/store/authStore";
@@ -66,7 +67,7 @@
 	}
 
 	function handleGoogleSignup(){
-		window.location.href = 'http://localhost:3333/auth/google/signup';
+		window.location.href = `${AppConfig.apiBaseUrl.replace(/\/$/, "")}/auth/google/signup`;
 	}
 
 	let { ...restProps }: ComponentProps<typeof Card.Root> = $props();

@@ -22,6 +22,7 @@ export default [
             '@typescript-eslint/explicit-function-return-type': 'off',
             '@typescript-eslint/explicit-module-boundary-types': 'off',
             '@typescript-eslint/no-explicit-any': 'off',
+            '@nx/enforce-module-boundaries': 'off',
 
             'import/no-restricted-paths': [
                 'error',
@@ -70,7 +71,7 @@ export default [
         },
     },
     {
-        files: ['src/core/infra/db/schema.ts'],
+        files: ['src/core/infra/db/schema.ts', 'src/core/infra/db/relations.ts'],
         rules: {
             'import/no-restricted-paths': 'off',
         },

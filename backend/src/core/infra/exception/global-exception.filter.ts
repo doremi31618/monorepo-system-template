@@ -13,9 +13,6 @@ type ApiResponse<T> = {
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
-    constructor() { }
-
-
     //unit exception message to avoid sensitive information disclosure
     catch(exception: unknown, host: ArgumentsHost): void {
         const ctx = host.switchToHttp();
