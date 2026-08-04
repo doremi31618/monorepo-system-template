@@ -29,7 +29,7 @@
 ## 目錄速覽
 
 ```
-frontend/src
+apps/web/src
 ├── routes/                 # SvelteKit 檔案式路由
 │   ├── +layout.svelte
 │   ├── auth/login/+page.svelte

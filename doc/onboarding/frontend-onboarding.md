@@ -1,109 +1,46 @@
 # Frontend Onboarding Guide
 
-協助工程師在 monorepo-auth-fullstack 前端專案中快速完成環境建置、了解常用指令與開發規範。
+前端採 SvelteKit 5 + Tailwind CSS 4。應用位於 `apps/web`，共用元件位於 `packages/ui`，Storybook 位於獨立的 `apps/storybook`。
 
----
+## 環境與啟動
 
-## 1. 先決條件
-
-- Node.js 20+、npm 10+。
-- 建議開發工具：VS Code（含 Svelte、TypeScript、Tailwind 插件）。
-- 若需一次啟動整套服務，請安裝 Docker Desktop（或 Docker Engine + Compose v2）。
-
----
-
-## 2. 安裝與啟動
+- Node.js 22 LTS
+- Bun 1.3+
 
 ```bash
-cd frontend
-npm install
-npm run dev        # 預設 http://localhost:5173
+bun install
+bun run dev:web
 ```
 
-前端會使用 `src/lib/config/index.ts` 的 `AppConfig.apiBaseUrl` 與後端溝通，預設為 `http://localhost:3333/v1`。如後端埠號不同，請透過 `frontend/.env` 的 `VITE_API_BASE_URL` 調整。
+預設前端位於 `http://localhost:5173`。若 API 不在預設網址，請在 `apps/web/.env` 設定 `VITE_API_BASE_URL`。
 
----
+## 常用指令
 
-## 3. 常用指令
-
-| 指令 | 說明 |
+| 指令 | 用途 |
 | --- | --- |
-| `npm run dev` | 啟動 Vite dev server，支援 HMR。 |
-| `npm run build` / `npm run preview` | 建置並預覽產線 bundle。 |
-| `npm run check` | 執行 `svelte-check` + TypeScript 檢查。 |
-| `npm run lint` | `prettier --check` + ESLint（Flat config）。 |
-| `npm run format` | 使用 Prettier 套用格式。 |
-| `npm run storybook` / `npm run build-storybook` | 開發或建置 UI 元件文件。 |
+| `bun run dev:web` | 啟動 SvelteKit dev server |
+| `bun run --filter @platform/web check` | Svelte 與 TypeScript 檢查 |
+| `bun run --filter @platform/web lint` | Web 靜態規則檢查 |
+| `bun run --filter @platform/web build` | 建置 Web app |
+| `bun run --filter @platform/storybook dev` | 啟動 Storybook |
+| `bun run --filter @platform/storybook build` | 建置 Storybook |
+| `bun run --filter @platform/ui check` | 驗證共用 UI 套件 |
 
----
+## 邊界規則
 
-## 4. Coding Standard
+- route 與 app-specific feature 留在 `apps/web/src`。
+- 可重用 UI primitive 放在 `packages/ui`，並從 `@platform/ui/<component>` 匯入。
+- API 型別與 permission 常數來自 `@platform/contracts`；HTTP client 來自 `@platform/sdk`。
+- 不要把 app store、route 或環境設定移進 UI 套件。
+- 新增共用 UI 時，同步補 Storybook story；避免讓 Storybook 設定回流到 Web app。
 
-- **TypeScript First**：所有檔案使用 `.ts/.svelte` 並補上顯式型別；避免 `any`。
-- **模組化路由**：頁面 (`src/routes/*`) 保持輕量，商業邏輯放在 `src/lib/module` 或 store。
-- **狀態管理**：共用 session 狀態由 `authStore` 管理；若新增 store，提供 `subscribe`/method API 並封裝副作用。
-- **匯入別名**：統一使用 `$lib/*`, `$app/*` 避免相對路徑地獄。
-- **UI 指南**：優先使用 `src/lib/components/ui/*` 封裝元件；客製樣式以 Tailwind utility classes 為主。
-- **Lint/Format**：提交前必須通過 `npm run lint` 與 `npm run check`。PR 附上測試/驗證結果。
+## 提交前
 
----
+```bash
+bun run lint
+bun run check
+bun run test
+bun run build
+```
 
-## 5. Development Standard
-
-1. **需求追蹤**：任何新功能或修正需在 `project-progress/*.md` 建立工作項（註明 `[frontend]`）。
-2. **Branch Flow**：建議命名 `feature/<scope>-<desc>`；PR 說明包含背景、修改點、驗證方式。
-3. **測試與驗證**：
-   - UI/互動：至少進行手動 smoke test；元件層可新增 Storybook stories 或 Vitest + Playwright 測試。
-   - Store/utility：善用 Vitest 撰寫單元測試。
-4. **錯誤處理**：API 回傳需保留 `statusCode`、`message`；UI 需能顯示錯誤訊息而非直接丟例外。
-5. **可維護性**：共用常數、路由、API path 由 `src/lib/config` 管理；表單驗證邏輯抽成 util 方便重複使用。
-
-### 5-1. Permission Management (RBAC)
-前端透過 `permissionStore` 與 `PermissionGuard` 進行權限管理。
-
--   **Initialization**: App 啟動或登入後，需呼叫 `permissionStore.loadPermissions()` 載入權限。
-    ```typescript
-    import { permissionStore } from '$lib/store/permissionStore';
-    
-    // In Layout or after Login
-    onMount(() => {
-        permissionStore.loadPermissions();
-    });
-    ```
-
--   **Component Protection**: 使用 `<PermissionGuard>` 包裹需權限的 UI。
-    ```svelte
-    <script>
-      import PermissionGuard from '$lib/components/admin/PermissionGuard.svelte';
-    </script>
-
-    <PermissionGuard permission="users.create">
-      <button>Create User</button>
-    </PermissionGuard>
-    ```
-
--   **Route Protection**:
-    -   簡易保護：在 `+layout.svelte` 檢查 Role 或 Store。
-    -   進階保護：在 `+page.ts` load function 中檢查 `permissionStore`，若 `!hasPermission` 則 throw redirect/error。
-
-
-### 5-2. Asset Handling & Direct Upload
-前端負責將檔案直接上傳至 Object Storage (MinIO/S3)，不經過後端 Server。
-- **詳見指南**：[Asset Upload & Storage Guide](../guides/asset-upload-and-storage.md)
-- **流程**：取得 Presigned URL (`/init`) -> PUT 上傳 -> 通知後端 (`/complete`)。
-
-### 5-3. Multilingual Support
-編輯器與公開頁面需支援多語系切換。
-- **詳見指南**：[Multilingual Implementation Guide](../guides/multilingual-implementation.md)
-- **原則**：URL 作為語系狀態的 Source of Truth (`?locale=zh-TW`)。
-
----
-
-## 6. 上線前檢查清單
-
-- [ ] `npm run lint`、`npm run check` 均通過。
-- [ ] 主要流程（登入 / 註冊 / 登出 / 受保護頁）手動驗證成功。
-- [ ] 新增/修改的工作項於 `project-progress` 更新狀態。
-- [ ] 若需後端配合，已同步 Swagger 變更或 API 契約。
-
-完成上述步驟後即可提出 PR，並附上驗證截圖或錄影以利審查。
+目前 Web 的既有頁面仍有非阻擋式 Svelte 可及性警告；新增或修改畫面時不要增加警告數量。

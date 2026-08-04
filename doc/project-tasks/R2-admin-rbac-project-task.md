@@ -161,7 +161,7 @@ All core acceptance criteria have been met:
 - **Refactor (UX)**: Replaced native `alert/confirm` with `Sonner` Toasts and `AlertDialog` for better user experience.
 - **Refactor (Logic)**: Implemented atomic User Role updates in Backend (`updateUser` accepts `roleId`), removing brittle frontend transactional logic.
 - **Access Control**: Verified RBAC end-to-end flow: Permission Matrix -> Role Assignment -> User Guard.
-- **Schema Automation**: Created `PermissionSchema` in `@share/contract` as single source of truth for all permission codes.
+- **Schema Automation**: Created `PermissionSchema` in `@packages/contracts` as single source of truth for all permission codes.
 - **Documentation**: Created comprehensive RBAC How-To Guide (`doc/onboarding/how-to-rbac.md`) covering module creation, seeding, and implementation patterns.
 - **API Documentation**: Added Swagger/OpenAPI decorators to all Admin endpoints. Swagger UI accessible at `/openapi`.
 - **Multi-Role Support**: Enhanced Backend & Frontend to support assigning multiple roles to users.

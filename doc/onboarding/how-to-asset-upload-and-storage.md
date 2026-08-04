@@ -50,7 +50,7 @@ Add the following to your `docker-compose.yml`:
       - ./.docker/minio/data:/data
 ```
 
-### 3.2 Environment Variables (`backend/.env`)
+### 3.2 Environment Variables (`apps/api/.env`)
 
 ```bash
 # Storage Configuration

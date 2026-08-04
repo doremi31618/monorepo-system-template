@@ -7,7 +7,7 @@
 ## 1. Domain Core Implementation
 
 ### 1-1. BaseRepository (Infra Layer)
-在 `backend/src/core/infra/db/base.repository.ts` 建立抽象類別，封裝 Drizzle 的基本操作與型別。
+在 `apps/api/src/core/infra/db/base.repository.ts` 建立抽象類別，封裝 Drizzle 的基本操作與型別。
 
 ```typescript
 import { Inject } from '@nestjs/common';
@@ -30,7 +30,7 @@ export abstract class BaseRepository {
 將 `UserRepository` 改為繼承 `BaseRepository`，並確保其僅依賴 Domain Schema (如果已拆分)。
 
 ```typescript
-// backend/src/core/domain/user/user.repository.ts
+// apps/api/src/core/domain/user/user.repository.ts
 import { Injectable } from '@nestjs/common';
 import { BaseRepository } from '../../infra/db/base.repository.js';
 import { schema } from '../../infra/db/schema.js'; // 使用 aggregator 或 module specific schema
@@ -49,7 +49,7 @@ export class UserRepository extends BaseRepository {
 - **避免循環依賴 (Circular Dependency)**: 通常 `UserModule` 會依賴 `Auth` (例如建立使用者時雜湊密碼)，若 `Auth` 又依賴 `User` (驗證帳號)，容易造成 NestJS 循環相依問題。透過 Interface (`IUserService`)，我們可以讓 `Auth` 只相依於一個抽象介面，而 `User` 實作該介面。
 - **測試性 (Testability)**: 測試 `AuthService` 時，可以輕鬆 mock `IUserService` 而不需要 mock 整個 Database Repo。
 
-**Location**: `backend/src/core/domain/user/user.interface.ts`
+**Location**: `apps/api/src/core/domain/user/user.interface.ts`
 
 ```typescript
 export interface IUserService {
@@ -65,7 +65,7 @@ export const IUserService = Symbol('IUserService'); // DI Token
 ### 1-4. AuthModule Refactor
 調整 `AuthService` 不再直接依賴 `UserRepository`，改為依賴 `IUserService`。
 
-**backend/src/core/domain/auth/auth.service.ts**:
+**apps/api/src/core/domain/auth/auth.service.ts**:
 ```typescript
 constructor(
   @Inject(IUserService) private readonly userService: IUserService,
@@ -73,10 +73,10 @@ constructor(
 ) {}
 ```
 
-**backend/src/core/domain/auth/auth.module.ts**:
+**apps/api/src/core/domain/auth/auth.module.ts**:
 需匯入 `UserModule`，且 `UserModule` 需提供 `IUserService`。
 
-**backend/src/core/domain/user/user.module.ts**:
+**apps/api/src/core/domain/user/user.module.ts**:
 ```typescript
 @Module({
   providers: [
@@ -97,10 +97,10 @@ export class UserModule {}
 ## 2. Auth Base Refinement
 
 ### 2-1. UserIdentity
-確認後端使用的 `UserIdentity` 與 `@share/contract` 對齊。此物件代表 "已驗證的使用者上下文"。
+確認後端使用的 `UserIdentity` 與 `@packages/contracts` 對齊。此物件代表 "已驗證的使用者上下文"。
 
 ```typescript
-// 來自 @share/contract
+// 來自 @packages/contracts
 export class UserIdentity {
   id: number;
   email: string;
@@ -112,7 +112,7 @@ export class UserIdentity {
 ### 2-2. AuthGuard Enhancement
 目前的 `AuthGuard` 僅回傳 `boolean`，需修改為將使用者資訊掛載到 `request` 物件上，以便後續 Controller 使用。
 
-**backend/src/core/domain/auth/auth.guard.ts**:
+**apps/api/src/core/domain/auth/auth.guard.ts**:
 ```typescript
 async canActivate(context: ExecutionContext): Promise<boolean> {
   const request = context.switchToHttp().getRequest();
@@ -134,7 +134,7 @@ async canActivate(context: ExecutionContext): Promise<boolean> {
 ### 2-3. @CurrentUser Decorator
 建立參數裝飾器以取得 `request.user`。
 
-**Location**: `backend/src/core/infra/auth/decorator/current-user.decorator.ts`
+**Location**: `apps/api/src/core/infra/auth/decorator/current-user.decorator.ts`
 
 ```typescript
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';

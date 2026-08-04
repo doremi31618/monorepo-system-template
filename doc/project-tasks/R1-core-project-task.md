@@ -18,11 +18,11 @@ Review action：依 2025-12-05 review，先完成「Pre-M1 Monorepo Bootstrap」
 ## 🎯 Acceptance Criteria（R1-core）
 
 **Pre-M1 — Monorepo Bootstrap**
-•	root package.json + pnpm-workspace.yaml + lockfile；Nx init 完成並註冊 backend/frontend app。
+•	root package.json + pnpm-workspace.yaml + lockfile；Nx init 完成並註冊 apps/api/frontend app。
 •	`/scripts` 改為 Nx target 或 npm script alias 指向 nx；nx graph/lint 可執行（tags scaffold 就緒）。
 
 **Core Refactor & Governance**
-1. Core 結構與邊界：backend/src/core 下完成 core/domain/user（schema/repo/service/IUserService）與 core/infra（config/db/logger/auth-base/utils）；Feature → Domain → Infra；禁止 Feature 直接使用 core/infra/db/schema.ts；Nx graph 無循環依賴。
+1. Core 結構與邊界：apps/api/src/core 下完成 core/domain/user（schema/repo/service/IUserService）與 core/infra（config/db/logger/auth-base/utils）；Feature → Domain → Infra；禁止 Feature 直接使用 core/infra/db/schema.ts；Nx graph 無循環依賴。
 2. Config system：schema 驗證、typed getter、移除隨處 process.env。
 3. Database layer：BaseEntity、BaseRepository、transaction helper；User domain fully on BaseRepository；Schema 按 Domain/Infra/Feature 分層；Drizzle aggregator 只收集 schema。
 4. Logger & Error：JSON logger；GlobalExceptionFilter；LoggingInterceptor。
@@ -39,14 +39,14 @@ Review action：依 2025-12-05 review，先完成「Pre-M1 Monorepo Bootstrap」
 
 | Feature / capability | Status | Notes |
 | --- | --- | --- |
-| Pre-M1 Monorepo bootstrap | ✅ Done | Root package.json + pnpm workspaces + lockfile；Nx init with backend/frontend apps；scripts → Nx target/alias；nx graph runnable. |
-| Core structure (Domain + Infra) | ✅ Done | backend/src/core split into core/domain and core/infra with enforced boundaries. |
+| Pre-M1 Monorepo bootstrap | ✅ Done | Root package.json + pnpm workspaces + lockfile；Nx init with apps/api/frontend apps；scripts → Nx target/alias；nx graph runnable. |
+| Core structure (Domain + Infra) | ✅ Done | apps/api/src/core split into core/domain and core/infra with enforced boundaries. |
 | Domain Core (User) | ✅ Done | User schema/repository/service; implements IUserService for AuthBase and feature modules. |
 | Config system | ✅ Done | ConfigModule with schema validation, environment profiles, typed getters; no direct process.env. |
 | Database layer (Drizzle) | ✅ Done | DatabaseModule, Drizzle setup, BaseEntity/BaseRepository, runInTransaction; schema split by layer; aggregator only for DB client/migration. |
 | Logger & error handling | ✅ Done | JSON logger, LoggingInterceptor, GlobalExceptionFilter with unified envelope. |
 | Auth base (non-RBAC) | ✅ Done | UserIdentity, IUserService token, AuthGuardBase, @CurrentUser decorator; Domain Core supplies IUserService. |
-| Shared utilities | ✅ Done | Pagination/date/id utilities; **Shared HttpClient/StorageService (@share/sdk)**; reused by ≥2 modules. |
+| Shared utilities | ✅ Done | Pagination/date/id utilities; **Shared HttpClient/StorageService (@packages/sdk)**; reused by ≥2 modules. |
 | Nx Workspace (backend + frontend) | ✅ Done | Tags scope:infra-core/scope:domain-core/scope:feature; lint boundary rules; nx graph after migration confirms direction; Nx init done in Pre-M1. |
 | CI/CD on Nx | ✅ Done | CI pipeline uses nx build/test/lint; Nx cache enabled; nx affected wired for future use; legacy scripts mapped to Nx target. |
 | Development guidelines | ✅ Done | DEVELOPMENT_GUIDE.md covering schema ownership, module boundaries, DI, naming/structure, PR checklist. |
@@ -85,14 +85,14 @@ Review action：依 2025-12-05 review，先完成「Pre-M1 Monorepo Bootstrap」
  • Rules: feature → domain/infra；domain-core → infra；infra-core → no domain/feature。
 
 **Packaging strategy**
- • Milestone 1：Core 保留在 backend/src/core。
+ • Milestone 1：Core 保留在 apps/api/src/core。
  • Future milestone：第二個 backend 出現後再抽成共享 library（libs/core 或 @app/core）。
 
 ⸻
 
 ## Tech Spec — Shared API/DTO（Auth）
  • 契約套件：libs/contracts（importPath 建議 @monorepo/contracts），只放 TS interface/type + route 常數；Nest DTO 維持 class-validator decorator，透過 implements shared interface 取代重複型別。
- • Response envelope：ApiResponse<T> = { statusCode: number; message: string; data?: T | null; error?: string | null; timestamp?: string; path?: string }（backend/src/common/response/response.interceptor.ts 與 frontend/src/lib/api/httpClient.ts 需共用）。
+ • Response envelope：ApiResponse<T> = { statusCode: number; message: string; data?: T | null; error?: string | null; timestamp?: string; path?: string }（apps/api/src/common/response/response.interceptor.ts 與 apps/web/src/lib/api/httpClient.ts 需共用）。
  • API/DTO 需搬到 shared/auth：
    - POST /auth/login → AuthLoginRequest { email; password }；Response AuthSession { token: string; refreshToken?: string; userId: number; name: string }（backend LoginDto/UserIdentityDto；frontend Session）。
    - POST /auth/signup → AuthSignupRequest { email; password; name }；Response AuthSession 同上。
@@ -104,7 +104,7 @@ Review action：依 2025-12-05 review，先完成「Pre-M1 Monorepo Bootstrap」
    - Google OAuth login/signup/callback：為瀏覽器 redirect 流程，不需共享 DTO。
  • Frontend 清理：$lib/api/auth.ts（Session, UserBasicInfo）、$lib/api/httpClient.ts（ApiResponse）改由 shared 匯入；authStore 狀態沿用 shared.AuthSession。
  • Backend 對齊：Login/Signup/Reset* DTO implements 對應 shared request；SessionDto/UserIdentityDto/SignoutDto implements shared response 並用 @ApiProperty/@Is* decorator；sessionToken → token 命名需對齊 shared。
- • Nx build 接線：nx g @nx/js:lib contracts --directory=libs --importPath=@monorepo/contracts --projectNameAndRootFormat=as-provided --bundler=tsc（或同等生成指令）；在 libs/contracts/src/index.ts 匯出契約並於 backend/frontend tsconfig 加上 path alias；CI/root 指令改為 nx run-many --target=build --projects=contracts,backend,frontend（或 --all），並在 targetDefaults.build.dependsOn 含 "^build" 以確保 contracts 先建置。
+ • Nx build 接線：nx g @nx/js:lib contracts --directory=libs --importPath=@monorepo/contracts --projectNameAndRootFormat=as-provided --bundler=tsc（或同等生成指令）；在 libs/contracts/src/index.ts 匯出契約並於 apps/api/frontend tsconfig 加上 path alias；CI/root 指令改為 nx run-many --target=build --projects=contracts,backend,frontend（或 --all），並在 targetDefaults.build.dependsOn 含 "^build" 以確保 contracts 先建置。
 
 Todo checklist
  - [x] 跑 nx build backend / nx build frontend / nx graph 確認工作區正常
@@ -126,7 +126,7 @@ Todo checklist
 
 Deliverables
  • Pre-M1 monorepo bootstrap（root package.json + pnpm workspace + Nx init + scripts → Nx target/alias）。
- • Domain Core + Infra Core structure in backend/src/core.
+ • Domain Core + Infra Core structure in apps/api/src/core.
  • Layered schema governance（domain/infra/feature）+ Drizzle aggregator in core/infra/db/schema.ts。
  • Nx workspace with tags + boundary lint + graph validation。
  • CI/CD using Nx runner + cache；nx affected ready。
@@ -140,7 +140,7 @@ Deliverables
 
 **Pre-M1 Monorepo bootstrap**
  • 建立 root package.json、pnpm-workspace.yaml、lockfile。
- • Nx init + 註冊 backend/frontend apps；加上基本 build/test/lint target。
+ • Nx init + 註冊 apps/api/frontend apps；加上基本 build/test/lint target。
  • 將 `/scripts` 轉為 Nx target 或 script alias；更新 README/開發指令。
  • 跑 nx graph/format/lint 確認 workspace 正常。
 
@@ -151,8 +151,8 @@ Deliverables
  • [infra/auth-base] UserIdentity, IUserService token, AuthGuardBase, @CurrentUser decorator.
  • [infra/utils] Shared utilities (pagination/date/id) reused across modules.
 
-**Shared SDK (@share/sdk)**
- • [x] Setup `@share/sdk` package and structure.
+**Shared SDK (@packages/sdk)**
+ • [x] Setup `@packages/sdk` package and structure.
  • [x] `StorageService`: Generic storage wrapper with localStorage support.
  • [x] `HttpClient`: Generic HTTP client with token refresh logic (migrated from frontend).
  • [x] Export `SDK` namespace and configure tsconfig paths.
@@ -208,13 +208,13 @@ Deliverables
 ### 2025-12-09
 
 - **Monorepo Shared Library Setup**:
-  - Initialized `@share/contract` package manually for sharing Typescript interfaces between backend and frontend.
+  - Initialized `@packages/contracts` package manually for sharing Typescript interfaces between backend and frontend.
   - Resolved module resolution issues for both frontend (Vite/SvelteKit) and backend (NestJS/CommonJS) to support sourcing directly from `src` (no build step needed for dev).
     - Frontend: Added `customConditions: ["monorepo-system-template"]` in `tsconfig` and `vite.config.ts`.
     - Backend: Configured `paths` in root `tsconfig.base.json` and extended it in backend `tsconfig.json`.
   - Implemented `SessionDto` in shared contract using `class-validator` decorators.
   - Enabled `experimentalDecorators` in shared library to support `class-validator`.
-  - Updated Frontend `auth.ts` and Backend `auth.dto.ts` to import `SessionDto` from `@share/contract`.
+  - Updated Frontend `auth.ts` and Backend `auth.dto.ts` to import `SessionDto` from `@packages/contracts`.
 
 - **Next Steps**:
   - Continue implementing other DTOs in the shared library.
@@ -225,12 +225,12 @@ Deliverables
 ### 2025-12-11
 
 - **Refactor `HttpClient` to Shared SDK**:
-  - Moved generic generic `StorageService` and `HttpClient` logic from frontend to `@share/sdk`.
-  - Implemented `SDK.Frontend.HttpClient` in `@share/sdk` with generic support, internal `StorageService` usage, and automatic token refresh logic.
-  - Updated `@share/sdk` to export `SDK` namespace containing `Frontend` modules.
-  - Added `@share/sdk` to `tsconfig.base.json` paths for monorepo resolution.
+  - Moved generic generic `StorageService` and `HttpClient` logic from frontend to `@packages/sdk`.
+  - Implemented `SDK.Frontend.HttpClient` in `@packages/sdk` with generic support, internal `StorageService` usage, and automatic token refresh logic.
+  - Updated `@packages/sdk` to export `SDK` namespace containing `Frontend` modules.
+  - Added `@packages/sdk` to `tsconfig.base.json` paths for monorepo resolution.
   - **Frontend Update**:
-    - Replaced `frontend/src/lib/api/httpClient.ts` with instantiation in `frontend/src/lib/utils.ts` using `SDK.Frontend.HttpClient`.
+    - Replaced `apps/web/src/lib/api/httpClient.ts` with instantiation in `apps/web/src/lib/utils.ts` using `SDK.Frontend.HttpClient`.
     - Updated `AppConfig` injection into the shared client.
     - Updated `auth.ts` to import `httpClient` from `../utils`.
   - Verified structure and imports.
@@ -269,7 +269,7 @@ Deliverables
   - **Exempted Schema Aggregator**: Configured `src/core/infra/db/schema.ts` to bypass boundary rules (required for Drizzle Runtime).
 
 - **ESM Migration (Backend)**:
-  - Enabled `"type": "module"` in `backend/package.json` to support ESM-only `@share/contract`.
+  - Enabled `"type": "module"` in `apps/api/package.json` to support ESM-only `@packages/contracts`.
   - Ran migration script to append `.js` extensions to all relative imports and resolve `src/` aliases.
   - Disabled `@nestjs/swagger` CLI plugin temporarily (incompatible with ESM build) to resolve `Debug Failure` crash.
   
@@ -306,7 +306,7 @@ Deliverables
 
 - **Logger & Error Handling Research (Phase 1)**:
   - Investigated requirements for centralized logging and error handling.
-  - Verified `ApiResponse` contract in `@share/contract` to ensure consistent error envelopes.
+  - Verified `ApiResponse` contract in `@packages/contracts` to ensure consistent error envelopes.
   - **Designed "Smart Logger" Architecture**:
     - Switches between JSON (Production) and Pretty Print (Development) modes based on `NODE_ENV`.
     - Leverages existing `AppConfig` for environment detection.
@@ -333,7 +333,7 @@ Deliverables
     - Implemented smart logging: Switches between Pretty Print (Dev) and JSON (Prod) based on `AppConfig`.
     - Integrated with NestJS dependency injection (`ConsoleLogger` extension with `SCOPE.TRANSIENT`).
   - **GlobalExceptionFilter**:
-    - Implemented standardized error handling using `@share/contract` `ApiResponse` type.
+    - Implemented standardized error handling using `@packages/contracts` `ApiResponse` type.
     - Registered via `APP_FILTER` in `ExceptionModule` to support dependency injection (LoggerService).
   - **Interceptors**:
     - **LoggingInterceptor**: Implemented request timing and system logging (Before/After logic) using RxJS `tap`.

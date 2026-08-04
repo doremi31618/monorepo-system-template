@@ -19,8 +19,8 @@
 ## Overview
 
 Our RBAC system uses a **Single Source of Truth** approach:
-- **Schema**: [`share/contract/src/lib/constants/permissions.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/share/contract/src/lib/constants/permissions.ts) defines all permission constants.
-- **Config**: [`backend/src/core/infra/config/access-control.config.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/backend/src/core/infra/config/access-control.config.ts) derives permissions and role mappings from the schema.
+- **Schema**: [`packages/contracts/src/lib/constants/permissions.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/packages/contracts/src/lib/constants/permissions.ts) defines all permission constants.
+- **Config**: [`apps/api/src/core/infra/config/access-control.config.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/apps/api/src/core/infra/config/access-control.config.ts) derives permissions and role mappings from the schema.
 - **Seeding**: Automatically runs on module init to sync DB with config.
 
 ### Key Components
@@ -37,7 +37,7 @@ Let's add a **Blog** module with CRUD permissions.
 
 ### Step 1.1: Define Permission Schema
 
-Edit [`share/contract/src/lib/constants/permissions.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/share/contract/src/lib/constants/permissions.ts):
+Edit [`packages/contracts/src/lib/constants/permissions.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/packages/contracts/src/lib/constants/permissions.ts):
 
 ```typescript
 export const PermissionSchema = {
@@ -61,7 +61,7 @@ export const PermissionSchema = {
 ### Step 1.2: Rebuild Shared Package
 
 ```bash
-cd share/contract
+cd packages/contracts
 npm run build
 ```
 
@@ -71,10 +71,10 @@ npm run build
 
 ### Step 2.1: Update Config
 
-Edit [`backend/src/core/infra/config/access-control.config.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/backend/src/core/infra/config/access-control.config.ts):
+Edit [`apps/api/src/core/infra/config/access-control.config.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/apps/api/src/core/infra/config/access-control.config.ts):
 
 ```typescript
-import { PermissionSchema } from '@share/contract';
+import { PermissionSchema } from '@packages/contracts';
 
 const permissions = [
     // ... existing permissions ...
@@ -116,7 +116,7 @@ Check logs:
 
 ### Option A: Update Existing Roles
 
-Edit the `rolePermissions` mapping in [`access-control.config.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/backend/src/core/infra/config/access-control.config.ts):
+Edit the `rolePermissions` mapping in [`access-control.config.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/apps/api/src/core/infra/config/access-control.config.ts):
 
 ```typescript
 rolePermissions: {
@@ -165,7 +165,7 @@ Use `PermissionGuard.svelte` to hide/show UI elements:
 ```svelte
 <script lang="ts">
   import PermissionGuard from '$lib/components/admin/PermissionGuard.svelte';
-  import { PermissionSchema } from '@share/contract';
+  import { PermissionSchema } from '@packages/contracts';
   import { Button } from '$lib/components/ui/button';
 </script>
 
@@ -182,7 +182,7 @@ Use `PermissionGuard.svelte` to hide/show UI elements:
 
 ### 4.2 Route-Level Protection
 
-Use SvelteKit's `+layout.ts` to protect admin routes server-side in [`frontend/src/routes/admin/+layout.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/frontend/src/routes/admin/+layout.ts):
+Use SvelteKit's `+layout.ts` to protect admin routes server-side in [`apps/web/src/routes/admin/+layout.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/apps/web/src/routes/admin/+layout.ts):
 
 ```typescript
 import { redirect } from '@sveltejs/kit';
@@ -216,7 +216,7 @@ export const load: LayoutLoad = async ({ fetch, parent }) => {
 
 ```svelte
 <script lang="ts">
-  import { PermissionSchema } from '@share/contract';
+  import { PermissionSchema } from '@packages/contracts';
   import PermissionGuard from '$lib/components/admin/PermissionGuard.svelte';
 </script>
 
@@ -244,7 +244,7 @@ import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nes
 import { AuthGuard } from '../auth/auth.guard';
 import { RBACGuard } from '../access-control/rbac.guard';
 import { RequirePermissions } from '../access-control/permissions.decorator';
-import { PermissionSchema } from '@share/contract';
+import { PermissionSchema } from '@packages/contracts';
 
 @Controller('blog')
 @UseGuards(AuthGuard, RBACGuard)  // Apply guards
@@ -339,7 +339,7 @@ curl -X POST http://localhost:3000/blog \
 ### ✅ DO
 - **Always use `PermissionSchema`** constants instead of hardcoded strings (`PermissionSchema.Blog.Read` ✓ vs `'blog.read'` ✗)
 - **Apply guards at controller level** (`@UseGuards(AuthGuard, RBACGuard)`)
-- **Rebuild `share/contract`** after schema changes
+- **Rebuild `packages/contracts`** after schema changes
 - **Restart backend** after config changes to re-seed
 - **Use descriptive permission names** (`blog.publish` is clearer than `blog.action3`)
 
@@ -374,7 +374,7 @@ async updatePost(@Param('id') id: string, @Req() req) {
 
 ```svelte
 <script>
-  import { PermissionSchema } from '@share/contract';
+  import { PermissionSchema } from '@packages/contracts';
   let userPermissions = [...]; // from store or API
   
   $: canManageBlog = userPermissions.includes(PermissionSchema.Blog.Create) 
@@ -396,27 +396,27 @@ async updatePost(@Param('id') id: string, @Req() req) {
 - **Check**: Guards are applied (`@UseGuards(AuthGuard, RBACGuard)`)
 
 ### Issue: Permission not appearing in UI
-- **Check**: `share/contract` was rebuilt (`npm run build`)
+- **Check**: `packages/contracts` was rebuilt (`npm run build`)
 - **Check**: Backend restarted to seed new permissions
 - **Check**: User role includes the permission in `rolePermissions` config
 
 ### Issue: TS Error `PermissionSchema.X does not exist`
-- **Solution**: Add to schema → rebuild `share/contract` → restart backend
+- **Solution**: Add to schema → rebuild `packages/contracts` → restart backend
 
 ---
 
 ## Summary
 
 **RBAC Implementation Checklist**:
-1. ✅ Define permissions in `PermissionSchema` (share/contract)
+1. ✅ Define permissions in `PermissionSchema` (packages/contracts)
 2. ✅ Add to `ACCESS_CONTROL_CONFIG.permissions` array
 3. ✅ Assign to roles in `rolePermissions` mapping
-4. ✅ Rebuild `share/contract` package
+4. ✅ Rebuild `packages/contracts` package
 5. ✅ Restart backend (auto-seed)
 6. ✅ Protect API with `@RequirePermissions(PermissionSchema.X.Y)`
 7. ✅ Use `<PermissionGuard>` in frontend for conditional rendering
 8. ✅ Test with different user roles
 
 **Need Help?** Check existing implementations:
-- Users Module: [`backend/src/core/domain/access-control/access-control.controller.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/backend/src/core/domain/access-control/access-control.controller.ts)
-- Admin UI: [`frontend/src/routes/admin/users/+page.svelte`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/frontend/src/routes/admin/users/+page.svelte)
+- Users Module: [`apps/api/src/core/domain/access-control/access-control.controller.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/apps/api/src/core/domain/access-control/access-control.controller.ts)
+- Admin UI: [`apps/web/src/routes/admin/users/+page.svelte`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/apps/web/src/routes/admin/users/+page.svelte)

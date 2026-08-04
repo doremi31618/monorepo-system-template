@@ -1,0 +1,192 @@
+import {
+	Controller,
+	HttpCode,
+	HttpStatus,
+	Get,
+	Post,
+	Body,
+	Req as NestRequest,
+	Response as NestResponse,
+	Headers as ReqHeaders,
+	BadRequestException,
+	UnauthorizedException,
+	UseGuards
+} from '@nestjs/common';
+import {
+	ApiBearerAuth,
+	ApiOperation,
+	ApiResponse,
+	ApiTags
+} from '@nestjs/swagger';
+import { AuthService } from './auth.service.js';
+import {
+	LoginDto,
+	SignupDto,
+	UserIdentityDto,
+	SignoutDto,
+	ResetRequestDto,
+	ResetConfirmDto
+} from '@platform/contracts';
+import type { Response, Request } from 'express';
+import { AuthGuard } from './auth.guard.js';
+import { extractSessionToken } from './utils/token.util.js';
+
+const refreshCookieBaseOptions = {
+	httpOnly: true,
+	secure: process.env.NODE_ENV === 'prd',
+	sameSite: 'lax' as const,
+	path: '/'
+};
+const refreshCookieMaxAge = 1000 * 60 * 60 * 24 * 30; // 30 days
+
+import { LoggerService } from '@platform/logger';
+
+@ApiTags('Auth')
+@Controller('auth')
+export class AuthController {
+	constructor(
+		private readonly authService: AuthService,
+		private readonly logger: LoggerService
+	) {
+		this.logger.setContext(AuthController.name);
+	}
+
+	@UseGuards(AuthGuard)
+	@Get('testguard')
+	async testGuard() {
+		return {
+			message: 'Test guard success'
+		};
+	}
+
+	@Get('inspect')
+	@HttpCode(HttpStatus.OK)
+	@ApiBearerAuth('access-token')
+	@ApiOperation({ summary: 'Inspect current session token' })
+	@ApiResponse({
+		status: 200,
+		description: 'Valid session token',
+		type: UserIdentityDto
+	})
+	async inspectSession(@ReqHeaders('Authorization') token: string) {
+		const sessionToken = extractSessionToken(token);
+		if (!sessionToken) {
+			throw new BadRequestException(
+				'Authorization header missing or malformed'
+			);
+		}
+		return this.authService.inspectSession(sessionToken);
+	}
+
+	@Post('login')
+	@HttpCode(HttpStatus.OK)
+	@ApiOperation({ summary: 'Login with email/password' })
+	@ApiResponse({ status: 200, type: UserIdentityDto })
+	async login(
+		@Body() dto: LoginDto,
+		@NestResponse({ passthrough: true }) response: Response
+	) {
+		this.logger.log({ message: 'login attempt', email: dto.email });
+		const result = await this.authService.login(dto);
+		// set refresh token in cookie
+		response.cookie('refreshToken', result.refreshToken, {
+			...refreshCookieBaseOptions,
+			maxAge: refreshCookieMaxAge
+		});
+		return {
+			token: result.token,
+			userId: result.userId,
+			name: result.name
+		};
+	}
+
+	@Post('signup')
+	@HttpCode(HttpStatus.OK)
+	@ApiOperation({ summary: 'Create account with email/password' })
+	@ApiResponse({ status: 200, type: UserIdentityDto })
+	async signup(
+		@Body() signupDto: SignupDto,
+		@NestResponse({ passthrough: true }) response: Response
+	) {
+		const result = await this.authService.signup(signupDto);
+		// set refresh token in cookie
+		response.cookie('refreshToken', result.refreshToken, {
+			...refreshCookieBaseOptions,
+			maxAge: refreshCookieMaxAge
+		});
+		return {
+			token: result.token,
+			userId: result.userId,
+			name: result.name
+		};
+	}
+
+	@Post('signout')
+	@HttpCode(HttpStatus.OK)
+	@ApiBearerAuth('access-token')
+	@ApiOperation({ summary: 'Sign out and revoke current session' })
+	@ApiResponse({ status: 200, type: SignoutDto })
+	async signout(
+		@ReqHeaders('Authorization') token: string,
+		@NestResponse({ passthrough: true }) response: Response
+	) {
+		const sessionToken = extractSessionToken(token);
+		if (!sessionToken) {
+			throw new BadRequestException(
+				'Authorization header missing or malformed'
+			);
+		}
+
+		const result = await this.authService.signout(sessionToken);
+		response.clearCookie('refreshToken', {
+			...refreshCookieBaseOptions,
+			maxAge: 0
+		});
+
+		return {
+			userId: result.userId,
+			message: 'Sign out successful'
+		};
+	}
+
+	@Post('refresh')
+	async refresh(
+		@NestRequest() request: Request,
+		@NestResponse({ passthrough: true }) response: Response
+	) {
+		// get refresh token from cookie
+		const refreshToken = request.cookies['refreshToken'];
+		console.log(refreshToken);
+		if (!refreshToken) {
+			throw new UnauthorizedException('Refresh token not found');
+		}
+
+		const result = await this.authService.refresh(refreshToken);
+		if (!result) {
+			throw new UnauthorizedException('Invalid refresh token');
+		}
+		// set new refresh token cookie
+		response.cookie('refreshToken', result.refreshToken.refreshToken, {
+			...refreshCookieBaseOptions,
+			maxAge: refreshCookieMaxAge
+		});
+
+		return {
+			sessionToken: result.sessionToken
+		};
+	}
+
+	@Post('reset/request')
+	@HttpCode(HttpStatus.OK)
+	@ApiOperation({ summary: 'Request password reset' })
+	async requestReset(@Body() dto: ResetRequestDto) {
+		return this.authService.requestPasswordReset(dto);
+	}
+
+	@Post('reset/confirm')
+	@HttpCode(HttpStatus.OK)
+	@ApiOperation({ summary: 'Confirm password reset' })
+	async confirmReset(@Body() dto: ResetConfirmDto) {
+		return this.authService.resetPassword(dto);
+	}
+}

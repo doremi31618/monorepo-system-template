@@ -29,7 +29,7 @@ Currently, M1 includes both *Tooling Setup* (Nx) and *Code Refactoring* (Core st
 - **Why**: Moving files in a non-monorepo setup can break imports silently. Having Nx/Turbo first helps track dependencies.
 
 #### 2️⃣ M1: Add "Migration Strategy" for Existing Modules
-You already have `auth` and `user` modules in `backend/src`.
+You already have `auth` and `user` modules in `apps/api/src`.
 **Recommendation**:
 - Add a specific step in M1: "Migrate existing Auth/User modules to Domain/Infra".
 - Explicitly define:

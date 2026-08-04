@@ -24,7 +24,7 @@ GitHub 提供的 CI/CD 平台。透過 YAML 定義 workflow，當特定事件 (p
 
 #### Nx CI Features
 - **Nx Affected**: 透過比較當前 commit 與 base commit (通常是 `master` or `origin/master`)，計算出 Dependency Graph 中受影響的節點。
-    - 例如：改了 `@share/contract`，則依賴它的 `backend` 和 `frontend` 都會被標記為 affected。
+    - 例如：改了 `@packages/contracts`，則依賴它的 `backend` 和 `frontend` 都會被標記為 affected。
 - **Target Defaults**: 在 `nx.json` 定義任務依賴 (e.g., build 之前要先 build dependencies)。
 
 ### 1-3. Implementation Steps (實作步驟)
@@ -136,7 +136,7 @@ flowchart TD
 ### 2-3. Implementation Steps (實作步驟)
 
 #### Step 1: Define Interface (Port)
-`backend/src/core/domain/scheduling/scheduler.port.ts`
+`apps/api/src/core/domain/scheduling/scheduler.port.ts`
 
 ```typescript
 export interface Job {
@@ -157,7 +157,7 @@ export abstract class JobSchedulerPort {
 ```
 
 #### Step 2: Create Schema (Adapter)
-`backend/src/core/infra/scheduling/scheduling.schema.ts`
+`apps/api/src/core/infra/scheduling/scheduling.schema.ts`
 
 ```typescript
 import { pgTable, text, timestamp, jsonb, uuid } from 'drizzle-orm/pg-core';
@@ -179,7 +179,7 @@ export const jobs = pgTable('jobs', {
 ```
 
 #### Step 3: Implement Postgres Adapter (Service)
-`backend/src/core/infra/scheduling/postgres-scheduler.service.ts`
+`apps/api/src/core/infra/scheduling/postgres-scheduler.service.ts`
 
 我們實作一個 `PostgresSchedulerService` (作為 Adapter) 來處理 Worker Loop 與搶單邏輯：
 
@@ -259,7 +259,7 @@ export class PostgresSchedulerService implements JobSchedulerPort, OnModuleInit 
 #### Step 4: Refactor Legacy Cron (Example)
 如何將既有的 Cron Service 改造成分散式架構：
 
-`backend/src/core/domain/auth/session-cleanup.service.ts`
+`apps/api/src/core/domain/auth/session-cleanup.service.ts`
 
 ```typescript
 import { Injectable, OnModuleInit } from '@nestjs/common';

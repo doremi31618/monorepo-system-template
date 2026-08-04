@@ -90,7 +90,7 @@ This filter will catch all application exceptions (both `HttpException` and unkn
 ```typescript
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { Response, Request } from 'express';
-import { ApiResponse } from '@share/contract'; // Ensure strict alignment with shared contract
+import { ApiResponse } from '@packages/contracts'; // Ensure strict alignment with shared contract
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {

@@ -20,7 +20,7 @@ This document captures the current auth implementation status, the outstanding b
 | Token refresh (`POST /auth/refresh`) | ✅ Implemented | Controller now reads the `refreshToken` cookie, `AuthService.refresh` rotates both session + refresh records, and the new HttpOnly cookie is re-issued together with the fresh session token payload. |
 | Google SSO | ✅ Implemented | `/auth/google/login` + callback now exchange code, persist/fetch federated users, issue session/refresh, set the HttpOnly cookie, and redirect back with the access token; frontend callback consumes the token and stores session state. |
 | Password reset / forgot password | ✅ Implemented | Backend endpoints `/auth/reset/request` + `/auth/reset/confirm` create/consume reset tokens (type=reset_password in `auth_token`), revoke all tokens on success, and redirect to login. Frontend has forgot/reset pages wired to the API; reset success auto-redirects. SMTP mailer sends reset link (SES credentials in `.env`), and requests are logged. 12/03: Added reset email delivery + mail_logs table, cleanup tokens on password change, front-end routing fixes. |
-| API base URL alignment | ✅ Configured | `backend/src/config/app.config.ts` and `frontend/src/lib/config/index.ts` now both default to `http://localhost:3333`, so the two sides agree as soon as `.env` populates `PORT` / `VITE_API_BASE_URL`. |
+| API base URL alignment | ✅ Configured | `apps/api/src/config/app.config.ts` and `apps/web/src/lib/config/index.ts` now both default to `http://localhost:3333`, so the two sides agree as soon as `.env` populates `PORT` / `VITE_API_BASE_URL`. |
 | SMTP integration testing | ⚠️ Opt-in only | Added `src/mail/jtest.spec.ts`, which sends a real SES email when `RUN_SMTP_TEST=true`. `.env` loading is commented out and credentials are shared with production keys, so the spec is disabled by default. |
 
 ### Frontend experience (SvelteKit)
@@ -204,7 +204,7 @@ Target UX: email capture → receive a 6-digit code → enter code + new passwor
 
 - [x] [ backend ] Finalize the session/token strategy (opaque token + HttpOnly refresh cookie + rotation) and document the flow in this spec; implementation work now tracks against refresh/logout tasks.
 - [x] [ backend ] Harden logout (`POST /auth/signout`) and refresh (`POST /auth/refresh`) so they strip the `Bearer` prefix, rotate refresh tokens, and clear cookies after revocation per the lifecycle spec.
-- [x] [ backend ] Expose a configuration-driven API base URL/port and share it via environment variables so the frontend client can target the correct origin. (Handled via `backend/src/config/app.config.ts` + `frontend/src/lib/config/index.ts` defaults / `.env`.)
+- [x] [ backend ] Expose a configuration-driven API base URL/port and share it via environment variables so the frontend client can target the correct origin. (Handled via `apps/api/src/config/app.config.ts` + `apps/web/src/lib/config/index.ts` defaults / `.env`.)
 - [x] [ backend + frontend ] Normalize Authorization header usage—frontend now persists the session token to storage/`httpClient` and the guard/controllers share the `extractSessionToken` helper, so Bearer headers are parsed consistently.
 - [x] [ frontend ] Align `lib/api/httpClient` + `lib/api/auth` with the NestJS contract by persisting login responses inside the auth store, including credentials on refresh/logout calls, and bubbling backend errors for the forms. (Depends on the API configuration item above.)
 - [x] [ frontend ] Rework `authStore` hydration and API response plumbing so it returns `{ session, status, message }`, fixes `logout` navigation targets, and persists state between refreshes without SSR errors. (Depends on the updated client.)
@@ -222,13 +222,13 @@ Target UX: email capture → receive a 6-digit code → enter code + new passwor
 
 ### 2025-11-10
 
-- Wired a client-side auth guard in `frontend/src/routes/user/+layout.svelte` that subscribes to `authStore` and redirects to the login route when the session is missing.
+- Wired a client-side auth guard in `apps/web/src/routes/user/+layout.svelte` that subscribes to `authStore` and redirects to the login route when the session is missing.
 - Remaining gaps: (1) guard still runs only on the client—need a server `+layout.ts` load that rejects unauthenticated requests before rendering; (2) `authStore` isn’t hydrated from storage/cookies yet, so the guard will misfire on hard refresh; (3) logout/refresh APIs are still stubs, so tokens are never revoked.
 
 ### 2025-11-12
 
-- Hooked the signup and signout flows from the SvelteKit forms (`frontend/src/routes/auth/signup/+page.svelte`, `frontend/src/routes/auth/login/+page.svelte`) through `authStore` so they call the backend APIs end-to-end.
-- Added a persistent sidebar to the user dashboard layout (`frontend/src/routes/user/+layout.svelte` and `frontend/src/lib/components/app-sidebar.svelte`) to surface navigation inside the protected area.
+- Hooked the signup and signout flows from the SvelteKit forms (`apps/web/src/routes/auth/signup/+page.svelte`, `apps/web/src/routes/auth/login/+page.svelte`) through `authStore` so they call the backend APIs end-to-end.
+- Added a persistent sidebar to the user dashboard layout (`apps/web/src/routes/user/+layout.svelte` and `apps/web/src/lib/components/app-sidebar.svelte`) to surface navigation inside the protected area.
 
 ### 2025-11-15
 
@@ -245,15 +245,15 @@ Target UX: email capture → receive a 6-digit code → enter code + new passwor
 
 ### 2025-11-19
 
-- Added storage helpers to `frontend/src/lib/store/authStore.ts` so login/signup persist the backend session payload (including the access token) and logout clears both the store and `localStorage`, unblocking token reuse across reloads.
-- Rebuilt `frontend/src/lib/api/httpClient.ts` to read the stored token, attach `Authorization: Bearer …` headers, refresh once after `401`, and push updated session tokens back into storage whenever `/auth/refresh` succeeds.
+- Added storage helpers to `apps/web/src/lib/store/authStore.ts` so login/signup persist the backend session payload (including the access token) and logout clears both the store and `localStorage`, unblocking token reuse across reloads.
+- Rebuilt `apps/web/src/lib/api/httpClient.ts` to read the stored token, attach `Authorization: Bearer …` headers, refresh once after `401`, and push updated session tokens back into storage whenever `/auth/refresh` succeeds.
 - Completed the backend refresh/logout flow: `AuthController` now reads the `refreshToken` cookie, clears it on signout, and `AuthService.refresh` rotates the session + refresh rows before issuing a new HttpOnly cookie.
 - Follow-ups identified: `fetch` wrappers still miss `credentials: 'include'`, the Svelte store drops the in-memory `token` (so guards can’t inspect it), and the `user/+layout` guard needs an SSR-safe `load`.
 
 ### 2025-11-25
 
-- Built a forgot-password/OTP layout in `frontend/src/lib/module/auth/forgot-password.service.svelte` with email capture and a loading-driven transition into a 6-digit verification form, giving the reset flow a UI shell ahead of backend/store wiring and route integration.
-- Updated `frontend/src/lib/api/httpClient.ts` to send `credentials: 'include'` for cookie-bound auth calls, keep retry-after-refresh errors structured, and throw `{ message, statusCode, error }` so forms can consume backend responses; store/form wiring is still pending.
+- Built a forgot-password/OTP layout in `apps/web/src/lib/module/auth/forgot-password.service.svelte` with email capture and a loading-driven transition into a 6-digit verification form, giving the reset flow a UI shell ahead of apps/api/store wiring and route integration.
+- Updated `apps/web/src/lib/api/httpClient.ts` to send `credentials: 'include'` for cookie-bound auth calls, keep retry-after-refresh errors structured, and throw `{ message, statusCode, error }` so forms can consume backend responses; store/form wiring is still pending.
 
 ### 2025-11-27
 

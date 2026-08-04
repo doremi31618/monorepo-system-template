@@ -1,127 +1,79 @@
-# 全端專案架構與開發指南
+# 開發環境啟動指南
 
-本文件彙整 monorepo-auth-fullstack 的專案結構、前後端架構設計、上手流程、程式撰寫與開發標準，並保留原有的環境啟動教學，協助新成員快速融入專案。
+## 需求
 
----
+- Bun 1.3+
+- Node.js 22.12+（NestJS 仍以 Node.js 作為正式 runtime）
+- Docker Desktop / Docker Engine（完整本機環境才需要）
 
-## 1. 專案結構介紹
+## 第一次安裝
 
-```
-monorepo-auth-fullstack/
-├── backend/                # NestJS + Drizzle 資料層與 API
-├── frontend/               # SvelteKit + Tailwind 前端專案
-├── doc/                    # 開發／流程文件（本檔案等）
-├── project-progress/       # 進度追蹤與工作項目
-├── SQLScripts/             # 資料庫相關 SQL
-├── scripts/                # 自動化腳本（如部署、產生資料）
-├── docker-compose.yml      # 一次啟動所有服務
-└── README.md               # 總覽說明
+```bash
+bun install --frozen-lockfile
+cp apps/api/.env.example apps/api/.env
 ```
 
-| 目錄 | 說明 |
-| --- | --- |
-| `backend/src/auth` | 登入、註冊、Session 等核心模組，提供 controller/service/dto/repository。 |
-| `backend/src/common` | 共用攔截器（`ResponseInterceptor`）、管線與工具。 |
-| `backend/src/db` | Drizzle ORM 設定、schema、資料存取。 |
-| `backend/src/user` | User repository 與 domain 邏輯。 |
-| `frontend/src/routes` | SvelteKit 檔案式路由（`auth/login`, `auth/signup`, `user/*` 等）。 |
-| `frontend/src/lib/api` | HTTP client 與 API 包裝（`httpClient.ts`, `auth.ts`）。 |
-| `frontend/src/lib/store` | 全域 store（`authStore.ts`）處理 session 狀態。 |
-| `frontend/src/lib/module` | feature 細分的 UI/邏輯模組（例如登入表單）。 |
-| `frontend/src/lib/components` | UI 元件庫（Bits UI wrapper、App Sidebar 等）。 |
-| `project-progress/` | 每日里程碑與工作項目清單。 |
+## 本機啟動
 
----
+同時啟動 API 與 Web：
 
-## 2. 延伸閱讀
+```bash
+bun run dev
+```
 
-為維持文件聚焦，以下主題已拆出獨立檔案，請依需求參考：
+分別啟動：
 
-- [Frontend 架構說明](./frontend-architect.md)
-- [Backend 架構說明](./backend-architect.md)
-- [Frontend Onboarding Guide](./frontend-onboarding.md)
-- [Backend Onboarding Guide](./backend-onboarding.md)
+```bash
+bun run dev:api
+bun run dev:web
+bun run --filter @platform/storybook dev
+```
 
----
+`bun run dev` 會先建置內部 packages，確保 API 與 Web 使用標準 package exports。
 
-## 3. 開發環境啟動指南
-
-### 3.1 使用 Docker Compose 一次啟動全部服務
-
-- 先決條件：已安裝 Docker Desktop / Docker Engine（包含 Compose v2）。
-- 本機 Node.js 請使用 22.12+ 或 24.x；專案根目錄提供 `.nvmrc`，可執行 `nvm use`。
-- 第一次啟動前，確認 `backend/.env` 已存在；若沒有，可執行 `cp backend/.env.example backend/.env` 並依需求調整 `PORT / API_BASE_URL`（後端對外位址）。
-- 在專案根目錄執行：
+## Docker Compose
 
 ```bash
 docker compose up --build
 ```
 
-- 服務啟動後：
-  - 前端（SvelteKit）位於 `http://localhost:5173`
-  - 後端（NestJS）位於 `http://localhost:3333`（或 .env 設定的 `PORT`），API 預設路徑為 `http://localhost:3333/v1`
-  - Postgres 位於 `localhost:5432`
-
-**常用指令**
+常用操作：
 
 ```bash
-# 以背景模式啟動
-docker compose up -d
-
-# 只啟動資料庫（本機跑後端時常用）
-docker compose up -d db
-
-# 查看特定服務日誌
-docker compose logs -f backend
-
-# 停止並清理容器（保留卷）
+docker compose up -d db minio createbuckets
+docker compose logs -f api
+docker compose logs -f web
 docker compose down
 ```
 
-若為首次啟動，容器就緒後建議套用 Drizzle 遷移：
+服務位置：
+
+- Web：`http://localhost:5173`
+- API：`http://localhost:3333/v1`
+- OpenAPI：`http://localhost:3333/openapi`
+- PostgreSQL：`localhost:5432`
+- MinIO：`http://localhost:9001`
+
+容器映像在 build 階段執行 `bun install --frozen-lockfile`；服務啟動時不會再動態安裝 dependencies。
+
+## Database migrations
+
+`apps/migrator/drizzle` 是唯一 migration history：
 
 ```bash
-docker compose exec backend npm run db:migrate
+bun run db:generate
+bun run db:migrate
+bun run db:studio
 ```
 
-Swagger 文件位於 `http://localhost:3333/openapi`。
+新增或修改 schema 時，請在擁有該資料表的 capability package 中編輯 `*.schema.ts`，再由 migrator 產生 migration。不要另建第二套 Supabase migration history。
 
-### 3.2 僅啟動後端（NestJS + Drizzle）
-
-1. 安裝 Node.js 20+ 與 npm。
-2. 設定環境變數：`cp backend/.env.example backend/.env`，依需求調整 `PORT`、`API_BASE_URL`（提供給前端的 Origin）與 `DATABASE_URL`。
-3. 確保 Postgres 已啟動（可使用 `docker compose up -d db`）。
-4. 安裝依賴並啟動：
+## 提交前驗證
 
 ```bash
-cd backend
-npm install
-npm run start:dev
+bun install --frozen-lockfile
+bun run check
+bun run test
+bun run build
+bun run lint
 ```
-
-5. 如有 schema 更新，執行：
-
-```bash
-npm run db:migrate
-```
-
-後端預設監聽 `http://localhost:3333`。
-
-### 3.3 僅啟動前端（SvelteKit）
-
-1. 安裝 Node.js 20+ 與 npm。
-2. 設定前端環境變數：`cp frontend/.env.example frontend/.env` 並將 `VITE_API_BASE_URL` 對應到你的後端 `API_BASE_URL`。
-3. 安裝依賴並啟動開發伺服器：
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-4. 前端會連線到 `AppConfig.apiBaseUrl`（以 `VITE_API_BASE_URL` 為準，預設 `http://localhost:3333/v1`）。
-5. 瀏覽 `http://localhost:5173` 進行開發。
-
----
-
-如有任何流程或標準需補充，請在 `project-progress` 或 `doc/` 目錄新增工作項並提出 PR。

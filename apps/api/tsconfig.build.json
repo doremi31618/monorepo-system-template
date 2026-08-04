@@ -1,0 +1,12 @@
+{
+	"extends": "./tsconfig.json",
+	"exclude": ["node_modules", "test", "dist", "**/*spec.ts"],
+	"references": [
+		{
+			"path": "../../packages/sdk/tsconfig.lib.json"
+		},
+		{
+			"path": "../../packages/contracts/tsconfig.lib.json"
+		}
+	]
+}

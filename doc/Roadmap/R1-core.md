@@ -114,13 +114,13 @@ core/infra/db/schema.ts
 ## ✅ Acceptance Criteria（驗收）
 
 **Pre-M1 — Monorepo Bootstrap**
-•	root package.json + pnpm-workspace.yaml + lockfile 完成；Nx init 並註冊 backend/frontend app。
+•	root package.json + pnpm-workspace.yaml + lockfile 完成；Nx init 並註冊 apps/api/frontend app。
 •	Nx tags/lint scaffold 建立；nx graph 可執行；`/scripts` 腳本轉為 Nx target（或 npm script alias 指向 nx），開發/CI 以 nx run 為入口。
 
 **M1 — Core Refactor & Governance**
 1. Core（Domain + Infra）結構完成
 
-backend/src/core 包含：
+apps/api/src/core 包含：
 
 Domain Core
 •	core/domain/user/user.schema.ts
@@ -245,7 +245,7 @@ scope:feature
 ## 🎯 Strategy → Actions（行動計畫）
 
 Strategy 0 — Monorepo Bootstrap（Pre-M1，新增）
-	•	Nx init（backend/frontend app），root package.json + pnpm-workspace.yaml + lockfile。
+	•	Nx init（apps/api/frontend app），root package.json + pnpm-workspace.yaml + lockfile。
 	•	將 `/scripts` 轉成 Nx target 或 npm script alias 指向 nx。
 	•	建立基本 nx.json / project.json targets，確認 build/test/lint 可跑後再開始搬檔案。
 
@@ -342,7 +342,7 @@ Strategy I — 既有模組遷移（Auth/User）
 
 ## 📁 建議最終 Schema 資料夾結構
 ```
-backend/src/
+apps/api/src/
   core/
     domain/
       user/

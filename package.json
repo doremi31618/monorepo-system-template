@@ -1,62 +1,36 @@
 {
   "name": "monorepo-system-template",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
+  "packageManager": "bun@1.3.14",
   "engines": {
-    "node": ">=22.12.0 <25",
-    "npm": ">=10 <12"
-  },
-  "scripts": {
-    "start": "nx run-many --target=start",
-    "build": "nx run-many --target=build",
-    "test": "nx run-many --target=test",
-    "lint": "nx run-many --target=lint",
-    "graph": "nx graph",
-    "backend": "nx start backend",
-    "frontend": "nx start frontend"
+    "node": ">=22.12.0 <27",
+    "bun": ">=1.3.0 <2"
   },
   "workspaces": [
-    "share/*",
-    "backend",
-    "frontend"
+    "apps/*",
+    "packages/*"
   ],
+  "scripts": {
+    "dev": "bun run build:packages && bun run --filter '@platform/api' --filter '@platform/web' --parallel dev",
+    "dev:api": "bun run --filter '@platform/api' dev",
+    "dev:web": "bun run --filter '@platform/web' dev",
+    "build": "bun run build:packages && bun run --filter './apps/*' --if-present build",
+    "build:packages": "bun run --filter '@platform/contracts' build && bun run --filter '@platform/config' build && bun run --filter '@platform/sdk' build && bun run --filter '@platform/logger' build && bun run --filter '@platform/database' build && bun run --filter '@platform/test-utils' build && bun run --filter '@platform/users' build && bun run --filter '@platform/mail' build && bun run --filter '@platform/scheduling' build && bun run --filter '@platform/auth' build && bun run --filter '@platform/access-control' build && bun run --filter '@platform/assets' build && bun run --filter '@platform/cms' build && bun run --filter '@platform/ui' build",
+    "check": "bun run build:packages && bun run --filter './packages/*' --if-present check && bun run --filter './apps/*' --if-present check",
+    "test": "bun run build:packages && bun run --filter '@platform/api' test && bun run --filter '@platform/contracts' test && bun run --filter '@platform/sdk' test",
+    "lint": "bun run --filter './packages/*' --filter './apps/*' --if-present lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:generate": "bun run --filter '@platform/migrator' db:generate",
+    "db:migrate": "bun run --filter '@platform/migrator' db:migrate",
+    "db:studio": "bun run --filter '@platform/migrator' db:studio"
+  },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.3.3",
-    "@eslint/js": "^9.8.0",
-    "@nx/eslint": "22.1.3",
-    "@nx/eslint-plugin": "22.1.3",
-    "@nx/jest": "22.1.3",
-    "@nx/js": "22.1.3",
-    "@nx/storybook": "22.1.3",
-    "@nx/vite": "22.1.3",
-    "@nx/web": "22.1.3",
-    "@swc-node/register": "~1.9.1",
-    "@swc/core": "~1.5.7",
-    "@swc/helpers": "~0.5.11",
-    "@swc/jest": "~0.2.38",
-    "@types/jest": "^30.0.0",
-    "@types/node": "20.19.9",
-    "@vitest/ui": "^4.0.0",
-    "ajv": "^8.0.0",
-    "eslint": "^9.8.0",
-    "eslint-config-prettier": "^10.0.0",
-    "eslint-import-resolver-typescript": "^4.4.4",
-    "eslint-plugin-import": "^2.32.0",
-    "jest": "^30.0.2",
-    "jest-environment-node": "^30.0.2",
-    "jest-util": "^30.0.2",
-    "jiti": "2.4.2",
-    "jsonc-eslint-parser": "^2.1.0",
-    "nx": "22.1.3",
-    "prettier": "^3.0.0",
-    "rxjs": "7.8.1",
-    "ts-jest": "^29.4.0",
-    "ts-node": "10.9.1",
-    "tslib": "^2.3.0",
-    "typescript": "~5.9.2",
-    "typescript-eslint": "^8.40.0",
-    "vite": "^7.0.0",
-    "vite-plugin-dts": "~4.5.0",
-    "vitest": "^4.0.0"
+    "@eslint/js": "^9.39.2",
+    "eslint": "^9.39.2",
+    "prettier": "^3.7.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.52.0"
   }
 }

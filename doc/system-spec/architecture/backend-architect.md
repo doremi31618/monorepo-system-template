@@ -35,7 +35,7 @@
 ## 目錄速覽
 
 ```
-backend/src
+apps/api/src
 ├── core/
 │   ├── domain/               # 商業邏輯 (Pure Business Logic)
 │   │   ├── auth/             # Auth Domain (Service, Repo, Entities)

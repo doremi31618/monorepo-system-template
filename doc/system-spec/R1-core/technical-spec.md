@@ -12,8 +12,8 @@
 - **Module Boundaries**: Enforced by ESLint rules.
 
 ## 2. Shared Libraries
-- `@share/contract`: DTOs & Constants.
-- `@share/sdk`: Frontend Logic (HttpClient).
+- `@packages/contracts`: DTOs & Constants.
+- `@packages/sdk`: Frontend Logic (HttpClient).
 
 ## 3. Infrastructure
 - **DB**: Drizzle ORM + Postgres.

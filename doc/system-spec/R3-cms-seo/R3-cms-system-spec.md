@@ -233,7 +233,7 @@
   - 新增 `link_preview_description` (`text`, nullable)
   - 新增 `link_preview_image` (`text`, nullable)
 - Migration:
-  - `backend/drizzle/0013_spicy_medusa.sql`
+  - `apps/api/drizzle/0013_spicy_medusa.sql`
 
 ### 9.2 Backend API Contract
 - `GET /v1/cms/posts`
@@ -383,7 +383,7 @@
 - `posts`
   - 新增 `view_count` (`integer`, default `0`, not null)。
 - Migration:
-  - `backend/drizzle/0014_faithful_bloodstrike.sql`
+  - `apps/api/drizzle/0014_faithful_bloodstrike.sql`
 
 ### 13.2 Backend API Contract
 - 新增 Public CMS API（不需後台頁）：
@@ -430,7 +430,7 @@
   - `created_at`, `updated_at`
   - PK: (`post_id`, `view_date`)
 - migration:
-  - `backend/drizzle/0015_*.sql`（由 drizzle generate 產生）
+  - `apps/api/drizzle/0015_*.sql`（由 drizzle generate 產生）
 
 ### 14.2 Backend API Contract
 - 新增 Dashboard API：

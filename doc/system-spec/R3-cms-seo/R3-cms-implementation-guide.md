@@ -7,7 +7,7 @@ This guide provides a step-by-step verification path for implementing Milestone 
 ### 1. Schema Init
 ```bash
 # 1. Create schema file
-touch backend/src/core/domain/cms/cms.schema.ts
+touch apps/api/src/core/domain/cms/cms.schema.ts
 # 2. Add 'posts' and 'post_contents' definitions
 # 3. Generate migrations
 npm run db:generate
@@ -15,7 +15,7 @@ npm run db:migrate
 ```
 
 ### 2. Module Definition
-*   Create `CmsModule` in `backend/src/core/domain/cms/cms.module.ts`.
+*   Create `CmsModule` in `apps/api/src/core/domain/cms/cms.module.ts`.
 *   Import `CmsModule` into `DomainModule`.
 
 ### 3. API & Service Stub
@@ -59,7 +59,7 @@ npm install @tiptap/react @tiptap/starter-kit @tiptap/extension-image
 
 ### 1. File Upload
 *   Use `multer` or `Busboy` (NestJS standard) for `POST /assets/upload`.
-*   Store files in `backend/uploads` (for R3) or S3 (Future).
+*   Store files in `apps/api/uploads` (for R3) or S3 (Future).
 *   Serve files via Static Assets middleware in NestJS.
 
 ---

@@ -102,7 +102,7 @@ We use:
 
 ## 📁 File Location & Naming
 
-Create E2E tests at: `backend/test/<module>.e2e-spec.ts`
+Create E2E tests at: `apps/api/test/<module>.e2e-spec.ts`
 
 ```typescript
 // Basic Template

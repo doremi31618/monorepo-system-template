@@ -2,7 +2,6 @@ node_modules
 
 pnpm-lock.yaml
 yarn.lock
-bun.lock
 bun.lockb
 .env
 .env.local
@@ -11,6 +10,13 @@ bun.lockb
 .nx/installation
 .nx/cache
 .nx/workspace-data
+
+# Build outputs
+dist/
+.svelte-kit/
+build/
+coverage/
+storybook-static/
 
 
 .cursor/rules/nx-rules.mdc

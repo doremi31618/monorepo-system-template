@@ -8,8 +8,8 @@
 
 ```
 monorepo-auth-fullstack/
-├── backend/       # NestJS + Drizzle REST API
-├── frontend/      # SvelteKit + Tailwind Web App
+├── apps/api/       # NestJS + Drizzle REST API
+├── apps/web/      # SvelteKit + Tailwind Web App
 ├── doc/           # 文件（含本檔、架構/Onboarding 指南）
 ├── project-progress/  # 進度與工作項目紀錄
 ├── SQLScripts/    # 額外 SQL 腳本
@@ -77,7 +77,7 @@ monorepo-auth-fullstack/
 
 ### 可維護性
 - Docs 已拆分：`frontend-architect`, `backend-architect`, `frontend-onboarding`, `backend-onboarding`，並在 `how-to-start-dev-env.md` 連結。
-- Config 與常數集中於 `frontend/src/lib/config` 與 `backend/.env`，方便依環境覆寫。
+- Config 與常數集中於 `apps/web/src/lib/config` 與 `apps/api/.env`，方便依環境覆寫。
 - Drizzle schema 與遷移流程 (`db:generate`/`db:migrate`) 確保資料庫演進可追溯。
 
 ---

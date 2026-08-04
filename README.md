@@ -1,54 +1,77 @@
 # monorepo-system-template
 
-## Overview
+A capability-oriented full-stack platform built with SvelteKit, NestJS, Drizzle, PostgreSQL, and Bun workspaces.
 
-Opinionated full-stack system template (SvelteKit + NestJS + Drizzle/PostgreSQL) with production-ready auth, Dockerized dev stack, and docs for extending into admin, CMS, and future modules. It ships end-to-end auth flows (email/password, Google SSO, password reset, session + refresh rotation) and serves as the foundation for the broader roadmap.
+## What is included
 
-## Tech Stack
+- Email/password and Google authentication, sessions, refresh rotation, and password reset
+- Users and role-based access control
+- Asset storage and CMS capabilities
+- Reusable Svelte UI components and Storybook
+- One Drizzle migration history and a Docker development stack
 
-- Frontend: Svelte 5, SvelteKit, Tailwind CSS 4
-- Backend: NestJS 10 (TypeScript), Drizzle ORM
-- Database: PostgreSQL 16 (Dockerized)
-- Tooling: Docker Compose for multi-service orchestration, ESLint/Prettier, TypeScript across the stack
+## Repository layout
 
-## Current Features
+```text
+apps/
+├── api/          # NestJS composition root and HTTP API
+├── web/          # SvelteKit routes and application UI
+├── migrator/     # Canonical Drizzle configuration and migrations
+└── storybook/    # UI development and documentation
 
-- Email/password signup/login with session + refresh rotation and HttpOnly refresh cookie handling
-- Logout and refresh endpoints that rotate tokens and clear cookies correctly
-- Google OAuth login/signup (backend exchange + frontend callback storing session token)
-- Password reset: request + confirm endpoints, SES email delivery, and wired frontend flows
-- Auth-aware SvelteKit UI (login/signup/reset pages, guarded user layout) and token-aware HTTP client
-- Drizzle ORM schemas and migration tooling with PostgreSQL via Docker Compose
-- Swagger UI at `/openapi` and shared response envelope via NestJS filters/interceptors
-
-## Repository Structure
-
-- `frontend/` – SvelteKit app, UI components, API helpers, and stores
-- `backend/` – NestJS service with modular architecture (`src/`), Drizzle schema, and migrations (`drizzle/`)
-- `doc/` – Architecture notes and developer runbooks (`frontend-architect.md`, `how-to-start-dev-env.md`)
-- `docker-compose.yml` – Spins up frontend, backend, and PostgreSQL for local development
-
-## Getting Started
-
-Step-by-step instructions for launching the development environment (Docker Compose, frontend-only, backend-only) live in `doc/onboarding/how-to-start-dev-env.md`.
-
-Use Node.js 22.12+ or 24.x for local tooling. The repository includes `.nvmrc` so `nvm use` selects the tested baseline.
-
-The short version:
-
-```bash
-cp backend/.env.example backend/.env   # first time only
-docker compose up --build              # run everything
+packages/
+├── contracts/    # Shared API types and validation contracts
+├── sdk/          # Browser/API client helpers
+├── ui/           # Packaged Svelte components
+├── config/       # Typed application configuration
+├── logger/       # Nest logger integration
+├── database/     # Database factory and repository primitives
+├── test-utils/   # Shared test helpers
+├── users/
+├── mail/
+├── scheduling/
+├── auth/
+├── access-control/
+├── assets/
+└── cms/
 ```
 
-The frontend is available at `http://localhost:5173`, the backend API at `http://localhost:3333/v1`, Swagger at `http://localhost:3333/openapi`, and Postgres at `localhost:5432`.
+Every internal dependency uses `workspace:*`. Packages expose ordinary `dist`-based package exports; no TypeScript path aliases or custom export conditions are required.
 
-## Additional Documentation
+## Getting started
 
-- Roadmap: `doc/Roadmap/overall-table.md` (Milestone 0 auth foundation → Milestone 1 core refactor → admin/CMS)
-- Auth implementation/status: `doc/project-tasks/R0-auth-project-task.md`
-- Core module WBS (Milestone 1): `doc/project-tasks/R1-core-project-task.md`
-- Svelte architecture overview: `doc/system-spec/architecture/frontend-architect.md`
-- Development environment guide: `doc/onboarding/how-to-start-dev-env.md`
+Requirements: Bun 1.3+, Node.js 22.12+ for the NestJS production runtime, and Docker when running the full local stack.
 
-Use these documents alongside this README to understand the design decisions and daily workflows in this project.
+```bash
+bun install --frozen-lockfile
+cp apps/api/.env.example apps/api/.env
+bun run dev
+```
+
+Or start the full stack:
+
+```bash
+docker compose up --build
+```
+
+- Web: `http://localhost:5173`
+- API: `http://localhost:3333/v1`
+- OpenAPI: `http://localhost:3333/openapi`
+- Storybook: `bun run --filter @platform/storybook dev`
+
+## Common commands
+
+```bash
+bun run check
+bun run test
+bun run build
+bun run lint
+
+bun run db:generate
+bun run db:migrate
+bun run db:studio
+```
+
+Drizzle migrations in `apps/migrator/drizzle` are the only canonical migration history. Feature packages own their schema definitions; the API composition root assembles them into one runtime schema.
+
+See [capability-platform.md](doc/system-spec/architecture/capability-platform.md) for dependency rules and [how-to-start-dev-env.md](doc/onboarding/how-to-start-dev-env.md) for daily workflows.

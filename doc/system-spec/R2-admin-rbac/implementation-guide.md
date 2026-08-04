@@ -54,14 +54,14 @@ erDiagram
 ### 2-2. Implementation Steps
 
 #### Step 1: Define Drizzle Schema
-`backend/src/core/domain/access-control/access-control.schema.ts`
+`apps/api/src/core/domain/access-control/access-control.schema.ts`
 
 -   **Roles Table**: `id`, `name`, `code` (e.g., 'superadmin'), `description`.
 -   **Permissions Table**: `id`, `code` (e.g., 'user.create'), `module`, `description`.
 -   **Mapping Tables**: `users_to_roles`, `roles_to_permissions`.
 
 #### Step 2: Seed Script
-建立 `backend/scripts/seed-rbac.ts`，用於初始化系統：
+建立 `apps/api/scripts/seed-rbac.ts`，用於初始化系統：
 1.  建立 `Super Admin` 角色 (擁有所有權限)。
 2.  建立 `Admin` 角色。
 3.  掃描 `PERMISSION_SCHEMA` 自動寫入 permissions table。
@@ -77,7 +77,7 @@ erDiagram
 ### 3-2. Implementation Steps
 
 #### Step 1: Permission Decorator
-`backend/src/core/domain/access-control/decorators/permission.decorator.ts`
+`apps/api/src/core/domain/access-control/decorators/permission.decorator.ts`
 
 ```typescript
 import { SetMetadata } from '@nestjs/common';
@@ -86,7 +86,7 @@ export const Permissions = (...permissions: string[]) => SetMetadata(PERMISSION_
 ```
 
 #### Step 2: RBAC Guard
-`backend/src/core/domain/access-control/guards/rbac.guard.ts`
+`apps/api/src/core/domain/access-control/guards/rbac.guard.ts`
 
 邏輯：
 1.  取得 `Reflector` 的 metadata (需要的權限)。
