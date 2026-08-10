@@ -9,6 +9,7 @@
     "test": "vitest --run"
   },
   "dependencies": {
+    "@platform/service-ui": "workspace:*",
     "@platform/ui": "workspace:*"
   },
   "devDependencies": {

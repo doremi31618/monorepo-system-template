@@ -19,7 +19,8 @@
   },
   "scripts": {
     "build": "vite build",
-    "test": "bun test"
+    "test": "bun test",
+    "test:unit": "bun test src"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
