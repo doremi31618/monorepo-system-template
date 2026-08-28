@@ -25,6 +25,43 @@ export const envSchema = z.object({
 	GOOGLE_SSO_CLIENT_SECRET: z.string().optional(),
 	GOOGLE_CALLBACK_URL: z.string().optional(),
 
+	// OAuth 2.1 / OpenID Connect authorization server
+	OAUTH_ISSUER: z.url().optional().default('http://localhost:3333'),
+	OAUTH_PRIVATE_JWKS: z.string().optional(),
+	OAUTH_DCR_ENABLED: z.enum(['true', 'false']).optional().default('true'),
+	OAUTH_DCR_RESOURCES: z
+		.string()
+		.optional()
+		.default('http://localhost:3333/mcp'),
+	OAUTH_DCR_SCOPES: z
+		.string()
+		.optional()
+		.default('openid,email,profile,offline_access,mcp:tools'),
+	OAUTH_DCR_RATE_LIMIT: z.coerce
+		.number()
+		.int()
+		.positive()
+		.optional()
+		.default(10),
+	OAUTH_DCR_RATE_WINDOW_SECONDS: z.coerce
+		.number()
+		.int()
+		.positive()
+		.optional()
+		.default(3600),
+	OAUTH_TOKEN_RATE_LIMIT: z.coerce
+		.number()
+		.int()
+		.positive()
+		.optional()
+		.default(120),
+	AUTH_LOGIN_RATE_LIMIT: z.coerce
+		.number()
+		.int()
+		.positive()
+		.optional()
+		.default(10),
+
 	// Storage
 	STORAGE_PROVIDER: z.string().default('s3'),
 	STORAGE_REGION: z.string().default('us-east-1'),

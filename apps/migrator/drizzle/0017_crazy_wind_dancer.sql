@@ -1,0 +1,2 @@
+ALTER TABLE "oauth_clients" ADD CONSTRAINT "oauth_clients_client_type_check" CHECK ("oauth_clients"."client_type" IN ('public', 'confidential'));--> statement-breakpoint
+ALTER TABLE "oauth_clients" ADD CONSTRAINT "oauth_clients_auth_method_check" CHECK ("oauth_clients"."token_endpoint_auth_method" IN ('none', 'client_secret_basic'));

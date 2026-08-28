@@ -5,6 +5,7 @@ import { AppService } from './app.service.js';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CoreModule } from './core/core.module.js';
 import { appConfig, validate } from '@platform/config';
+import { OAuthModule } from './oauth/oauth.module.js';
 
 // const env = validate(process.env);
 @Module({
@@ -14,7 +15,8 @@ import { appConfig, validate } from '@platform/config';
 			isGlobal: true, 
 			validate,
 			load: [appConfig] }),
-		CoreModule
+		CoreModule,
+		OAuthModule
 	],
 	controllers: [AppController],
 	providers: [AppService]

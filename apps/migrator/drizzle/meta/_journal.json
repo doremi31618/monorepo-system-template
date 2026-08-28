@@ -113,6 +113,20 @@
       "when": 1771388166441,
       "tag": "0015_quick_grim_reaper",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1787912151946,
+      "tag": "0016_neat_salo",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1787913263629,
+      "tag": "0017_crazy_wind_dancer",
+      "breakpoints": true
     }
   ]
 }

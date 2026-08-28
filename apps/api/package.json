@@ -39,6 +39,7 @@
     "@platform/sdk": "workspace:*",
     "@platform/users": "workspace:*",
     "@platform/mail": "workspace:*",
+    "@platform/oauth-server": "workspace:*",
     "@platform/scheduling": "workspace:*",
     "@platform/auth": "workspace:*",
     "@platform/access-control": "workspace:*",

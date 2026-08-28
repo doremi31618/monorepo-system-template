@@ -8,16 +8,18 @@ export const ssr = false;
 
 export const load: LayoutLoad = async ({ url }) => {
     const token = url.searchParams.get('token');
+    const returnTo = url.searchParams.get('returnTo');
 
     if (!browser) return;
 
-    if (token) {
+    if (token || returnTo) {
         await authStore.refreshSession();
-        console.log('token', token, 'goto', appRoutePath.user.home);
-        await goto(appRoutePath.user.home);
+        const safeReturnTo = returnTo?.match(/^\/oauth\/interaction\/[A-Za-z0-9_-]+$/)
+            ? returnTo
+            : appRoutePath.user.home;
+        await goto(safeReturnTo);
         return;
     }
-    console.log('no token, goto login');
 
     // await goto(appRoutePath.auth.login);
 };
