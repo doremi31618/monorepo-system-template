@@ -1,6 +1,6 @@
 # Domain Core & Auth Base Implementation Guide
 
-> **Related Task**: [R1-core-project-task](../project-tasks/R1-core-project-task.md) | **Roadmap**: [R1-core](../Roadmap/R1-core.md)
+> **Related Task**: [R1-core-project-task](../../../project-tasks/R1-core-project-task.md) | **Roadmap**: [R1-core](../../../Roadmap/R1-core.md)
 
 本指南協助開發者實作 `Domain Core` (BaseRepository, IUserService) 與 `Auth Base` (UserIdentity, @CurrentUser) 重構，以達成架構解耦與標準化。
 

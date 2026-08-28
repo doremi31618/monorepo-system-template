@@ -6,9 +6,9 @@
 
 > **Roadmap**: [R1 - Core Refactor](../Roadmap/R1-core.md)
 > **Guides**:
-> - [01. Logger & Error Handling](../system-spec/R1-core/R1-01-logger-and-error-handling.md)
-> - [02. Domain Core & Auth Base](../system-spec/R1-core/R1-02-domain-core-and-auth-base.md)
-> - [03. CI/CD & Scheduling](../system-spec/R1-core/R1-03-cicd-and-scheduling.md)
+> - [01. Logger & Error Handling](../system-spec/R1-core/implementation-guide/R1-01-logger-and-error-handling.md)
+> - [02. Domain Core & Auth Base](../system-spec/R1-core/implementation-guide/R1-02-domain-core-and-auth-base.md)
+> - [03. CI/CD & Scheduling](../system-spec/R1-core/implementation-guide/R1-03-cicd-and-scheduling.md)
 
 Last updated: 2026-01-02
 
@@ -401,4 +401,3 @@ Deliverables
     - Corrected `schedule()` logic to allow distributed queuing (removed local handler check).
   - **Integration**: Refactored `SessionCleanupService` to use `JobSchedulerPort` for daily cleanup tasks.
   - **Documentation**: Finalized `walkthrough.md` with implementation details.
-

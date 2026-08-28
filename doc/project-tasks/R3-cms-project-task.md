@@ -2,7 +2,7 @@
 
 > **Status**: 🚧 In Progress  
 > **Objective**: Build a content platform governed by RBAC, extensible for multilingual support, and publishable.  
-> **Based on**: [R3-cms-seo.md](../roadmap/R3-cms-seo.md)  
+> **Based on**: [R3-cms-seo.md](../Roadmap/R3-cms-seo.md)
 > **Last updated**: 2026-02-18
 
 ## 📌 今日工作進度（2026-02-18）

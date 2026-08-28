@@ -19,8 +19,8 @@
 ## Overview
 
 Our RBAC system uses a **Single Source of Truth** approach:
-- **Schema**: [`packages/contracts/src/lib/constants/permissions.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/packages/contracts/src/lib/constants/permissions.ts) defines all permission constants.
-- **Config**: [`apps/api/src/core/infra/config/access-control.config.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/apps/api/src/core/infra/config/access-control.config.ts) derives permissions and role mappings from the schema.
+- **Schema**: [`packages/contracts/src/lib/constants/permissions.ts`](../../packages/contracts/src/lib/constants/permissions.ts) defines all permission constants.
+- **Config**: [`packages/config/src/access-control.config.ts`](../../packages/config/src/access-control.config.ts) derives permissions and role mappings from the schema.
 - **Seeding**: Automatically runs on module init to sync DB with config.
 
 ### Key Components
@@ -37,7 +37,7 @@ Let's add a **Blog** module with CRUD permissions.
 
 ### Step 1.1: Define Permission Schema
 
-Edit [`packages/contracts/src/lib/constants/permissions.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/packages/contracts/src/lib/constants/permissions.ts):
+Edit [`packages/contracts/src/lib/constants/permissions.ts`](../../packages/contracts/src/lib/constants/permissions.ts):
 
 ```typescript
 export const PermissionSchema = {
@@ -71,7 +71,7 @@ npm run build
 
 ### Step 2.1: Update Config
 
-Edit [`apps/api/src/core/infra/config/access-control.config.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/apps/api/src/core/infra/config/access-control.config.ts):
+Edit [`packages/config/src/access-control.config.ts`](../../packages/config/src/access-control.config.ts):
 
 ```typescript
 import { PermissionSchema } from '@packages/contracts';
@@ -116,7 +116,7 @@ Check logs:
 
 ### Option A: Update Existing Roles
 
-Edit the `rolePermissions` mapping in [`access-control.config.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/apps/api/src/core/infra/config/access-control.config.ts):
+Edit the `rolePermissions` mapping in [`access-control.config.ts`](../../packages/config/src/access-control.config.ts):
 
 ```typescript
 rolePermissions: {
@@ -182,7 +182,7 @@ Use `PermissionGuard.svelte` to hide/show UI elements:
 
 ### 4.2 Route-Level Protection
 
-Use SvelteKit's `+layout.ts` to protect admin routes server-side in [`apps/web/src/routes/admin/+layout.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/apps/web/src/routes/admin/+layout.ts):
+Use SvelteKit's `+layout.ts` to protect admin routes in [`apps/web/src/routes/admin/+layout.ts`](../../apps/web/src/routes/admin/+layout.ts):
 
 ```typescript
 import { redirect } from '@sveltejs/kit';
@@ -418,5 +418,5 @@ async updatePost(@Param('id') id: string, @Req() req) {
 8. ✅ Test with different user roles
 
 **Need Help?** Check existing implementations:
-- Users Module: [`apps/api/src/core/domain/access-control/access-control.controller.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/apps/api/src/core/domain/access-control/access-control.controller.ts)
-- Admin UI: [`apps/web/src/routes/admin/users/+page.svelte`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/apps/web/src/routes/admin/users/+page.svelte)
+- Access Control Module: [`packages/access-control/src/access-control.controller.ts`](../../packages/access-control/src/access-control.controller.ts)
+- Admin UI: [`apps/web/src/routes/admin/users/+page.svelte`](../../apps/web/src/routes/admin/users/+page.svelte)

@@ -1,71 +1,65 @@
 # R3 Implementation Guide: CMS
 
-This guide provides a step-by-step verification path for implementing Milestone 3.
+This guide describes the current SvelteKit/NestJS capability implementation for Milestone 3.
 
-## Phase 1: Backend Setup (R3a)
+## Phase 1: Backend capability
 
-### 1. Schema Init
-```bash
-# 1. Create schema file
-touch apps/api/src/core/domain/cms/cms.schema.ts
-# 2. Add 'posts' and 'post_contents' definitions
-# 3. Generate migrations
-npm run db:generate
-npm run db:migrate
+CMS schema and behavior are owned by `packages/cms`:
+
+```text
+packages/cms/src/cms.schema.ts
+packages/cms/src/cms.service.ts
+packages/cms/src/cms.module.ts
+packages/cms/src/cms.controller.ts
+packages/cms/src/cms-public.controller.ts
 ```
 
-### 2. Module Definition
-*   Create `CmsModule` in `apps/api/src/core/domain/cms/cms.module.ts`.
-*   Import `CmsModule` into `DomainModule`.
+After changing a CMS or asset schema, generate and apply the canonical migration from the repository root:
 
-### 3. API & Service Stub
-*   Create `CmsController` with `@Controller('cms')`.
-*   Establish `CmsService` and `CmsRepository` extending BaseRepository.
-*   **Tip**: Use `DrizzleRepository` pattern for type-safe queries.
-
----
-
-## Phase 2: Frontend Editor (R3a)
-
-### 1. Dependency
 ```bash
-npm install @tiptap/react @tiptap/starter-kit @tiptap/extension-image
+bun run db:generate
+bun run db:migrate
 ```
 
-### 2. Component Construction
-*   Create `@share/ui/editor/TiptapEditor.tsx`.
-*   Implement `MenuBubble` for quick formatting.
-*   Ensure `onChange` prop returns JSON.
+Do not create a second migration history for the platform database.
 
-### 3. Page Assembly
-*   Link Admin Route `/admin/cms/posts`.
-*   Connect API client `sdk.cms.getPosts()`.
+## Phase 2: SvelteKit editor
 
----
+- Editor component: `apps/web/src/lib/components/editor/TiptapEditor.svelte`.
+- Admin list: `apps/web/src/routes/admin/cms/+page.svelte`.
+- Admin editor: `apps/web/src/routes/admin/cms/[id]/+page.svelte`.
+- Browser API client: `apps/web/src/lib/api/cms.ts`.
 
-## Phase 3: Public Rendering (R3b)
+The editor emits Tiptap JSON. Keep toolbar, block-menu, autosave, preview, and status changes in the Svelte feature boundary; shared visual primitives remain in `packages/ui` or `packages/service-ui`.
 
-### 1. Next.js Route
-*   File: `apps/web/app/blog/[slug]/page.tsx`.
-*   Use `generateMetadata` for SEO dynamic tags.
+## Phase 3: Public rendering and SEO
 
-### 2. Tiptap Rendering
-*   Use `editor-content` CSS class for styling HTML output from JSON.
-*   Ensure strict sanitization if rendering HTML strings (though Tiptap JSON is generally safer).
+- Public list: `apps/web/src/routes/blog/+page.svelte`.
+- Public detail: `apps/web/src/routes/blog/[slug]/+page.svelte`.
+- Public API: `GET /v1/cms/public/posts` and `GET /v1/cms/public/posts/:slug`.
 
----
+Render only published posts. Set title, description, canonical URL, and social metadata through SvelteKit's `<svelte:head>`. Sanitize any generated HTML before using `{@html ...}`; prefer structured Tiptap JSON rendering where practical.
 
-## Phase 4: Assets (R3c)
+## Phase 4: Assets
 
-### 1. File Upload
-*   Use `multer` or `Busboy` (NestJS standard) for `POST /assets/upload`.
-*   Store files in `apps/api/uploads` (for R3) or S3 (Future).
-*   Serve files via Static Assets middleware in NestJS.
+Asset schema and storage adapters live in `packages/assets`. Browser uploads use the flow implemented in `apps/web/src/lib/api/assets.ts`:
 
----
+1. `POST /v1/cms/assets/init` returns an upload URL.
+2. The browser uploads directly to the S3-compatible storage endpoint.
+3. `POST /v1/cms/assets/:id/complete` marks the asset ready.
 
-## QC Checklist (Self-Check)
+Local development uses MinIO. Do not add an `apps/api/uploads` local-filesystem authority.
 
-- [ ] Does `POST /cms/posts` reject invalid JSON?
-- [ ] Does `GET /public/posts/:slug` return 404 for drafts?
-- [ ] Can I edit Japanese content while keeping English content intact?
+## Verification
+
+```bash
+bun run build:packages
+bun run --filter '@platform/web' check
+bun run --filter '@platform/web' build
+bun run --filter '@platform/api' test
+```
+
+- Draft posts are not available from public endpoints.
+- Locale-specific content can be edited without replacing another locale.
+- Public pages render saved Tiptap content and metadata.
+- Asset upload completes through the configured storage adapter.
