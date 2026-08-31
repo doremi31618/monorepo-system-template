@@ -56,7 +56,7 @@
 ### 3.1 分支策略 (Branching Strategy)
 我們採用 **Feature Branch Workflow**。
 
-- **Main Branch**: `master` (或 `main`)
+- **Main Branch**: `main`
     - 永遠保持可部署狀態 (Deployable)。
     - 禁止直接 Commit，必須透過 Pull Request (PR) 合併。
 - **Development Branches**:
