@@ -7,7 +7,7 @@
 > **Branch**: `hotfix/CI-001-postgres-integration-tests`  
 > **Base**: `main` (`71cdd45`)  
 > **Worktree**: `/Users/ericzhan/Documents/SIRAYA-project/monorepo-system-template`  
-> **PR**: Pending  
+> **PR**: [#14](https://github.com/doremi31618/monorepo-system-template/pull/14)  
 > **Related Spec**: `doc/system-spec/architecture/ci-integration-tests.md`  
 > **Release**: Pending  
 > **Last updated**: 2026-08-31
@@ -60,7 +60,7 @@ Make the standard GitHub Actions CI job self-contained by starting PostgreSQL, m
 - [x] Run migrations before tests.
 - [x] Document the integration-test database architecture.
 - [x] Complete local verification.
-- [ ] Push and open a pull request to `main`.
+- [x] Push and open a pull request to `main`.
 - [ ] Obtain the required Code Owner approval and merge.
 
 ## Decisions and Work Log
@@ -71,7 +71,7 @@ Make the standard GitHub Actions CI job self-contained by starting PostgreSQL, m
 
 ## Handoff
 
-- **Commit/PR**: Pending
+- **Commit/PR**: `b6a55fa`; [PR #14](https://github.com/doremi31618/monorepo-system-template/pull/14)
 - **Validation**: Prettier, migration, `bun run check`, `bun run test`, and `bun run build` passed against an isolated PostgreSQL 16 database. The existing Web check reports 16 warnings and 0 errors.
-- **Known issues**: Pull-request verification requires the branch to be pushed first.
-- **Next action**: Create the pull request and verify its GitHub Actions run.
+- **Known issues**: GitHub Actions verification and the required Code Owner approval are pending.
+- **Next action**: Verify the pull-request CI run, then obtain approval and merge.
