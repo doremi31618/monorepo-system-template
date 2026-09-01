@@ -1,7 +1,7 @@
 # Remote MCP Server Project Task
 
 > **Work Item ID**: MCP-001
-> **Status**: Review
+> **Status**: Dev
 > **Actor**: Codex
 > **Role**: Owner
 > **Branch**: `feat/MCP-001-remote-mcp-server`
@@ -9,7 +9,7 @@
 > **Worktree**: `/Users/ericzhan/Documents/side-projects/monorepo-system-template-worktrees/MCP-001-remote-mcp-server`
 > **PR**: [#15](https://github.com/doremi31618/monorepo-system-template/pull/15)
 > **Related Spec**: `doc/system-spec/MCP-001-remote-mcp-server/product-spec.md`, `doc/system-spec/MCP-001-remote-mcp-server/technical-spec.md`
-> **Release**: Pending
+> **Release**: `0.2.0` candidate — `doc/release-notes/0.2.0.md`
 > **Last updated**: 2026-09-01
 
 ## Objective
@@ -87,8 +87,8 @@ Add a reusable NestJS-first Remote MCP server capability and prove it with publi
 - [x] Compose public/private CMS tools and authorization
 - [x] Tests and package-boundary validation
 - [x] README, dependency graph, and onboarding updates
-- [ ] Independent review and PR ([#15](https://github.com/doremi31618/monorepo-system-template/pull/15))
-- [ ] Release note and release approval
+- [x] PR and required CI ([#15](https://github.com/doremi31618/monorepo-system-template/pull/15))
+- [x] Release note and release approval
 
 ## Decisions and Work Log
 
@@ -103,6 +103,8 @@ Add a reusable NestJS-first Remote MCP server capability and prove it with publi
 - 2026-09-01: Full Nest smoke verified public tools/list, private `401` resource challenge, and unwrapped RFC 9728 metadata against an isolated migrated PostgreSQL database.
 - 2026-09-01: Live OpenAI/ChatGPT/Claude vendor smoke not executed because this worktree has no reachable HTTPS deployment or authenticated vendor workspace; exact manual steps are documented for release validation.
 - 2026-09-01: Opened feature integration PR [#15](https://github.com/doremi31618/monorepo-system-template/pull/15) targeting `dev`.
+- 2026-09-01: PR #15 passed GitHub CI and merged into `dev` as `0f008b2`; the solo-project workflow required PR plus CI with zero approval count.
+- 2026-09-01: Approved `0.2.0` as the minor release containing MCP-001 and added `doc/release-notes/0.2.0.md`.
 
 ## Handoff
 
@@ -110,4 +112,4 @@ Add a reusable NestJS-first Remote MCP server capability and prove it with publi
 - **Branch/Worktree**: `feat/MCP-001-remote-mcp-server` at `/Users/ericzhan/Documents/side-projects/monorepo-system-template-worktrees/MCP-001-remote-mcp-server`
 - **Validation**: `bun run check`, `bun run test` (isolated PostgreSQL), `bun run lint`, `bun run deps:check`, API MCP 13-test suite, real Nest app HTTP smoke, and `git diff --check` pass. Existing Web checks/lint retain 16/24 non-blocking baseline warnings and no errors.
 - **Known issues**: Live vendor smoke tests require reachable HTTPS and suitable account/workspace access; the manual release gate remains open. Existing legacy Nest packages without a `nest-` prefix are documented migration debt; all newly split framework-bound packages follow the naming rule.
-- **Next action**: Review the branch, run OpenAI/ChatGPT live smoke on a reachable deployment, then open the PR and approve release.
+- **Next action**: Merge the `dev -> main` release PR; run the documented vendor smoke checks when a reachable HTTPS deployment and suitable accounts are available.
