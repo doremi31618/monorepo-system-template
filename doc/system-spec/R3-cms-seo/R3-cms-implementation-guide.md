@@ -4,14 +4,14 @@ This guide describes the current SvelteKit/NestJS capability implementation for 
 
 ## Phase 1: Backend capability
 
-CMS schema and behavior are owned by `packages/cms`:
+CMS contracts and pure utilities are owned by `packages/cms`; the NestJS/Drizzle adapter is owned by `packages/nest-cms`:
 
 ```text
-packages/cms/src/cms.schema.ts
-packages/cms/src/cms.service.ts
-packages/cms/src/cms.module.ts
-packages/cms/src/cms.controller.ts
-packages/cms/src/cms-public.controller.ts
+packages/nest-cms/src/cms.schema.ts
+packages/nest-cms/src/cms.service.ts
+packages/nest-cms/src/cms.module.ts
+packages/nest-cms/src/cms.controller.ts
+packages/nest-cms/src/cms-public.controller.ts
 ```
 
 After changing a CMS or asset schema, generate and apply the canonical migration from the repository root:

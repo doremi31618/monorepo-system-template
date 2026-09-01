@@ -7,8 +7,14 @@ import { CmsTagsController } from './cms-tags.controller.js';
 import { CmsService } from './cms.service.js';
 
 @Module({
-    controllers: [CmsController, CmsDashboardController, CmsTagsController, CmsLinkPreviewController, CmsPublicController],
-    providers: [CmsService],
-    exports: [CmsService],
+  controllers: [
+    CmsController,
+    CmsDashboardController,
+    CmsTagsController,
+    CmsLinkPreviewController,
+    CmsPublicController,
+  ],
+  providers: [CmsService],
+  exports: [CmsService],
 })
-export class CmsModule { }
+export class CmsModule {}

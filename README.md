@@ -1,4 +1,4 @@
-# monorepo-system-template
+# monorepo-system-template — NestJS + SvelteKit first
 
 A capability-oriented full-stack platform built with SvelteKit, NestJS, Drizzle, PostgreSQL, and Bun workspaces.
 
@@ -36,7 +36,9 @@ packages/
 ├── auth/
 ├── access-control/
 ├── assets/
-└── cms/
+├── cms/            # Framework-neutral CMS contracts/utilities
+├── nest-cms/       # NestJS/Drizzle CMS implementation
+└── nest-mcp-server/# Generic NestJS Remote MCP adapter
 ```
 
 Every internal dependency uses `workspace:*`. Packages expose ordinary `dist`-based package exports; no TypeScript path aliases or custom export conditions are required.
@@ -60,6 +62,8 @@ docker compose up --build
 - Web: `http://localhost:5173`
 - API: `http://localhost:3333/v1`
 - OpenAPI: `http://localhost:3333/openapi`
+- Public MCP: `http://localhost:3333/mcp/public`
+- Private MCP: `http://localhost:3333/mcp/private`
 - Storybook: `bun run --filter @platform/storybook dev`
 
 ## Common commands
@@ -71,6 +75,8 @@ bun run test:unit
 bun run test:storybook
 bun run build
 bun run lint
+bun run deps:check
+bun run deps:graph
 
 bun run db:generate
 bun run db:migrate
@@ -81,4 +87,5 @@ Drizzle migrations in `apps/migrator/drizzle` are the only canonical migration h
 
 See [capability-platform.md](doc/system-spec/architecture/capability-platform.md) for dependency rules,
 [capability-migration-plan.md](doc/project-tasks/capability-migration-plan.md) for the cross-project
-migration roadmap, and [how-to-start-dev-env.md](doc/onboarding/how-to-start-dev-env.md) for daily workflows.
+migration roadmap, [how-to-start-dev-env.md](doc/onboarding/how-to-start-dev-env.md) for daily workflows,
+and [how-to-add-remote-mcp-tool.md](doc/onboarding/how-to-add-remote-mcp-tool.md) for Remote MCP tool composition.

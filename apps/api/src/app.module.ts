@@ -6,19 +6,22 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { CoreModule } from './core/core.module.js';
 import { appConfig, validate } from '@platform/config';
 import { OAuthModule } from './oauth/oauth.module.js';
+import { McpModule } from './mcp/mcp.module.js';
 
 // const env = validate(process.env);
 @Module({
 	imports: [
 		ScheduleModule.forRoot(),
-		ConfigModule.forRoot({ 
-			isGlobal: true, 
+		ConfigModule.forRoot({
+			isGlobal: true,
 			validate,
-			load: [appConfig] }),
+			load: [appConfig]
+		}),
 		CoreModule,
-		OAuthModule
+		OAuthModule,
+		McpModule
 	],
 	controllers: [AppController],
 	providers: [AppService]
 })
-export class AppModule { }
+export class AppModule {}

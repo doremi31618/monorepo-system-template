@@ -1,6 +1,6 @@
 import { relations } from 'drizzle-orm';
 import { users } from '@platform/users/schema';
-import { posts, postContents, cmsTags, postTags, postDailyViews } from '@platform/cms/schema';
+import { posts, postContents, cmsTags, postTags, postDailyViews } from '@platform/nest-cms/schema';
 import { assets } from '@platform/assets/schema';
 import { userRoles } from '@platform/access-control/schema';
 
