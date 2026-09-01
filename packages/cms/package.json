@@ -10,31 +10,13 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
-    },
-    "./schema": {
-      "types": "./dist/cms.schema.d.ts",
-      "import": "./dist/cms.schema.js",
-      "default": "./dist/cms.schema.js"
     }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test:unit": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config ../../jest.capability.config.cjs --runInBand --testPathPattern /packages/cms/"
   },
-  "dependencies": {
-    "@nestjs/common": "^10.0.0",
-    "@nestjs/config": "^4.0.2",
-    "@platform/assets": "workspace:*",
-    "@platform/users": "workspace:*",
-    "drizzle-orm": "^0.44.7",
-    "uuid": "^13.0.0"
-  },
   "devDependencies": {
-    "@types/express": "^4.17.17",
     "typescript": "^5.9.3"
-  },
-  "peerDependencies": {
-    "reflect-metadata": "^0.2.0",
-    "rxjs": "^7.8.0"
   }
 }

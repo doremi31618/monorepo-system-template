@@ -39,6 +39,8 @@
         "@platform/database": "workspace:*",
         "@platform/logger": "workspace:*",
         "@platform/mail": "workspace:*",
+        "@platform/nest-cms": "workspace:*",
+        "@platform/nest-mcp-server": "workspace:*",
         "@platform/oauth-server": "workspace:*",
         "@platform/scheduling": "workspace:*",
         "@platform/sdk": "workspace:*",
@@ -49,6 +51,7 @@
         "dotenv": "^17.2.3",
         "drizzle-orm": "^0.44.7",
         "googleapis": "^166.0.0",
+        "jose": "^6.2.10",
         "nodemailer": "^7.0.10",
         "pg": "^8.16.3",
         "reflect-metadata": "^0.2.0",
@@ -260,21 +263,8 @@
     "packages/cms": {
       "name": "@platform/cms",
       "version": "0.1.0",
-      "dependencies": {
-        "@nestjs/common": "^10.0.0",
-        "@nestjs/config": "^4.0.2",
-        "@platform/assets": "workspace:*",
-        "@platform/users": "workspace:*",
-        "drizzle-orm": "^0.44.7",
-        "uuid": "^13.0.0",
-      },
       "devDependencies": {
-        "@types/express": "^4.17.17",
         "typescript": "^5.9.3",
-      },
-      "peerDependencies": {
-        "reflect-metadata": "^0.2.0",
-        "rxjs": "^7.8.0",
       },
     },
     "packages/config": {
@@ -349,6 +339,44 @@
       },
       "devDependencies": {
         "@types/nodemailer": "^7.0.0",
+        "typescript": "^5.9.3",
+      },
+      "peerDependencies": {
+        "reflect-metadata": "^0.2.0",
+        "rxjs": "^7.8.0",
+      },
+    },
+    "packages/nest-cms": {
+      "name": "@platform/nest-cms",
+      "version": "0.1.0",
+      "dependencies": {
+        "@nestjs/common": "^10.0.0",
+        "@nestjs/config": "^4.0.2",
+        "@platform/assets": "workspace:*",
+        "@platform/cms": "workspace:*",
+        "@platform/users": "workspace:*",
+        "drizzle-orm": "^0.44.7",
+        "uuid": "^13.0.0",
+      },
+      "devDependencies": {
+        "@types/express": "^4.17.17",
+        "typescript": "^5.9.3",
+      },
+      "peerDependencies": {
+        "reflect-metadata": "^0.2.0",
+        "rxjs": "^7.8.0",
+      },
+    },
+    "packages/nest-mcp-server": {
+      "name": "@platform/nest-mcp-server",
+      "version": "0.1.0",
+      "dependencies": {
+        "@modelcontextprotocol/node": "2.0.0",
+        "@modelcontextprotocol/server": "2.0.0",
+        "@nestjs/common": "^10.0.0",
+      },
+      "devDependencies": {
+        "@types/express": "^4.17.17",
         "typescript": "^5.9.3",
       },
       "peerDependencies": {
@@ -753,6 +781,8 @@
 
     "@floating-ui/utils": ["@floating-ui/utils@0.2.10", "", {}, "sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ=="],
 
+    "@hono/node-server": ["@hono/node-server@1.19.17", "", { "peerDependencies": { "hono": "^4" } }, "sha512-dSneS5qhiauZWGDCeK4o695Xd9nUNjviSZCMQrj10eetr8Uln1ucn6bbphOM6UynAMMtNIzZNSpL9vnASJwrPQ=="],
+
     "@humanfs/core": ["@humanfs/core@0.19.1", "", {}, "sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA=="],
 
     "@humanfs/node": ["@humanfs/node@0.16.7", "", { "dependencies": { "@humanfs/core": "^0.19.1", "@humanwhocodes/retry": "^0.4.0" } }, "sha512-/zUx+yOsIrG4Y43Eh2peDeKCxlRt/gET6aHfaKpuq267qXdYDFViVHfMaLyygZOnl0kGWxFIgsBy8QFuTLUXEQ=="],
@@ -831,6 +861,12 @@
 
     "@microsoft/tsdoc-config": ["@microsoft/tsdoc-config@0.18.0", "", { "dependencies": { "@microsoft/tsdoc": "0.16.0", "ajv": "~8.12.0", "jju": "~1.4.0", "resolve": "~1.22.2" } }, "sha512-8N/vClYyfOH+l4fLkkr9+myAoR6M7akc8ntBJ4DJdWH2b09uVfr71+LTMpNyG19fNqWDg8KEDZhx5wxuqHyGjw=="],
 
+    "@modelcontextprotocol/core": ["@modelcontextprotocol/core@2.0.0", "", { "dependencies": { "zod": "^4.2.0" } }, "sha512-pJCEwGG7Lfr/+PQp9ZTwKXNeO5wzbfKL7H3MYpCorM4oFBoQrdjnBgEoqG+RjhsvS1FKrDbKux+M1HhlnGWqcA=="],
+
+    "@modelcontextprotocol/node": ["@modelcontextprotocol/node@2.0.0", "", { "dependencies": { "@hono/node-server": "^1.19.9" }, "peerDependencies": { "@modelcontextprotocol/server": "^2.0.0", "hono": "^4.11.4" }, "optionalPeers": ["hono"] }, "sha512-Y4hAC2XdGDUdDOCbLDOCA4+aL3NUldjsOWlDL/YwpAxrPhRm1xHd7lZ+mLacvZ9t3PaH28wgNoaLQGrIk1P2pg=="],
+
+    "@modelcontextprotocol/server": ["@modelcontextprotocol/server@2.0.0", "", { "dependencies": { "@modelcontextprotocol/core": "2.0.0", "zod": "^4.2.0" } }, "sha512-YhHWdHfpFMQfd0prsEnxKeS3Qz3ytIGmsS0sth4KDjnacIT7hxk6hXHkJ9KysxlkvTM+WZAtQbbcUhdoP4Hvtw=="],
+
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@0.2.12", "", { "dependencies": { "@emnapi/core": "^1.4.3", "@emnapi/runtime": "^1.4.3", "@tybys/wasm-util": "^0.10.0" } }, "sha512-ZVWUcfwY4E/yPitQJl481FjFo3K22D6qF0DuFH6Y/nbnE11GY5uguDxZMGXPQ8WQ0128MXQD7TnfHyK4oWoIJQ=="],
 
     "@neoconfetti/react": ["@neoconfetti/react@1.0.0", "", {}, "sha512-klcSooChXXOzIm+SE5IISIAn3bYzYfPjbX7D7HoqZL84oAfgREeSg5vSIaSFH+DaGzzvImTyWe1OyrJ67vik4A=="],
@@ -884,6 +920,10 @@
     "@platform/mail": ["@platform/mail@workspace:packages/mail"],
 
     "@platform/migrator": ["@platform/migrator@workspace:apps/migrator"],
+
+    "@platform/nest-cms": ["@platform/nest-cms@workspace:packages/nest-cms"],
+
+    "@platform/nest-mcp-server": ["@platform/nest-mcp-server@workspace:packages/nest-mcp-server"],
 
     "@platform/oauth-server": ["@platform/oauth-server@workspace:packages/oauth-server"],
 
@@ -2068,6 +2108,8 @@
     "hasown": ["hasown@2.0.2", "", { "dependencies": { "function-bind": "^1.1.2" } }, "sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ=="],
 
     "he": ["he@1.2.0", "", { "bin": "bin/he" }, "sha512-F/1DnUGPopORZi0ni+CvrCgHQ5FyEAHRLSApuYWMmrbSwoN2Mn/7k+Gl38gJnR7yyDZk6WLXwiGod1JOWNDKGw=="],
+
+    "hono": ["hono@4.13.5", "", {}, "sha512-O6+/eCYRkzzzy0rPWwKLiGBR1nFuUPZynnwjxN1MBA62NNqbT0wQEzQyK2gSO5yDIDB336sXQleAhOHrzlYyKw=="],
 
     "html-escaper": ["html-escaper@2.0.2", "", {}, "sha512-H2iMtd0I4Mt5eYiapRdIDjp+XzelXQ0tFE4JS7YFwFevXXMmOp9myNrUvCg0D6ws8iqkRPBfKHgbwig1SmlLfg=="],
 

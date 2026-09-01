@@ -52,7 +52,9 @@ async function bootstrap() {
 		if (
 			(req.path.startsWith('/oauth/') &&
 				!req.path.startsWith('/oauth/interaction/')) ||
-			req.path.startsWith('/.well-known/')
+			req.path === '/.well-known/oauth-authorization-server' ||
+			req.path === '/.well-known/openid-configuration' ||
+			req.path === '/.well-known/jwks.json'
 		) {
 			if (
 				req.method === 'POST' &&
