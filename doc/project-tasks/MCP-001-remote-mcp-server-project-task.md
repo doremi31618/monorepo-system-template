@@ -7,7 +7,7 @@
 > **Branch**: `feat/MCP-001-remote-mcp-server`
 > **Base**: `origin/main` (`d6900c2`)
 > **Worktree**: `/Users/ericzhan/Documents/side-projects/monorepo-system-template-worktrees/MCP-001-remote-mcp-server`
-> **PR**: Pending
+> **PR**: [#15](https://github.com/doremi31618/monorepo-system-template/pull/15)
 > **Related Spec**: `doc/system-spec/MCP-001-remote-mcp-server/product-spec.md`, `doc/system-spec/MCP-001-remote-mcp-server/technical-spec.md`
 > **Release**: Pending
 > **Last updated**: 2026-09-01
@@ -87,7 +87,7 @@ Add a reusable NestJS-first Remote MCP server capability and prove it with publi
 - [x] Compose public/private CMS tools and authorization
 - [x] Tests and package-boundary validation
 - [x] README, dependency graph, and onboarding updates
-- [ ] Independent review and PR
+- [ ] Independent review and PR ([#15](https://github.com/doremi31618/monorepo-system-template/pull/15))
 - [ ] Release note and release approval
 
 ## Decisions and Work Log
@@ -102,10 +102,11 @@ Add a reusable NestJS-first Remote MCP server capability and prove it with publi
 - 2026-09-01: Added `deps:check`/`deps:graph`; all 19 packages now have a README with framework/runtime labels and usage guidance.
 - 2026-09-01: Full Nest smoke verified public tools/list, private `401` resource challenge, and unwrapped RFC 9728 metadata against an isolated migrated PostgreSQL database.
 - 2026-09-01: Live OpenAI/ChatGPT/Claude vendor smoke not executed because this worktree has no reachable HTTPS deployment or authenticated vendor workspace; exact manual steps are documented for release validation.
+- 2026-09-01: Opened feature integration PR [#15](https://github.com/doremi31618/monorepo-system-template/pull/15) targeting `dev`.
 
 ## Handoff
 
-- **Commit/PR**: Pending
+- **Commit/PR**: `2ce671e` / [#15](https://github.com/doremi31618/monorepo-system-template/pull/15)
 - **Branch/Worktree**: `feat/MCP-001-remote-mcp-server` at `/Users/ericzhan/Documents/side-projects/monorepo-system-template-worktrees/MCP-001-remote-mcp-server`
 - **Validation**: `bun run check`, `bun run test` (isolated PostgreSQL), `bun run lint`, `bun run deps:check`, API MCP 13-test suite, real Nest app HTTP smoke, and `git diff --check` pass. Existing Web checks/lint retain 16/24 non-blocking baseline warnings and no errors.
 - **Known issues**: Live vendor smoke tests require reachable HTTPS and suitable account/workspace access; the manual release gate remains open. Existing legacy Nest packages without a `nest-` prefix are documented migration debt; all newly split framework-bound packages follow the naming rule.
