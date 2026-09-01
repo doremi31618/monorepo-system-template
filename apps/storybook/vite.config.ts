@@ -12,14 +12,20 @@ export default defineConfig({
       {
         extends: true,
         plugins: [
-          storybookTest({ configDir: path.join(import.meta.dirname, '.storybook') }),
+          storybookTest({
+            configDir: path.join(import.meta.dirname, '.storybook'),
+          }),
         ],
         test: {
           name: 'storybook',
           browser: {
             enabled: true,
             headless: true,
-            provider: playwright({}),
+            provider: playwright({
+              launchOptions: {
+                channel: 'chrome',
+              },
+            }),
             instances: [{ browser: 'chromium' }],
           },
           setupFiles: ['.storybook/vitest.setup.ts'],

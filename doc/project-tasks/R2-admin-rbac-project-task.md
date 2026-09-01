@@ -3,7 +3,7 @@
 
 # Admin & RBAC Progress Report (Milestone 2)
 
-> **Roadmap**: [R2 - Admin & RBAC](../roadmap/R2-admin-rbac.md)
+> **Roadmap**: [R2 - Admin & RBAC](../Roadmap/R2-admin-rbac.md)
 > **Guides**:
 > - [Implementation Guide](../system-spec/R2-admin-rbac/implementation-guide.md) (Pending)
 

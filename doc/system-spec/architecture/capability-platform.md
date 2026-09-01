@@ -24,17 +24,43 @@ contracts   config   database   logger   ui   test-utils
                 access-control
 
 users ───────────────► assets
-users + assets ───────► cms
+
+cms (framework-neutral contracts/utilities)
+  ▲
+  │
+nest-cms (NestJS + Drizzle) ──► users + assets
+
+nest-mcp-server (generic NestJS MCP adapter; no domain dependency)
 ```
 
 Applications choose capabilities:
 
 ```text
 apps/api        -> all server capabilities + schema composition
-apps/web        -> contracts + sdk + ui
+apps/web        -> contracts + sdk + ui + service-ui
 apps/migrator   -> feature-owned schemas + one migration history
-apps/storybook  -> ui
+apps/storybook  -> ui + service-ui + package-owned stories
+apps/api        -> nest-mcp-server + nest-cms (register CMS tools here)
 ```
+
+Framework-neutral capability cores and framework adapters are separate dependency
+layers. Applications compose adapters; cores never import NestJS, Express, Svelte,
+SvelteKit, or Drizzle.
+
+```text
+apps/* -> framework adapters -> capability cores
+                     |
+                     +-------> infrastructure adapters
+
+service-ui -> Svelte
+task-runtime -> TypeScript only
+nest-cms -> cms
+apps/api -> nest-mcp-server + nest-cms
+```
+
+`@platform/nest-mcp-server` 不匯入任何 domain capability。Remote MCP tool 在
+`apps/api` composition root 直接注入 capability service 後註冊，因此同一個
+`CmsService` 可同時服務 REST 與 MCP，不需要 `nest-cms-mcp` 之類的橋接 package。
 
 ## Database seam
 
@@ -46,7 +72,13 @@ Feature packages own table definitions. `@platform/database` deliberately does n
 
 - A capability may import another capability only when the dependency direction above allows it.
 - A package must never import from `apps/*`.
-- Routes remain in `apps/web`; reusable Svelte components remain in `packages/ui`.
+- Framework-neutral package cannot depend on NestJS, Express, Svelte, SvelteKit, or Drizzle.
+- 新的 framework-bound package 使用 `<framework>-<大模組>-<子模組>` 命名；例如
+  `nest-auth-access-control`。沒有子模組時可省略最後一段，例如 `nest-cms`。
+- 每個 package 都必須有 README，第一段明確標示 framework/runtime 限制、用途與匯入方式。
+- Routes remain in `apps/web`; primitive Svelte components remain in `packages/ui`.
+- Domain-neutral service presentation belongs in `packages/service-ui`; Storybook is
+  the showcase host, not the owner of library stories.
 - Platform adapters are selected by an app. A future alternate storage provider should be a separate adapter package rather than hard-coded into unrelated capabilities.
 
 ## Decisions made during the first extraction
@@ -56,3 +88,27 @@ Feature packages own table definitions. `@platform/database` deliberately does n
 - No `supabase/` migration tree is created. The current platform uses PostgreSQL/MinIO and keeps Drizzle as the single migration authority; an unused second history would create ambiguity.
 - Capability modules use explicit workspace dependencies for this first extraction. Introduce `register(...)`/provider tokens when a capability gains a second adapter or needs to be consumed outside this workspace, rather than adding configuration indirection pre-emptively.
 - Node.js remains the API production runtime. Bun owns dependency installation, workspace resolution, and task execution.
+
+## Capability delivery contract
+
+Every new or migrated capability owns its public API, unit tests, and fixtures. A
+package exposes a `test:unit` script even when its underlying test runner differs by
+framework. Root `bun run test:unit` builds packages and runs every package-owned unit
+suite.
+
+UI packages additionally own colocated Storybook stories. `apps/storybook` scans
+`packages/*/stories` and runs those stories in Chrome through Vitest, including the
+configured accessibility checks. A successful Storybook build does not replace the
+browser story suite or package unit tests.
+
+使用 `bun run deps:check` 驗證 README、workspace dependency、undeclared internal
+imports、framework-neutral 邊界與循環相依；使用 `bun run deps:graph` 輸出可貼入
+Mermaid 的即時 package graph。這兩個命令以 `package.json` 與實際 source imports
+為準，不依賴手動維護的圖。
+
+Storage adapters also require integration tests for transaction and locking behavior;
+mock-based unit tests are not sufficient evidence for durable task or event semantics.
+
+The staged extraction roadmap, including Quantum QA recipe/recording capabilities and
+their browser/Chrome adapter boundaries, is maintained in
+[`capability-migration-plan.md`](../../project-tasks/capability-migration-plan.md).

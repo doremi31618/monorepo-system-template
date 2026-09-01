@@ -34,11 +34,12 @@ export class GoogleService {
 		this.signupRedirect = `${this.hostUrl}/auth/google/signup/callback`;
 	}
 
-	getLoginAuthUrl() {
+	getLoginAuthUrl(state?: string) {
 		return this.createOAuthClient(this.loginRedirect).generateAuthUrl({
 			access_type: 'offline',
 			prompt: 'consent',
-			scope: ['openid', 'email', 'profile']
+			scope: ['openid', 'email', 'profile'],
+			...(state ? { state } : {})
 		});
 	}
 

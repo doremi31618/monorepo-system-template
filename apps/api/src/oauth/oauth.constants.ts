@@ -1,0 +1,1 @@
+export const OAUTH_PROVIDER = 'OAUTH_PROVIDER';

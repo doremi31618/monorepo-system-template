@@ -1,6 +1,6 @@
 # Implementation Guide: Admin & RBAC Core (R2-01)
 
-> **Related Task**: [R2-admin-rbac-project-task](../project-tasks/R2-admin-rbac-project-task.md) | **Roadmap**: [R2-admin-rbac](../roadmap/R2-admin-rbac.md)
+> **Related Task**: [R2-admin-rbac-project-task](../../project-tasks/R2-admin-rbac-project-task.md) | **Roadmap**: [R2-admin-rbac](../../Roadmap/R2-admin-rbac.md)
 
 本指南涵蓋 R2 Milestone 的第一階段核心基礎建設：
 1.  **Admin Panel Foundation**: 前端後台佈局與路由保護。

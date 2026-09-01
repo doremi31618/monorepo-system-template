@@ -4,7 +4,7 @@
 
 採用 **Headless CMS** 架構，確保內容管理與前端呈現解耦。
 
-* **Admin SPA**: React/Next.js (Client-side) + Tiptap Editor。
+* **Admin SPA**: SvelteKit + Svelte 5 + Tiptap Editor。
 * **Backend API**: Node.js/NestJS (提供 RESTful API)。
 * **Database**: PostgreSQL (處理結構化數據與多語系)。
 * **Asset Storage**: S3-Compatible Cloud Storage (R3c)。
@@ -60,7 +60,7 @@
 
 * **Editor Core**: `Tiptap` (基於 ProseMirror)。
 * **Drag & Drop**: `dnd-kit` 或 `ProseMirror-drag-drop`。
-* **Block Component**: 自定義 Tiptap `Node`，每個節點封裝在一個帶有 `DragHandle` 的 React 元件中。
+* **Block Component**: 自定義 Tiptap `Node`，由 Svelte editor component 提供 block menu 與 drag handle interaction。
 
 ### 3.2 拖拽邏輯 (D&D Mechanism)
 
@@ -158,7 +158,7 @@
 
 ## 6. SEO 與效能優化 (Technical SEO)
 
-* **SSR (Server Side Rendering)**: 前端必須使用 Next.js 或類似框架，在伺服器端將 `body` JSON 轉換為語義化的 HTML（使用 `Tiptap GenerateHTML` 函式）。
+* **Rendering**: SvelteKit public route 將 `body` JSON 轉換為語義化內容，並透過 `<svelte:head>` 輸出文章 title、description 與 canonical metadata。
 * **Open Graph**: 動態生成 `<meta property="og:image">`，若無專屬 SEO 圖則抓取文章第一張圖片。
 * **Canonical URL**: 自動生成 `<link rel="canonical">` 避免多語系內容造成的重複頁面問題。
 

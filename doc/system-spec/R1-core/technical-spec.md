@@ -3,9 +3,9 @@
 > **Owner**: System Designer
 > **Feature**: Core Architecture
 > **Implementation Guides**:
-> - [01. Logger & Error Handling](./R1-01-logger-and-error-handling.md)
-> - [02. Domain Core & Auth Base](./R1-02-domain-core-and-auth-base.md)
-> - [03. CI/CD & Scheduling](./R1-03-cicd-and-scheduling.md)
+> - [01. Logger & Error Handling](./implementation-guide/R1-01-logger-and-error-handling.md)
+> - [02. Domain Core & Auth Base](./implementation-guide/R1-02-domain-core-and-auth-base.md)
+> - [03. CI/CD & Scheduling](./implementation-guide/R1-03-cicd-and-scheduling.md)
 
 ## 1. Architecture
 - **Layered Arch**: Feature -> Domain -> Infra.

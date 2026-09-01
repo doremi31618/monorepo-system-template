@@ -6,10 +6,21 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "default": "./dist/index.js" },
-    "./schema": { "types": "./dist/scheduling.schema.d.ts", "import": "./dist/scheduling.schema.js", "default": "./dist/scheduling.schema.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./schema": {
+      "types": "./dist/scheduling.schema.d.ts",
+      "import": "./dist/scheduling.schema.js",
+      "default": "./dist/scheduling.schema.js"
+    }
   },
-  "scripts": { "build": "tsc -p tsconfig.json" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test:unit": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config ../../jest.capability.config.cjs --runInBand --testPathPattern /packages/scheduling/"
+  },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
     "@platform/config": "workspace:*",
@@ -17,6 +28,11 @@
     "@platform/logger": "workspace:*",
     "drizzle-orm": "^0.44.7"
   },
-  "devDependencies": { "typescript": "^5.9.3" },
-  "peerDependencies": { "reflect-metadata": "^0.2.0", "rxjs": "^7.8.0" }
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "reflect-metadata": "^0.2.0",
+    "rxjs": "^7.8.0"
+  }
 }

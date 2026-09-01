@@ -1,6 +1,6 @@
 # Implementation Guide: CI/CD & Backend Scheduling (R1-03)
 
-> **Related Task**: [R1-core-project-task](../project-tasks/R1-core-project-task.md) | **Roadmap**: [R1-core](../Roadmap/R1-core.md)
+> **Related Task**: [R1-core-project-task](../../../project-tasks/R1-core-project-task.md) | **Roadmap**: [R1-core](../../../Roadmap/R1-core.md)
 
 本指南涵蓋 R1 Milestone 最後兩項核心基礎建設：
 1. **CI/CD**: 自動化建置與測試管道 (GitHub Actions + Nx)。

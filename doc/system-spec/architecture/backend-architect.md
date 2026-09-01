@@ -5,8 +5,8 @@
 ---
 
 ## 🔗 Related Documents
-- **Project Structure**: [Roadmap (R1)](../Roadmap/R1-core.md)
-- **Implementation Status**: [Project Task (R1)](../project-tasks/R1-core-project-task.md)
+- **Project Structure**: [Roadmap (R1)](../../Roadmap/R1-core.md)
+- **Implementation Status**: [Project Task (R1)](../../project-tasks/R1-core-project-task.md)
 
 ## 技術棧
 

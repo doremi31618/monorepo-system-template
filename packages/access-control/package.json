@@ -6,10 +6,21 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "default": "./dist/index.js" },
-    "./schema": { "types": "./dist/access-control.schema.d.ts", "import": "./dist/access-control.schema.js", "default": "./dist/access-control.schema.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./schema": {
+      "types": "./dist/access-control.schema.d.ts",
+      "import": "./dist/access-control.schema.js",
+      "default": "./dist/access-control.schema.js"
+    }
   },
-  "scripts": { "build": "tsc -p tsconfig.json" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test:unit": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config ../../jest.capability.config.cjs --runInBand --testPathPattern /packages/access-control/"
+  },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
     "@nestjs/core": "^10.0.0",
@@ -24,6 +35,12 @@
     "class-validator": "^0.14.2",
     "drizzle-orm": "^0.44.7"
   },
-  "devDependencies": { "@types/bcrypt": "^6.0.0", "typescript": "^5.9.3" },
-  "peerDependencies": { "reflect-metadata": "^0.2.0", "rxjs": "^7.8.0" }
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "reflect-metadata": "^0.2.0",
+    "rxjs": "^7.8.0"
+  }
 }

@@ -62,4 +62,4 @@ apps/web/src
 - **可擴充性**：路由、API base URL、儲存鍵值皆放在 `config`，方便依環境覆寫。
 - **SSR 友善**：存取 `localStorage` 需受 `browser` 守衛，並於 store/guard 中統一處理。
 
-如需新增功能，建議依上述層次新增對應模組，並在 `project-progress` 記錄工作項目。
+如需新增功能，建議依上述層次新增對應模組，並在 `doc/project-tasks` 記錄工作項目。

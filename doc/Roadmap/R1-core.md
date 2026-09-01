@@ -16,8 +16,8 @@ Updated: 2025-12-05
 ## 🔗 Related Documents
 - **Execution Checklist**: [Project Task (R1)](../project-tasks/R1-core-project-task.md)
 - **Technical Guides**:
-  - [01. Logger & Error Handling](../implementation-guides/R1-01-logger-and-error-handling.md)
-  - [02. Domain Core & Auth Base](../implementation-guides/R1-02-domain-core-and-auth-base.md)
+  - [01. Logger & Error Handling](../system-spec/R1-core/implementation-guide/R1-01-logger-and-error-handling.md)
+  - [02. Domain Core & Auth Base](../system-spec/R1-core/implementation-guide/R1-02-domain-core-and-auth-base.md)
 
 ## 🎯 Goal（目標）
 
