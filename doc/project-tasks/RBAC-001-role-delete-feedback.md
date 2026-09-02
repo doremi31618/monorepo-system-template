@@ -7,7 +7,7 @@
 > **Branch**: `feat/RBAC-001-role-delete-feedback`
 > **Base**: local `dev` (`fc002d0`)
 > **Worktree**: `/Users/ericzhan/Documents/side-projects/monorepo-system-template-worktrees/RBAC-001-role-delete-feedback`
-> **PR**: Pending
+> **PR**: [#20](https://github.com/doremi31618/monorepo-system-template/pull/20)
 > **Related Spec**: `doc/system-spec/R2-admin-rbac/product-spec.md` (REQ-R-04), `doc/system-spec/R2-admin-rbac/technical-spec.md` (Role deletion), `doc/system-spec/R2-admin-rbac/design-spec.md` (Role deletion feedback)
 > **Release**: Pending
 > **Last updated**: 2026-09-02
@@ -70,7 +70,7 @@ Make custom-role deletion reliable when the role has user and permission relatio
 - [x] Add a failing browser regression for missing success feedback.
 - [x] Implement the role-deletion success toast.
 - [x] Run focused and full Web validation.
-- [ ] Commit, open the feature PR to `dev`, and request independent review.
+- [x] Commit and open the feature PR to `dev`; independent review remains pending.
 
 ## Decisions and Work Log
 
@@ -79,11 +79,12 @@ Make custom-role deletion reliable when the role has user and permission relatio
 - 2026-09-02: User verified deletion succeeds and requested a success toast.
 - 2026-09-02: User explicitly skipped the requirements interview; accepted existing English copy and post-refresh timing.
 - 2026-09-02: Browser regression first failed waiting for the missing toast, then passed after the minimal implementation. Web check, lint, production build, and diff checks pass with existing warnings only.
+- 2026-09-02: Opened feature PR [#20](https://github.com/doremi31618/monorepo-system-template/pull/20) targeting `dev`.
 
 ## Handoff
 
-- **Commit/PR**: Pending
+- **Commit/PR**: `74da248` / [#20](https://github.com/doremi31618/monorepo-system-template/pull/20)
 - **Branch/Worktree**: `feat/RBAC-001-role-delete-feedback` at `/Users/ericzhan/Documents/side-projects/monorepo-system-template-worktrees/RBAC-001-role-delete-feedback`
 - **Validation**: API E2E/unit/check and live deletion smoke passed; Web browser regression, check, lint, production build, and diff checks passed. Web retains existing non-blocking warnings.
 - **Known issues**: None currently known in scope.
-- **Next action**: Commit, open the feature PR to `dev`, and request independent review.
+- **Next action**: Complete independent review and CI before merging PR #20 into `dev`.
