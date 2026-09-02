@@ -9,6 +9,11 @@ bun.lockb
 .env.production.local
 .env.development.local
 
+# Nx local cache and installation metadata
+.nx/installation/
+.nx/cache/
+.nx/workspace-data/
+
 # Build outputs
 dist/
 .svelte-kit/
