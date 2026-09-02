@@ -1,6 +1,6 @@
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { Module } from '@nestjs/common';
-import { LoggerModule } from '@platform/logger';
+import { LoggerModule } from '@platform/nest-infra-logger';
 import { LoggingInterceptor } from './logging.interceptor.js';
 import { ResponseInterceptor } from './response.interceptor.js';
 @Module({

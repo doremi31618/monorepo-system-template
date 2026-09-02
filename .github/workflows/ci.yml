@@ -24,6 +24,19 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Dependency boundaries and cycles
+        run: bun run deps:check
+
+      - name: Dependency graph is current
+        run: bun run deps:graph:check
+
+      - name: High and critical vulnerability audit
+        run: bun run deps:audit
+
+      - name: Unused files and exports report
+        continue-on-error: true
+        run: bun run deps:report
+
       - name: Check
         run: bun run check
 

@@ -1,0 +1,32 @@
+{
+  "name": "@platform/browser-sdk",
+  "version": "0.0.1",
+  "description": "瀏覽器端 HTTP、Session 與搜尋工具，不依賴 UI framework",
+  "private": true,
+  "platform": { "runtime": "browser", "framework": "none", "layer": "sdk", "domain": "shared" },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "vite build",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@platform/types-shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.6",
+    "vite-plugin-dts": "^4.5.4"
+  }
+}

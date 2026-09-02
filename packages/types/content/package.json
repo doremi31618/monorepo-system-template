@@ -1,0 +1,28 @@
+{
+  "name": "@platform/types-content",
+  "version": "0.1.0",
+  "description": "Content 大模組跨 package 與跨 runtime 共用的純 TypeScript 型別",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "platform": {
+    "runtime": "universal",
+    "framework": "none",
+    "layer": "types",
+    "domain": "content"
+  }
+}

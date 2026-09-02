@@ -1,5 +1,5 @@
 import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from "@nestjs/common";
-import { LoggerService } from '@platform/logger';
+import { LoggerService } from '@platform/nest-infra-logger';
 import { tap } from "rxjs/operators";
 import { Observable } from 'rxjs';
 

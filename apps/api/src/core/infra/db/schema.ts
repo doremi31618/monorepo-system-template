@@ -1,10 +1,10 @@
-import * as usersModel from '@platform/users/schema';
-import * as authModel from '@platform/auth/schema';
-import * as mailModel from '@platform/mail/schema';
-import * as schedulingModel from '@platform/scheduling/schema';
-import * as accessControlModel from '@platform/access-control/schema';
-import * as assetsModel from '@platform/assets/schema';
-import * as cmsModel from '@platform/cms/schema';
+import * as usersModel from '@platform/nest-identity-users/schema';
+import * as authModel from '@platform/nest-identity-auth/schema';
+import * as mailModel from '@platform/nest-infra-mail/schema';
+import * as schedulingModel from '@platform/nest-infra-scheduling/schema';
+import * as accessControlModel from '@platform/nest-identity-access-control/schema';
+import * as assetsModel from '@platform/nest-content-assets/schema';
+import * as cmsModel from '@platform/nest-content-cms/schema';
 import * as relationModels from './relations.js';
 
 export const schema = {
@@ -18,11 +18,11 @@ export const schema = {
   ...relationModels,
 };
 
-export * from '@platform/users/schema';
-export * from '@platform/auth/schema';
-export * from '@platform/mail/schema';
-export * from '@platform/scheduling/schema';
-export * from '@platform/access-control/schema';
-export * from '@platform/assets/schema';
-export * from '@platform/cms/schema';
+export * from '@platform/nest-identity-users/schema';
+export * from '@platform/nest-identity-auth/schema';
+export * from '@platform/nest-infra-mail/schema';
+export * from '@platform/nest-infra-scheduling/schema';
+export * from '@platform/nest-identity-access-control/schema';
+export * from '@platform/nest-content-assets/schema';
+export * from '@platform/nest-content-cms/schema';
 export * from './relations.js';

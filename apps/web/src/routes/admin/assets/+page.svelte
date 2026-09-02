@@ -1,6 +1,16 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { Download, Loader2, Pencil, Save, Search, Trash2, X } from 'lucide-svelte';
+    import { goto } from '$app/navigation';
+    import { resolve } from '$app/paths';
+    import { page } from '$app/stores';
+    import { Download, FileText, Image as ImageIcon, Loader2, Pencil, Save, Trash2, X } from 'lucide-svelte';
+    import {
+        DataViewToolbar,
+        parseDataViewQuery,
+        writeDataViewQuery,
+        type DataViewProperty,
+        type DataViewQuery,
+    } from '@platform/svelte-ui/data-view-toolbar';
     import { deleteAsset as deleteAssetApi, getAssetPublicUrl, getDownloadUrl, listAssets, updateAsset, type Asset } from '$lib/api/assets';
     import { uploadAsset } from '$lib/services/upload.service';
 
@@ -16,6 +26,47 @@
     let previewRefreshCount: Record<string, number> = {};
     let searchQuery = '';
     let statusFilter = 'all';
+    let mimePrefix = 'all';
+    let visibility = 'all';
+    let dataViewQuery: DataViewQuery = { search: '', filters: [], sorts: [] };
+    const assetProperties: DataViewProperty[] = [
+        {
+            key: 'status',
+            label: 'Status',
+            type: 'enum',
+            operators: ['is'],
+            options: [
+                { value: 'ready', label: 'Ready' },
+                { value: 'pending', label: 'Pending' },
+            ],
+        },
+        {
+            key: 'mimePrefix',
+            label: 'File type',
+            type: 'enum',
+            operators: ['is'],
+            options: [
+                { value: 'image/', label: 'Image' },
+                { value: 'video/', label: 'Video' },
+                { value: 'audio/', label: 'Audio' },
+                { value: 'application/', label: 'Document' },
+            ],
+        },
+        {
+            key: 'visibility',
+            label: 'Visibility',
+            type: 'enum',
+            operators: ['is'],
+            options: [
+                { value: 'public', label: 'Public' },
+                { value: 'private', label: 'Private' },
+            ],
+        },
+        { key: 'createdAt', label: 'Created', type: 'date', operators: [], sortable: true },
+        { key: 'updatedAt', label: 'Updated', type: 'date', operators: [], sortable: true },
+        { key: 'name', label: 'Name', type: 'text', operators: [], sortable: true },
+        { key: 'size', label: 'Size', type: 'number', operators: [], sortable: true },
+    ];
     let editingAssetId: string | null = null;
     let editingOriginalName = '';
     let editingStatus: 'pending' | 'ready' = 'ready';
@@ -68,6 +119,9 @@
                 limit: 50,
                 query: searchQuery,
                 status: statusFilter,
+                mimePrefix,
+                visibility,
+                sort: dataViewQuery.sorts.map((sort) => `${sort.property}:${sort.direction}`),
             });
             assets = res.data?.data ?? [];
             prunePreviewState(assets);
@@ -188,13 +242,26 @@
         await loadPreviewUrl(asset, true);
     }
 
-    async function handleSearchSubmit() {
-        await loadAssets();
+    function applyDataViewQuery(query: DataViewQuery) {
+        searchQuery = query.search;
+        const valueFor = (property: string) => {
+            const value = query.filters.find((filter) => filter.property === property)?.value;
+            return Array.isArray(value) ? (value[0] ?? 'all') : (value ?? 'all');
+        };
+        statusFilter = valueFor('status');
+        mimePrefix = valueFor('mimePrefix');
+        visibility = valueFor('visibility');
     }
 
-    async function handleResetFilters() {
-        searchQuery = '';
-        statusFilter = 'all';
+    async function handleDataViewQueryChange(next: DataViewQuery) {
+        dataViewQuery = next;
+        applyDataViewQuery(next);
+        const params = writeDataViewQuery($page.url.searchParams, next);
+        await goto(`${resolve('/admin/assets')}?${params.toString()}`, {
+            replaceState: true,
+            noScroll: true,
+            keepFocus: true,
+        });
         await loadAssets();
     }
 
@@ -206,6 +273,8 @@
     }
 
     onMount(() => {
+        dataViewQuery = parseDataViewQuery($page.url.searchParams, assetProperties);
+        applyDataViewQuery(dataViewQuery);
         loadAssets();
     });
 </script>
@@ -221,7 +290,7 @@
                 on:change={handleFileSelect}
             />
             <button 
-                class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+                class="rounded bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                 disabled={isUploading}
                 on:click={() => fileInput.click()}
             >
@@ -230,38 +299,23 @@
         </div>
     </div>
 
-    <div class="mb-4 rounded border bg-white p-3 shadow-sm">
-        <div class="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_160px_auto_auto]">
-            <div class="relative">
-                <Search size={16} class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                    class="w-full rounded border px-3 py-2 pl-9 text-sm"
-                    placeholder="Search by asset name"
-                    bind:value={searchQuery}
-                    on:keydown={(event) => event.key === 'Enter' && handleSearchSubmit()}
-                />
-            </div>
-            <select class="rounded border px-3 py-2 text-sm" bind:value={statusFilter}>
-                <option value="all">All status</option>
-                <option value="ready">Ready</option>
-                <option value="pending">Pending</option>
-            </select>
-            <button class="rounded bg-slate-900 px-3 py-2 text-sm text-white hover:bg-slate-700" on:click={handleSearchSubmit}>
-                Search
-            </button>
-            <button class="inline-flex items-center justify-center rounded border px-3 py-2 text-sm hover:bg-gray-50" on:click={handleResetFilters}>
-                <X size={14} />
-            </button>
-        </div>
+    <div class="mb-4 border-y py-2">
+        <DataViewToolbar
+            properties={assetProperties}
+            query={dataViewQuery}
+            searchLabel="Search assets"
+            searchPlaceholder="Search filename or storage key…"
+            onquerychange={handleDataViewQueryChange}
+        />
     </div>
 
     {#if loading}
-        <div class="text-gray-500">Loading assets...</div>
+        <div class="text-muted-foreground">Loading assets...</div>
     {:else}
         <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {#each assets as asset (asset.id)}
-                <div class="border rounded p-2 hover:shadow-lg transition flex flex-col items-center">
-                    <div class="h-32 w-full bg-gray-100 mb-2 flex items-center justify-center overflow-hidden rounded">
+                <div class="flex flex-col items-center rounded border bg-card p-2 text-card-foreground transition hover:shadow-lg" data-theme-surface>
+                    <div class="mb-2 flex h-32 w-full items-center justify-center overflow-hidden rounded bg-muted">
                         {#if asset.mimeType?.startsWith('image/')}
                             {#if previewUrls[asset.id]}
                                 <img
@@ -271,43 +325,43 @@
                                     on:error={() => handlePreviewImageError(asset)}
                                 />
                             {:else if previewLoading[asset.id]}
-                                <span class="text-xs text-gray-400">Loading...</span>
+                                <span class="text-xs text-muted-foreground">Loading...</span>
                             {:else if previewFailed[asset.id]}
                                 <button
-                                    class="text-xs text-red-500 hover:underline"
+                                    class="text-xs text-destructive hover:underline"
                                     on:click={() => loadPreviewUrl(asset, true)}
                                 >
                                     Retry
                                 </button>
                             {:else}
-                                <span class="text-2xl">🖼️</span>
+                                <ImageIcon class="size-8 text-muted-foreground" aria-hidden="true" />
                             {/if}
                         {:else}
-                             <span class="text-2xl">📄</span>
+                             <FileText class="size-8 text-muted-foreground" aria-hidden="true" />
                         {/if}
                     </div>
                     {#if editingAssetId === asset.id}
                         <input
-                            class="w-full rounded border px-2 py-1 text-sm"
+                            class="w-full rounded border border-input bg-background px-2 py-1 text-sm text-foreground placeholder:text-muted-foreground"
                             bind:value={editingOriginalName}
                             placeholder="Asset name"
                         />
                     {:else}
                         <div class="text-sm font-medium truncate w-full text-center" title={displayAssetName(asset)}>{displayAssetName(asset)}</div>
                     {/if}
-                    <div class="text-xs text-gray-500">{asset.mimeType}</div>
+                    <div class="text-xs text-muted-foreground">{asset.mimeType}</div>
                     {#if editingAssetId === asset.id}
-                        <select class="mt-1 w-full rounded border px-2 py-1 text-xs" bind:value={editingStatus}>
+                        <select class="mt-1 w-full rounded border border-input bg-background px-2 py-1 text-xs text-foreground" bind:value={editingStatus}>
                             <option value="ready">ready</option>
                             <option value="pending">pending</option>
                         </select>
                     {:else}
-                        <div class="text-xs text-gray-500">status: {asset.status}</div>
+                        <div class="text-xs text-muted-foreground">status: {asset.status}</div>
                     {/if}
-                    <div class="text-xs text-gray-400">{(asset.size / 1024).toFixed(1)} KB</div>
+                    <div class="text-xs text-muted-foreground">{((asset.size ?? 0) / 1024).toFixed(1)} KB</div>
                     <div class="mt-2 flex items-center gap-3">
                         <button 
-                            class="inline-flex h-8 w-8 items-center justify-center rounded text-blue-600 transition-colors hover:bg-blue-50"
+                            class="inline-flex h-8 w-8 items-center justify-center rounded text-primary transition-colors hover:bg-accent"
                             on:click={() => getSignedUrl(asset.id)}
                             aria-label="Download asset"
                             title="Download"
@@ -316,7 +370,7 @@
                         </button>
                         {#if editingAssetId === asset.id}
                             <button
-                                class="inline-flex h-8 w-8 items-center justify-center rounded text-emerald-600 transition-colors hover:bg-emerald-50 disabled:opacity-50"
+                                class="inline-flex h-8 w-8 items-center justify-center rounded text-primary transition-colors hover:bg-accent disabled:opacity-50"
                                 on:click={() => handleSaveAsset(asset)}
                                 disabled={savingAssetId === asset.id}
                                 aria-label="Save asset"
@@ -329,7 +383,7 @@
                                 {/if}
                             </button>
                             <button
-                                class="inline-flex h-8 w-8 items-center justify-center rounded text-gray-500 transition-colors hover:bg-gray-100"
+                                class="inline-flex h-8 w-8 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                                 on:click={cancelEditAsset}
                                 aria-label="Cancel editing asset"
                                 title="Cancel"
@@ -338,7 +392,7 @@
                             </button>
                         {:else}
                             <button
-                                class="inline-flex h-8 w-8 items-center justify-center rounded text-blue-600 transition-colors hover:bg-blue-50"
+                                class="inline-flex h-8 w-8 items-center justify-center rounded text-primary transition-colors hover:bg-accent"
                                 on:click={() => startEditAsset(asset)}
                                 aria-label="Edit asset"
                                 title="Edit"
@@ -347,16 +401,16 @@
                             </button>
                         {/if}
                         <button
-                            class="inline-flex h-8 w-8 items-center justify-center rounded transition-colors hover:bg-red-50 disabled:opacity-50"
+                            class="inline-flex h-8 w-8 items-center justify-center rounded text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
                             disabled={deletingAssetId === asset.id || editingAssetId === asset.id}
                             on:click={() => handleDeleteAsset(asset)}
                             aria-label="Delete asset"
                             title="Delete"
                         >
                             {#if deletingAssetId === asset.id}
-                                <Loader2 size={16} class="animate-spin text-red-600" />
+                                <Loader2 size={16} class="animate-spin" />
                             {:else}
-                                <Trash2 size={16} class="text-red-600" />
+                                <Trash2 size={16} />
                             {/if}
                         </button>
                     </div>
@@ -364,7 +418,7 @@
             {/each}
         </div>
         {#if assets.length === 0}
-            <div class="text-gray-400 text-center py-10">No assets found. Upload one!</div>
+            <div class="py-10 text-center text-muted-foreground">No assets found. Upload one!</div>
         {/if}
     {/if}
 </div>

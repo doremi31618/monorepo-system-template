@@ -4,25 +4,22 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module.js';
 
-import type { AppConfig } from '@platform/config';
 import cookieParser from 'cookie-parser';
-import { LoggerService } from '@platform/logger';
+import { LoggerService } from '@platform/nest-infra-logger';
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule, {
-		bufferLogs: true,
+		bufferLogs: true
 	});
 	app.enableVersioning({
 		type: VersioningType.URI,
-		defaultVersion: '1',
+		defaultVersion: '1'
 	});
 	app.useLogger(await app.resolve(LoggerService));
 	app.enableCors({ origin: true, credentials: true });
 	app.use(cookieParser());
 
-
 	const configService = app.get(ConfigService);
-	const appConfig = configService.get<AppConfig>('app');
 
 	const config = new DocumentBuilder()
 		.setTitle('Auth API')
@@ -41,9 +38,10 @@ async function bootstrap() {
 	const document = SwaggerModule.createDocument(app, config);
 	SwaggerModule.setup('openapi', app, document);
 
-	const port = appConfig?.port ?? 3000;
+	const port = configService.getOrThrow<number>('PORT');
 	await app.listen(port);
-	const baseUrl = appConfig?.baseUrl ?? (await app.getUrl());
+	const baseUrl =
+		configService.get<string>('API_BASE_URL') ?? (await app.getUrl());
 	console.info(`Auth API listening on ${baseUrl}`);
 }
 bootstrap();

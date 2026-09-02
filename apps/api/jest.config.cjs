@@ -4,11 +4,12 @@ module.exports = {
 	rootDir: '.',
 	roots: [
 		'<rootDir>/src',
-		'<rootDir>/../../packages/auth/src',
-		'<rootDir>/../../packages/logger/src',
-		'<rootDir>/../../packages/mail/src',
-		'<rootDir>/../../packages/scheduling/src',
-		'<rootDir>/../../packages/users/src'
+		'<rootDir>/../../packages/nest/identity/auth/src',
+		'<rootDir>/../../packages/nest/identity/access-control/src',
+		'<rootDir>/../../packages/nest/infra/logger/src',
+		'<rootDir>/../../packages/nest/infra/mail/src',
+		'<rootDir>/../../packages/nest/infra/scheduling/src',
+		'<rootDir>/../../packages/nest/identity/users/src'
 	],
 	moduleNameMapper: {
 		'^src/(.*)$': '<rootDir>/src/$1',

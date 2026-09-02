@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module.js';
+import { closeTestApp } from './close-test-app.js';
 
 describe('CmsController (e2e)', () => {
     let app: INestApplication;
@@ -16,10 +17,11 @@ describe('CmsController (e2e)', () => {
     });
 
     afterAll(async () => {
-        await app.close();
+        await closeTestApp(app);
     });
 
     let postId: string;
+    const postSlug = `e2e-test-post-${Date.now()}`;
 
     it('/cms/posts (POST) - Create Post', async () => {
         return request(app.getHttpServer())
@@ -61,7 +63,7 @@ describe('CmsController (e2e)', () => {
     it('/cms/posts/:id/status (PATCH) - Publish Post', async () => {
         return request(app.getHttpServer())
             .patch(`/cms/posts/${postId}/status`)
-            .send({ status: 'published', slug: 'e2e-test-post' })
+            .send({ status: 'published', slug: postSlug })
             .expect(200)
             .then(response => {
                 // Update returns array of 1
@@ -71,7 +73,19 @@ describe('CmsController (e2e)', () => {
                 // If service returns array, data is array.
                 const updated = Array.isArray(data) ? data[0] : data;
                 expect(updated.status).toBe('published');
-                expect(updated.slug).toBe('e2e-test-post');
+                expect(updated.slug).toBe(postSlug);
             });
+    });
+
+    it('/cms/posts (GET) - Filters and sorts before returning the page', async () => {
+        const response = await request(app.getHttpServer())
+            .get('/cms/posts?status=published&sort=title:asc&sort=updatedAt:desc')
+            .expect(200);
+
+        const items = response.body.data.data;
+        expect(items.some((post: { id: string }) => post.id === postId)).toBe(true);
+        expect(items.every((post: { status: string }) => post.status === 'published')).toBe(true);
+        const titles = items.map((post: { title: string }) => post.title);
+        expect(titles).toEqual([...titles].sort((left, right) => left.localeCompare(right)));
     });
 });

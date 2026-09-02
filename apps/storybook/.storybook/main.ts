@@ -1,20 +1,24 @@
 import type { StorybookConfig } from '@storybook/sveltekit';
+import tailwindcss from '@tailwindcss/vite';
+import { mergeConfig } from 'vite';
 
 const config: StorybookConfig = {
-  "stories": [
-    "../src/**/*.mdx",
-    "../src/**/*.stories.@(js|ts|svelte)"
+  stories: ['../src/**/*.mdx', '../src/**/*.stories.@(js|ts|svelte)'],
+  addons: [
+    '@storybook/addon-svelte-csf',
+    '@chromatic-com/storybook',
+    '@storybook/addon-docs',
+    '@storybook/addon-a11y',
+    '@storybook/addon-vitest',
   ],
-  "addons": [
-    "@storybook/addon-svelte-csf",
-    "@chromatic-com/storybook",
-    "@storybook/addon-docs",
-    "@storybook/addon-a11y",
-    "@storybook/addon-vitest"
-  ],
-  "framework": {
-    "name": "@storybook/sveltekit",
-    "options": {}
-  }
+  framework: {
+    name: '@storybook/sveltekit',
+    options: {},
+  },
+  async viteFinal(baseConfig) {
+    return mergeConfig(baseConfig, {
+      plugins: [tailwindcss()],
+    });
+  },
 };
 export default config;

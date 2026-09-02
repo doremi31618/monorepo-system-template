@@ -1,11 +1,12 @@
 # How to Work with RBAC (Role-Based Access Control)
 
-> **Last Updated**: 2026-01-26  
+> **Last Updated**: 2026-09-02
 > **Purpose**: Complete guide for implementing and managing RBAC in the monorepo system.
 
 ---
 
 ## Table of Contents
+
 1. [Overview](#overview)
 2. [Adding a New Module](#adding-a-new-module)
 3. [Adding Module Permissions](#adding-module-permissions)
@@ -19,12 +20,15 @@
 ## Overview
 
 Our RBAC system uses a **Single Source of Truth** approach:
-- **Schema**: [`packages/contracts/src/lib/constants/permissions.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/packages/contracts/src/lib/constants/permissions.ts) defines all permission constants.
-- **Config**: [`apps/api/src/core/infra/config/access-control.config.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/apps/api/src/core/infra/config/access-control.config.ts) derives permissions and role mappings from the schema.
+
+- **Schema**: [`packages/types/identity/src/access-control.ts`](../../packages/types/identity/src/access-control.ts) defines all permission constants.
+- **Application policy**: [`apps/api/src/config/access-control.config.ts`](../../apps/api/src/config/access-control.config.ts) owns permissions, role mappings, and Root Admin bootstrap values.
+- **Package contract**: [`packages/nest/identity/access-control/src/access-control.config.ts`](../../packages/nest/identity/access-control/src/access-control.config.ts) defines only the narrow config shape accepted by the reusable package.
 - **Seeding**: Automatically runs on module init to sync DB with config.
 
 ### Key Components
-- **PermissionSchema**: TypeScript constants (`PermissionSchema.Users.Read`)
+
+- **PermissionCodes**: TypeScript constants (`PermissionCodes.Users.Read`)
 - **@RequirePermissions**: Backend decorator for API protection
 - **RBACGuard**: NestJS guard that enforces permissions
 - **PermissionGuard.svelte**: Frontend component for conditional rendering
@@ -37,22 +41,22 @@ Let's add a **Blog** module with CRUD permissions.
 
 ### Step 1.1: Define Permission Schema
 
-Edit [`packages/contracts/src/lib/constants/permissions.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/packages/contracts/src/lib/constants/permissions.ts):
+Edit [`packages/types/identity/src/access-control.ts`](../../packages/types/identity/src/access-control.ts):
 
 ```typescript
-export const PermissionSchema = {
-    Users: { /* existing */ },
-    Roles: { /* existing */ },
-    Permissions: { /* existing */ },
-    
-    // New Module: Blog
-    Blog: {
-        Read: 'blog.read',
-        Create: 'blog.create',
-        Update: 'blog.update',
-        Delete: 'blog.delete',
-        Publish: 'blog.publish',  // Custom action
-    }
+export const PermissionCodes = {
+  Users: {/* existing */},
+  Roles: {/* existing */},
+  Permissions: {/* existing */},
+
+  // New Module: Blog
+  Blog: {
+    Read: 'blog.read',
+    Create: 'blog.create',
+    Update: 'blog.update',
+    Delete: 'blog.delete',
+    Publish: 'blog.publish', // Custom action
+  },
 } as const;
 ```
 
@@ -61,8 +65,7 @@ export const PermissionSchema = {
 ### Step 1.2: Rebuild Shared Package
 
 ```bash
-cd packages/contracts
-npm run build
+bun run --filter @platform/types-identity build
 ```
 
 ---
@@ -71,28 +74,60 @@ npm run build
 
 ### Step 2.1: Update Config
 
-Edit [`apps/api/src/core/infra/config/access-control.config.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/apps/api/src/core/infra/config/access-control.config.ts):
+Edit [`apps/api/src/config/access-control.config.ts`](../../apps/api/src/config/access-control.config.ts):
 
 ```typescript
-import { PermissionSchema } from '@packages/contracts';
+import { PermissionCodes } from '@platform/types-identity';
 
 const permissions = [
-    // ... existing permissions ...
-    
-    // Blog Module
-    { id: PermissionSchema.Blog.Read, module: 'blog', action: 'read', description: 'View blog posts' },
-    { id: PermissionSchema.Blog.Create, module: 'blog', action: 'create', description: 'Create blog posts' },
-    { id: PermissionSchema.Blog.Update, module: 'blog', action: 'update', description: 'Edit blog posts' },
-    { id: PermissionSchema.Blog.Delete, module: 'blog', action: 'delete', description: 'Delete blog posts' },
-    { id: PermissionSchema.Blog.Publish, module: 'blog', action: 'publish', description: 'Publish blog posts' },
+  // ... existing permissions ...
+
+  // Blog Module
+  {
+    id: PermissionCodes.Blog.Read,
+    module: 'blog',
+    action: 'read',
+    description: 'View blog posts',
+  },
+  {
+    id: PermissionCodes.Blog.Create,
+    module: 'blog',
+    action: 'create',
+    description: 'Create blog posts',
+  },
+  {
+    id: PermissionCodes.Blog.Update,
+    module: 'blog',
+    action: 'update',
+    description: 'Edit blog posts',
+  },
+  {
+    id: PermissionCodes.Blog.Delete,
+    module: 'blog',
+    action: 'delete',
+    description: 'Delete blog posts',
+  },
+  {
+    id: PermissionCodes.Blog.Publish,
+    module: 'blog',
+    action: 'publish',
+    description: 'Publish blog posts',
+  },
 ];
 
-export const ACCESS_CONTROL_CONFIG = {
-    roles: [ /* existing roles */ ],
+export function createAccessControlBootstrapConfig(env: RootAdminEnv) {
+  return {
+    roles: [/* existing roles */],
     permissions,
-    rolePermissions: { /* will update next */ },
-    rootAdmin: { /* existing */ }
-};
+    rolePermissions: {/* will update next */},
+    rootAdmin: {
+      email: env.ROOT_ADMIN_EMAIL,
+      name: env.ROOT_ADMIN_NAME,
+      password: env.ROOT_ADMIN_PASSWORD,
+      roleId: 'admin',
+    },
+  };
+}
 ```
 
 ### Step 2.2: Restart Backend
@@ -100,11 +135,11 @@ export const ACCESS_CONTROL_CONFIG = {
 Permissions are auto-seeded on app startup:
 
 ```bash
-cd backend
-npm run start:dev
+bun run dev:api
 ```
 
 Check logs:
+
 ```
 [AccessControlService] Creating Permissions...
 [AccessControlService] Permissions seeded: blog.read, blog.create, ...
@@ -116,14 +151,14 @@ Check logs:
 
 ### Option A: Update Existing Roles
 
-Edit the `rolePermissions` mapping in [`access-control.config.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/apps/api/src/core/infra/config/access-control.config.ts):
+Edit the `rolePermissions` mapping in [`access-control.config.ts`](../../apps/api/src/config/access-control.config.ts):
 
 ```typescript
 rolePermissions: {
     'admin': ['*'] as string[], // Admin has all permissions
     'user': [
-        PermissionSchema.Users.Read,
-        PermissionSchema.Blog.Read,  // Users can read blog
+        PermissionCodes.Users.Read,
+        PermissionCodes.Blog.Read,  // Users can read blog
     ] as string[],
 }
 ```
@@ -139,17 +174,18 @@ roles: [
 
 rolePermissions: {
     'admin': ['*'] as string[],
-    'user': [PermissionSchema.Users.Read, PermissionSchema.Blog.Read] as string[],
+    'user': [PermissionCodes.Users.Read, PermissionCodes.Blog.Read] as string[],
     'editor': [
-        PermissionSchema.Blog.Read,
-        PermissionSchema.Blog.Create,
-        PermissionSchema.Blog.Update,
-        PermissionSchema.Blog.Publish,
+        PermissionCodes.Blog.Read,
+        PermissionCodes.Blog.Create,
+        PermissionCodes.Blog.Update,
+        PermissionCodes.Blog.Publish,
     ] as string[],
 }
 ```
 
 Restart backend to seed new role:
+
 ```bash
 npm run start:dev
 ```
@@ -165,15 +201,15 @@ Use `PermissionGuard.svelte` to hide/show UI elements:
 ```svelte
 <script lang="ts">
   import PermissionGuard from '$lib/components/admin/PermissionGuard.svelte';
-  import { PermissionSchema } from '@packages/contracts';
+  import { PermissionCodes } from '@platform/types-identity';
   import { Button } from '$lib/components/ui/button';
 </script>
 
-<PermissionGuard permission={PermissionSchema.Blog.Create}>
+<PermissionGuard permission={PermissionCodes.Blog.Create}>
   <Button onclick={createPost}>Create Post</Button>
 </PermissionGuard>
 
-<PermissionGuard permission={PermissionSchema.Blog.Delete}>
+<PermissionGuard permission={PermissionCodes.Blog.Delete}>
   <Button variant="destructive" onclick={deletePost}>Delete</Button>
 </PermissionGuard>
 ```
@@ -182,31 +218,31 @@ Use `PermissionGuard.svelte` to hide/show UI elements:
 
 ### 4.2 Route-Level Protection
 
-Use SvelteKit's `+layout.ts` to protect admin routes server-side in [`apps/web/src/routes/admin/+layout.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/apps/web/src/routes/admin/+layout.ts):
+Use SvelteKit's `+layout.ts` to protect admin routes server-side in [`apps/web/src/routes/admin/+layout.ts`](../../apps/web/src/routes/admin/+layout.ts):
 
 ```typescript
 import { redirect } from '@sveltejs/kit';
 import type { LayoutLoad } from './$types';
 
 export const load: LayoutLoad = async ({ fetch, parent }) => {
-    try {
-        const response = await fetch('/api/admin/me');
-        if (!response.ok) {
-            throw redirect(302, '/auth/login');
-        }
-        
-        const { data: user } = await response.json();
-        
-        // Check if user has admin role
-        const hasAdminRole = user.userRoles?.some(ur => ur.role.id === 'admin');
-        if (!hasAdminRole) {
-            throw redirect(302, '/');
-        }
-        
-        return { user };
-    } catch (e) {
-        throw redirect(302, '/auth/login');
+  try {
+    const response = await fetch('/api/admin/me');
+    if (!response.ok) {
+      throw redirect(302, '/auth/login');
     }
+
+    const { data: user } = await response.json();
+
+    // Check if user has admin role
+    const hasAdminRole = user.userRoles?.some((ur) => ur.role.id === 'admin');
+    if (!hasAdminRole) {
+      throw redirect(302, '/');
+    }
+
+    return { user };
+  } catch (e) {
+    throw redirect(302, '/auth/login');
+  }
 };
 ```
 
@@ -216,16 +252,16 @@ export const load: LayoutLoad = async ({ fetch, parent }) => {
 
 ```svelte
 <script lang="ts">
-  import { PermissionSchema } from '@packages/contracts';
+  import { PermissionCodes } from '@platform/types-identity';
   import PermissionGuard from '$lib/components/admin/PermissionGuard.svelte';
 </script>
 
 <nav>
-  <PermissionGuard permission={PermissionSchema.Users.Read}>
+  <PermissionGuard permission={PermissionCodes.Users.Read}>
     <a href="/admin/users">Users</a>
   </PermissionGuard>
-  
-  <PermissionGuard permission={PermissionSchema.Blog.Read}>
+
+  <PermissionGuard permission={PermissionCodes.Blog.Read}>
     <a href="/admin/blog">Blog</a>
   </PermissionGuard>
 </nav>
@@ -240,42 +276,50 @@ export const load: LayoutLoad = async ({ fetch, parent }) => {
 Example: `BlogController`
 
 ```typescript
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthGuard } from '../auth/auth.guard';
 import { RBACGuard } from '../access-control/rbac.guard';
 import { RequirePermissions } from '../access-control/permissions.decorator';
-import { PermissionSchema } from '@packages/contracts';
+import { PermissionCodes } from '@platform/types-identity';
 
 @Controller('blog')
-@UseGuards(AuthGuard, RBACGuard)  // Apply guards
+@UseGuards(AuthGuard, RBACGuard) // Apply guards
 export class BlogController {
+  @Get()
+  @RequirePermissions(PermissionCodes.Blog.Read)
+  async getPosts() {
+    // Anyone with blog.read can view
+    return this.blogService.findAll();
+  }
 
-    @Get()
-    @RequirePermissions(PermissionSchema.Blog.Read)
-    async getPosts() {
-        // Anyone with blog.read can view
-        return this.blogService.findAll();
-    }
+  @Post()
+  @RequirePermissions(PermissionCodes.Blog.Create)
+  async createPost(@Body() dto: CreatePostDto) {
+    // Only users with blog.create
+    return this.blogService.create(dto);
+  }
 
-    @Post()
-    @RequirePermissions(PermissionSchema.Blog.Create)
-    async createPost(@Body() dto: CreatePostDto) {
-        // Only users with blog.create
-        return this.blogService.create(dto);
-    }
+  @Put(':id/publish')
+  @RequirePermissions(PermissionCodes.Blog.Publish)
+  async publishPost(@Param('id') id: string) {
+    // Only editors/admins with blog.publish
+    return this.blogService.publish(id);
+  }
 
-    @Put(':id/publish')
-    @RequirePermissions(PermissionSchema.Blog.Publish)
-    async publishPost(@Param('id') id: string) {
-        // Only editors/admins with blog.publish
-        return this.blogService.publish(id);
-    }
-
-    @Delete(':id')
-    @RequirePermissions(PermissionSchema.Blog.Delete)
-    async deletePost(@Param('id') id: string) {
-        return this.blogService.delete(id);
-    }
+  @Delete(':id')
+  @RequirePermissions(PermissionCodes.Blog.Delete)
+  async deletePost(@Param('id') id: string) {
+    return this.blogService.delete(id);
+  }
 }
 ```
 
@@ -288,7 +332,7 @@ export class BlogController {
 
 ```typescript
 @Post('draft')
-@RequirePermissions(PermissionSchema.Blog.Create, PermissionSchema.Blog.Update)
+@RequirePermissions(PermissionCodes.Blog.Create, PermissionCodes.Blog.Update)
 async saveDraft() {
     // User needs EITHER blog.create OR blog.update
 }
@@ -337,13 +381,15 @@ curl -X POST http://localhost:3000/blog \
 ## 7. Best Practices
 
 ### ✅ DO
-- **Always use `PermissionSchema`** constants instead of hardcoded strings (`PermissionSchema.Blog.Read` ✓ vs `'blog.read'` ✗)
+
+- **Always use `PermissionCodes`** constants instead of hardcoded strings (`PermissionCodes.Blog.Read` ✓ vs `'blog.read'` ✗)
 - **Apply guards at controller level** (`@UseGuards(AuthGuard, RBACGuard)`)
-- **Rebuild `packages/contracts`** after schema changes
+- **Rebuild `packages/types/identity`** after schema changes
 - **Restart backend** after config changes to re-seed
 - **Use descriptive permission names** (`blog.publish` is clearer than `blog.action3`)
 
 ### ❌ DON'T
+
 - Don't hardcode permission strings in controllers/frontend
 - Don't skip `@RequirePermissions` on sensitive endpoints
 - Don't forget to add permissions to `ACCESS_CONTROL_CONFIG`
@@ -357,15 +403,15 @@ curl -X POST http://localhost:3000/blog \
 
 ```typescript
 @Put('posts/:id')
-@RequirePermissions(PermissionSchema.Blog.Update)
+@RequirePermissions(PermissionCodes.Blog.Update)
 async updatePost(@Param('id') id: string, @Req() req) {
     const post = await this.blogService.findOne(id);
-    
+
     // Custom logic: Only author or admin can edit
     if (post.authorId !== req.user.id && !req.user.isAdmin) {
         throw new ForbiddenException('Not the author');
     }
-    
+
     return this.blogService.update(id, dto);
 }
 ```
@@ -374,11 +420,11 @@ async updatePost(@Param('id') id: string, @Req() req) {
 
 ```svelte
 <script>
-  import { PermissionSchema } from '@packages/contracts';
+  import { PermissionCodes } from '@platform/types-identity';
   let userPermissions = [...]; // from store or API
-  
-  $: canManageBlog = userPermissions.includes(PermissionSchema.Blog.Create) 
-                  || userPermissions.includes(PermissionSchema.Blog.Update);
+
+  $: canManageBlog = userPermissions.includes(PermissionCodes.Blog.Create)
+                  || userPermissions.includes(PermissionCodes.Blog.Update);
 </script>
 
 {#if canManageBlog}
@@ -391,32 +437,37 @@ async updatePost(@Param('id') id: string, @Req() req) {
 ## 9. Troubleshooting
 
 ### Issue: `403 Forbidden` on API call
+
 - **Check**: User has the required permission in DB (`user_roles` → `role_permissions`)
 - **Check**: `@RequirePermissions` decorator is using correct schema constant
 - **Check**: Guards are applied (`@UseGuards(AuthGuard, RBACGuard)`)
 
 ### Issue: Permission not appearing in UI
-- **Check**: `packages/contracts` was rebuilt (`npm run build`)
+
+- **Check**: `@platform/types-identity` was rebuilt (`bun run --filter @platform/types-identity build`)
 - **Check**: Backend restarted to seed new permissions
 - **Check**: User role includes the permission in `rolePermissions` config
 
-### Issue: TS Error `PermissionSchema.X does not exist`
-- **Solution**: Add to schema → rebuild `packages/contracts` → restart backend
+### Issue: TS Error `PermissionCodes.X does not exist`
+
+- **Solution**: Add to schema → rebuild `@platform/types-identity` → restart backend
 
 ---
 
 ## Summary
 
 **RBAC Implementation Checklist**:
-1. ✅ Define permissions in `PermissionSchema` (packages/contracts)
+
+1. ✅ Define permissions in `PermissionCodes` (`packages/types/identity`)
 2. ✅ Add to `ACCESS_CONTROL_CONFIG.permissions` array
 3. ✅ Assign to roles in `rolePermissions` mapping
-4. ✅ Rebuild `packages/contracts` package
+4. ✅ Rebuild `@platform/types-identity` package
 5. ✅ Restart backend (auto-seed)
-6. ✅ Protect API with `@RequirePermissions(PermissionSchema.X.Y)`
+6. ✅ Protect API with `@RequirePermissions(PermissionCodes.X.Y)`
 7. ✅ Use `<PermissionGuard>` in frontend for conditional rendering
 8. ✅ Test with different user roles
 
 **Need Help?** Check existing implementations:
-- Users Module: [`apps/api/src/core/domain/access-control/access-control.controller.ts`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/apps/api/src/core/domain/access-control/access-control.controller.ts)
-- Admin UI: [`apps/web/src/routes/admin/users/+page.svelte`](file:///Users/zhanminxiang/Documents/Project/Side-Project/monorepo-system-template/apps/web/src/routes/admin/users/+page.svelte)
+
+- Access Control Module: [`packages/nest/identity/access-control/src/access-control.controller.ts`](../../packages/nest/identity/access-control/src/access-control.controller.ts)
+- Admin UI: [`apps/web/src/routes/admin/users/+page.svelte`](../../apps/web/src/routes/admin/users/+page.svelte)

@@ -1,0 +1,19 @@
+{
+  "name": "@platform/nest-infra-database",
+  "version": "0.1.0",
+  "description": "NestJS 與 Drizzle 的資料庫連線及 repository 基礎能力",
+  "private": true,
+  "platform": { "runtime": "node", "framework": "nestjs", "layer": "infra", "domain": "infra" },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "default": "./dist/index.js" } },
+  "scripts": { "build": "tsc -p tsconfig.json" },
+  "dependencies": {
+    "@nestjs/common": "^10.4.22",
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": { "@types/pg": "^8.15.6", "typescript": "^5.9.3" },
+  "peerDependencies": { "reflect-metadata": "^0.2.0", "rxjs": "^7.8.0" }
+}

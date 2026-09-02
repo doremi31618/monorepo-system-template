@@ -4,8 +4,8 @@ export {
 	type WithoutChild,
 	type WithoutChildren,
 	type WithoutChildrenOrChild
-} from '@platform/ui';
-import { SDK } from '@platform/sdk';
+} from '@platform/svelte-ui';
+import { SDK } from '@platform/browser-sdk';
 import { AppConfig } from '$lib/config';
 import { browser } from '$app/environment';
 

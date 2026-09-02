@@ -15,6 +15,12 @@ bun run --filter @platform/api build
 
 Copy `apps/api/.env.example` to `apps/api/.env` before starting the app. OpenAPI is served at `/openapi`.
 
+`src/config/env.validation.ts` is the authoritative API environment contract.
+`.env.example` intentionally contains the same key set, and a unit test prevents
+the schema and example from drifting apart. `API_BASE_URL` is the server origin
+used for startup output; `HOST_URL` includes the `/v1` prefix and is used when
+the API creates callback or asset URLs.
+
 ## Default API user
 
 After copying `.env.example`, the API seeds this local/test root administrator when it starts:

@@ -1,31 +1,9 @@
 
 import { httpClient } from '../utils';
 import { AppConfig } from '$lib/config';
+import type { Asset, InitUploadResponse, ListAssetsResponse } from '@platform/types-content';
 
-export interface Asset {
-    id: string;
-    storageKey: string;
-    originalName?: string;
-    status: 'pending' | 'ready' | 'deleted';
-    mimeType: string;
-    size: number;
-    visibility: string;
-    createdAt: string;
-    updatedAt: string;
-}
-
-export interface ListAssetsResponse {
-    data: Asset[];
-    page: number;
-    limit: number;
-    total?: number;
-}
-
-export interface InitUploadResponse {
-    assetId: string;
-    uploadUrl: string;
-    storageKey: string;
-}
+export type { Asset, InitUploadResponse, ListAssetsResponse } from '@platform/types-content';
 
 export async function listAssets(params: {
     page?: number;
@@ -33,6 +11,8 @@ export async function listAssets(params: {
     query?: string;
     status?: string;
     mimePrefix?: string;
+    visibility?: string;
+    sort?: string[];
 } = {}) {
     const queryParams = new URLSearchParams({
         page: String(params.page ?? 1),
@@ -49,6 +29,14 @@ export async function listAssets(params: {
 
     if (params.mimePrefix && params.mimePrefix !== 'all') {
         queryParams.set('mimePrefix', params.mimePrefix);
+    }
+
+    if (params.visibility && params.visibility !== 'all') {
+        queryParams.set('visibility', params.visibility);
+    }
+
+    for (const sort of params.sort ?? []) {
+        queryParams.append('sort', sort);
     }
 
     const query = queryParams.toString();

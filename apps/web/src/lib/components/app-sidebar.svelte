@@ -53,7 +53,7 @@
 <script lang="ts">
 	import SearchForm from "./search-form.svelte";
 	import VersionSwitcher from "./version-switcher.svelte";
-	import * as Sidebar from "@platform/ui/sidebar";
+	import * as Sidebar from "@platform/svelte-ui/sidebar";
 	import type { ComponentProps } from "svelte";
 	import { appRoutePath } from "$lib/config/route";
 	

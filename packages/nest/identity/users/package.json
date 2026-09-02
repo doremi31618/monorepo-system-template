@@ -1,0 +1,23 @@
+{
+  "name": "@platform/nest-identity-users",
+  "version": "0.1.0",
+  "description": "NestJS 的 Identity／Users 使用者資料與 repository 能力",
+  "private": true,
+  "platform": { "runtime": "node", "framework": "nestjs", "layer": "feature", "domain": "identity" },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "default": "./dist/index.js" },
+    "./schema": { "types": "./dist/user.schema.d.ts", "import": "./dist/user.schema.js", "default": "./dist/user.schema.js" }
+  },
+  "scripts": { "build": "tsc -p tsconfig.json" },
+  "dependencies": {
+    "@nestjs/common": "^10.4.22",
+    "@platform/types-identity": "workspace:*",
+    "@platform/nest-infra-database": "workspace:*",
+    "drizzle-orm": "^0.45.2"
+  },
+  "devDependencies": { "@nestjs/testing": "^10.4.22", "typescript": "^5.9.3" },
+  "peerDependencies": { "reflect-metadata": "^0.2.0", "rxjs": "^7.8.0" }
+}

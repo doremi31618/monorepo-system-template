@@ -2,7 +2,15 @@
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
+    import { page } from '$app/stores';
     import { Loader2, Pencil, Save, Search, Trash2, X } from 'lucide-svelte';
+    import {
+        DataViewToolbar,
+        parseDataViewQuery,
+        writeDataViewQuery,
+        type DataViewProperty,
+        type DataViewQuery,
+    } from '@platform/svelte-ui/data-view-toolbar';
     import {
         createPost,
         createTag,
@@ -27,6 +35,8 @@
     let tagFilter = 'all';
     let updatedFrom = '';
     let updatedTo = '';
+    let dataViewQuery: DataViewQuery = { search: '', filters: [], sorts: [] };
+    let postProperties: DataViewProperty[] = [];
 
     let tagManagerQuery = '';
     let newTagName = '';
@@ -43,6 +53,62 @@
         if (!keyword) return true;
         return tag.name.toLowerCase().includes(keyword) || tag.slug.toLowerCase().includes(keyword);
     });
+    $: postProperties = [
+        {
+            key: 'status',
+            label: 'Status',
+            type: 'enum',
+            operators: ['is'],
+            options: [
+                { value: 'draft', label: 'Draft' },
+                { value: 'published', label: 'Published' },
+                { value: 'archived', label: 'Archived' },
+            ],
+        },
+        {
+            key: 'tagId',
+            label: 'Tag',
+            type: 'relation',
+            operators: ['is'],
+            options: tags.map((tag) => ({ value: tag.id, label: tag.name })),
+        },
+        { key: 'updatedAt', label: 'Updated', type: 'date', operators: ['before', 'after', 'between'], sortable: true },
+        { key: 'createdAt', label: 'Created', type: 'date', operators: [], sortable: true },
+        { key: 'publishedAt', label: 'Published at', type: 'date', operators: [], sortable: true },
+        { key: 'title', label: 'Title', type: 'text', operators: [], sortable: true },
+        { key: 'viewCount', label: 'Views', type: 'number', operators: [], sortable: true },
+    ];
+
+    function applyDataViewQuery(query: DataViewQuery) {
+        searchQuery = query.search;
+        const statusRule = query.filters.find((filter) => filter.property === 'status');
+        statusFilter = Array.isArray(statusRule?.value) ? (statusRule.value[0] ?? 'all') : (statusRule?.value ?? 'all');
+        const tagRule = query.filters.find((filter) => filter.property === 'tagId');
+        tagFilter = Array.isArray(tagRule?.value) ? (tagRule.value[0] ?? 'all') : (tagRule?.value ?? 'all');
+        const updatedRule = query.filters.find((filter) => filter.property === 'updatedAt');
+        updatedFrom = updatedRule?.operator === 'after'
+            ? String(updatedRule.value)
+            : updatedRule?.operator === 'between' && Array.isArray(updatedRule.value)
+                ? (updatedRule.value[0] ?? '')
+                : '';
+        updatedTo = updatedRule?.operator === 'before'
+            ? String(updatedRule.value)
+            : updatedRule?.operator === 'between' && Array.isArray(updatedRule.value)
+                ? (updatedRule.value[1] ?? '')
+                : '';
+    }
+
+    async function handleDataViewQueryChange(next: DataViewQuery) {
+        dataViewQuery = next;
+        applyDataViewQuery(next);
+        const params = writeDataViewQuery($page.url.searchParams, next);
+        await goto(`${resolve('/admin/cms')}?${params.toString()}`, {
+            replaceState: true,
+            noScroll: true,
+            keepFocus: true,
+        });
+        await loadPosts();
+    }
 
     async function loadTags() {
         loadingTags = true;
@@ -67,6 +133,7 @@
                 tagId: tagFilter,
                 updatedFrom,
                 updatedTo,
+                sort: dataViewQuery.sorts.map((sort) => `${sort.property}:${sort.direction}`),
             });
             posts = res.data?.data ?? [];
         } catch (error) {
@@ -205,10 +272,10 @@
     }
 
     onMount(async () => {
-        await Promise.all([
-            loadTags(),
-            loadPosts(),
-        ]);
+        await loadTags();
+        dataViewQuery = parseDataViewQuery($page.url.searchParams, postProperties);
+        applyDataViewQuery(dataViewQuery);
+        await loadPosts();
     });
 </script>
 
@@ -218,17 +285,17 @@
         {#if activeTab === 'posts'}
             <button
                 on:click={handleCreatePost}
-                class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                class="rounded bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
             >
                 New Post
             </button>
         {/if}
     </div>
 
-    <div class="mb-4 inline-flex rounded-lg border bg-white p-1 shadow-sm">
+    <div class="mb-4 inline-flex rounded-lg border bg-card p-1 text-card-foreground shadow-sm">
         <button
             class={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-                activeTab === 'posts' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
+                activeTab === 'posts' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
             }`}
             on:click={() => (activeTab = 'posts')}
         >
@@ -236,7 +303,7 @@
         </button>
         <button
             class={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-                activeTab === 'tags' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
+                activeTab === 'tags' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
             }`}
             on:click={() => (activeTab = 'tags')}
         >
@@ -245,49 +312,21 @@
     </div>
 
     {#if activeTab === 'posts'}
-        <div class="mb-4 rounded border bg-white p-3 shadow-sm">
-            <div class="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_150px_180px_150px_150px_auto_auto]">
-                <div class="relative">
-                    <Search size={16} class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                        class="w-full rounded border px-3 py-2 pl-9 text-sm"
-                        placeholder="Search by title or slug"
-                        bind:value={searchQuery}
-                        on:keydown={(event) => event.key === 'Enter' && handleSearchSubmit()}
-                    />
-                </div>
-
-                <select class="rounded border px-3 py-2 text-sm" bind:value={statusFilter}>
-                    <option value="all">All status</option>
-                    <option value="draft">Draft</option>
-                    <option value="published">Published</option>
-                    <option value="archived">Archived</option>
-                </select>
-
-                <select class="rounded border px-3 py-2 text-sm" bind:value={tagFilter} disabled={loadingTags}>
-                    <option value="all">All tags</option>
-                    {#each tags as tag (tag.id)}
-                        <option value={tag.id}>{tag.name}</option>
-                    {/each}
-                </select>
-
-                <input type="date" class="rounded border px-3 py-2 text-sm" bind:value={updatedFrom} />
-                <input type="date" class="rounded border px-3 py-2 text-sm" bind:value={updatedTo} />
-
-                <button class="rounded bg-slate-900 px-3 py-2 text-sm text-white hover:bg-slate-700" on:click={handleSearchSubmit}>
-                    Search
-                </button>
-                <button class="inline-flex items-center justify-center rounded border px-3 py-2 text-sm hover:bg-gray-50" on:click={handleResetFilters}>
-                    <X size={14} />
-                </button>
-            </div>
+        <div class="mb-4 border-y py-2">
+            <DataViewToolbar
+                properties={postProperties}
+                query={dataViewQuery}
+                searchLabel="Search posts"
+                searchPlaceholder="Search title or slug…"
+                onquerychange={handleDataViewQueryChange}
+            />
         </div>
 
         {#if loadingPosts}
-            <div class="text-gray-500">Loading posts...</div>
+            <div class="text-muted-foreground">Loading posts...</div>
         {:else}
-            <table class="w-full overflow-hidden rounded bg-white shadow">
-                <thead class="border-b bg-gray-50">
+            <table class="w-full overflow-hidden rounded bg-card text-card-foreground shadow" data-theme-surface>
+                <thead class="border-b bg-muted/50 text-muted-foreground">
                     <tr>
                         <th class="px-4 py-3 text-left">Title</th>
                         <th class="px-4 py-3 text-left">Slug</th>
@@ -300,44 +339,44 @@
                 </thead>
                 <tbody>
                     {#each posts as post (post.id)}
-                        <tr class="border-b hover:bg-gray-50">
+                        <tr class="border-b hover:bg-muted/50">
                             <td class="px-4 py-3 font-medium">{post.title || '(No Title)'}</td>
-                            <td class="px-4 py-3 text-gray-500">{post.slug}</td>
+                            <td class="px-4 py-3 text-muted-foreground">{post.slug}</td>
                             <td class="px-4 py-3">
                                 <span class={`rounded px-2 py-1 text-xs ${
                                     post.status === 'published'
-                                        ? 'bg-green-100 text-green-800'
+                                        ? 'bg-primary/10 text-primary'
                                         : post.status === 'archived'
-                                            ? 'bg-amber-100 text-amber-800'
-                                            : 'bg-gray-100 text-gray-800'
+                                            ? 'bg-destructive/10 text-destructive'
+                                            : 'bg-secondary text-secondary-foreground'
                                 }`}>
                                     {post.status}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-600">{getTagDisplay(post)}</td>
-                            <td class="px-4 py-3 text-sm text-gray-500">{post.viewCount ?? 0}</td>
-                            <td class="px-4 py-3 text-sm text-gray-400">{new Date(post.updatedAt).toLocaleDateString()}</td>
+                            <td class="px-4 py-3 text-sm text-muted-foreground">{getTagDisplay(post)}</td>
+                            <td class="px-4 py-3 text-sm text-muted-foreground">{post.viewCount ?? 0}</td>
+                            <td class="px-4 py-3 text-sm text-muted-foreground">{new Date(post.updatedAt).toLocaleDateString()}</td>
                             <td class="px-4 py-3 text-right">
                                 <div class="flex items-center justify-end gap-2">
                                     <a
                                         href={resolve(`/admin/cms/${post.id}`)}
-                                        class="inline-flex h-8 w-8 items-center justify-center rounded text-blue-600 transition-colors hover:bg-blue-50"
+                                        class="inline-flex h-8 w-8 items-center justify-center rounded text-primary transition-colors hover:bg-accent"
                                         aria-label="Edit post"
                                         title="Edit"
                                     >
                                         <Pencil size={16} />
                                     </a>
                                     <button
-                                        class="inline-flex h-8 w-8 items-center justify-center rounded transition-colors hover:bg-red-50 disabled:opacity-50"
+                                        class="inline-flex h-8 w-8 items-center justify-center rounded text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
                                         disabled={deletingPostId === post.id}
                                         on:click={() => handleDeletePost(post)}
                                         aria-label="Delete post"
                                         title="Delete"
                                     >
                                         {#if deletingPostId === post.id}
-                                            <Loader2 size={16} class="animate-spin text-red-600" />
+                                            <Loader2 size={16} class="animate-spin" />
                                         {:else}
-                                            <Trash2 size={16} class="text-red-600" />
+                                            <Trash2 size={16} />
                                         {/if}
                                     </button>
                                 </div>
@@ -347,35 +386,35 @@
                 </tbody>
             </table>
             {#if posts.length === 0}
-                <div class="py-10 text-center text-gray-400">No posts found.</div>
+                <div class="py-10 text-center text-muted-foreground">No posts found.</div>
             {/if}
         {/if}
     {:else}
-        <div class="rounded border bg-white p-4 shadow-sm">
+        <div class="rounded border bg-card p-4 text-card-foreground shadow-sm" data-theme-surface>
             <div class="mb-4 flex items-center justify-between">
                 <h2 class="text-lg font-semibold">CMS Tags</h2>
                 {#if loadingTags}
-                    <Loader2 size={16} class="animate-spin text-gray-400" />
+                    <Loader2 size={16} class="animate-spin text-muted-foreground" />
                 {/if}
             </div>
 
             <div class="mb-3 grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
                 <div class="relative">
-                    <Search size={16} class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <Search size={16} class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <input
-                        class="w-full rounded border px-3 py-2 pl-9 text-sm"
+                        class="w-full rounded border border-input bg-background px-3 py-2 pl-9 text-sm text-foreground placeholder:text-muted-foreground"
                         placeholder="Search tags by name or slug"
                         bind:value={tagManagerQuery}
                     />
                 </div>
                 <div class="flex items-center gap-2">
                     <input
-                        class="rounded border px-3 py-2 text-sm"
+                        class="rounded border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
                         placeholder="New tag name"
                         bind:value={newTagName}
                     />
                     <button
-                        class="rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+                        class="rounded bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                         on:click={handleCreateTag}
                         disabled={creatingTag}
                     >
@@ -385,7 +424,7 @@
             </div>
 
             <table class="w-full overflow-hidden rounded border">
-                <thead class="border-b bg-gray-50">
+                <thead class="border-b bg-muted/50 text-muted-foreground">
                     <tr>
                         <th class="px-3 py-2 text-left text-sm">Name</th>
                         <th class="px-3 py-2 text-left text-sm">Slug</th>
@@ -396,17 +435,17 @@
                 </thead>
                 <tbody>
                     {#each filteredManagedTags as tag (tag.id)}
-                        <tr class="border-b hover:bg-gray-50">
+                        <tr class="border-b hover:bg-muted/50">
                             <td class="px-3 py-2 text-sm">
                                 {#if editingTagId === tag.id}
-                                    <input class="w-full rounded border px-2 py-1" bind:value={editingTagName} />
+                                    <input class="w-full rounded border border-input bg-background px-2 py-1 text-foreground" bind:value={editingTagName} />
                                 {:else}
                                     {tag.name}
                                 {/if}
                             </td>
-                            <td class="px-3 py-2 text-sm text-gray-500">{tag.slug}</td>
-                            <td class="px-3 py-2 text-sm text-gray-500">{tag.postCount ?? 0}</td>
-                            <td class="px-3 py-2 text-sm text-gray-500">{tag.totalViews ?? 0}</td>
+                            <td class="px-3 py-2 text-sm text-muted-foreground">{tag.slug}</td>
+                            <td class="px-3 py-2 text-sm text-muted-foreground">{tag.postCount ?? 0}</td>
+                            <td class="px-3 py-2 text-sm text-muted-foreground">{tag.totalViews ?? 0}</td>
                             <td class="px-3 py-2 text-right">
                                 <div class="flex items-center justify-end gap-2">
                                     {#if editingTagId === tag.id}
@@ -454,7 +493,7 @@
             </table>
 
             {#if filteredManagedTags.length === 0}
-                <div class="py-6 text-center text-sm text-gray-400">No tags found.</div>
+                <div class="py-6 text-center text-sm text-muted-foreground">No tags found.</div>
             {/if}
         </div>
     {/if}

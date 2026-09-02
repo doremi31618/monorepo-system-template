@@ -1,7 +1,7 @@
 <script lang="ts">
   import { toggleMode, mode } from 'mode-watcher';
   import { Sun, Moon } from 'lucide-svelte';
-  import { Button } from '@platform/ui/button';
+  import { Button } from '@platform/svelte-ui/button';
 </script>
 
 <Button variant="ghost" size="icon" onclick={toggleMode}>

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Permission } from '$lib/api/admin';
-  import * as Accordion from '@platform/ui/accordion';
+  import * as Accordion from '@platform/svelte-ui/accordion';
 
   export let allPermissions: Permission[] = [];
   export let selectedPermissionIds: string[] = [];

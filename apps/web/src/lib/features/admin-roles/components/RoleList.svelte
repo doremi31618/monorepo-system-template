@@ -1,11 +1,10 @@
 <script lang="ts">
 
-    import { Plus, Search, Ellipsis, Pencil, Trash2, Key } from 'lucide-svelte';
-    import { Button } from '@platform/ui/button';
-    import * as DropdownMenu from '@platform/ui/dropdown-menu';
-    import { Badge } from '@platform/ui/badge';
-    import { Input } from '@platform/ui/input';
-    import type { Role } from '@platform/contracts';
+    import { Ellipsis, Pencil, Trash2, Key } from 'lucide-svelte';
+    import { Button } from '@platform/svelte-ui/button';
+    import * as DropdownMenu from '@platform/svelte-ui/dropdown-menu';
+    import { Badge } from '@platform/svelte-ui/badge';
+    import type { Role } from '@platform/types-identity';
 
     let {
         roles = [],
@@ -21,20 +20,6 @@
     
     // const dispatch = createEventDispatcher(); // Deprecated
     
-    let searchQuery = $state('');
-    let filteredRoles = $derived.by(() => {
-        if (!searchQuery) return [...roles];
-        const q = searchQuery.toLowerCase();
-        return roles.filter((r: Role) => 
-            r.name.toLowerCase().includes(q) || 
-            (r.description && r.description.toLowerCase().includes(q))
-        );
-    });
-
-    function handleCreate() {
-        oncreate?.();
-    }
-
     function handleEdit(role: Role) {
         onedit?.(role);
     }
@@ -45,32 +30,9 @@
 </script>
 
 <div class="space-y-6">
-    <!-- Toolbar -->
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-            <h1 class="text-2xl font-bold tracking-tight">Roles</h1>
-            <p class="text-muted-foreground">Manage roles and permissions.</p>
-        </div>
-        <div class="flex items-center gap-2">
-            <div class="relative w-full sm:w-64">
-                <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search roles..."
-                  class="pl-9 bg-background"
-                  bind:value={searchQuery}
-                />
-            </div>
-            <Button onclick={handleCreate}>
-                <Plus class="mr-2 h-4 w-4" />
-                Create Role
-            </Button>
-        </div>
-    </div>
-
     <!-- Grid Layout -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {#each filteredRoles as role}
+        {#each roles as role}
         <div class="group relative flex flex-col justify-between rounded-xl border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md">
             <div class="p-6">
                  <div class="flex justify-between items-start">
@@ -125,9 +87,9 @@
         </div>
         {/each}
         
-        {#if filteredRoles.length === 0}
+        {#if roles.length === 0}
             <div class="col-span-full py-12 text-center text-muted-foreground border-2 border-dashed rounded-xl">
-                 No roles found matching "{searchQuery}".
+                 No roles found.
             </div>
         {/if}
     </div>

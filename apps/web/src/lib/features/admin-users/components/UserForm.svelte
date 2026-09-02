@@ -1,11 +1,11 @@
 <script lang="ts">
 
-    import { Button } from '@platform/ui/button';
-    import * as Sheet from '@platform/ui/sheet';
-    import { Input } from '@platform/ui/input';
-    import { Label } from '@platform/ui/label';
-    import { Select, SelectTrigger, SelectContent, SelectItem } from '@platform/ui/select';
-    import type { Role } from '@platform/contracts';
+    import { Button } from '@platform/svelte-ui/button';
+    import * as Sheet from '@platform/svelte-ui/sheet';
+    import { Input } from '@platform/svelte-ui/input';
+    import { Label } from '@platform/svelte-ui/label';
+    import { Select, SelectTrigger, SelectContent, SelectItem } from '@platform/svelte-ui/select';
+    import type { Role } from '@platform/types-identity';
     
     // Props
     let { 

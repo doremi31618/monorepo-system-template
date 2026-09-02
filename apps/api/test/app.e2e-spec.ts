@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
+import { closeTestApp } from './close-test-app.js';
 
 describe('AppController (e2e)', () => {
 	let app: INestApplication;
@@ -14,6 +15,10 @@ describe('AppController (e2e)', () => {
 		app = moduleFixture.createNestApplication();
 		app.setGlobalPrefix('v1');
 		await app.init();
+	});
+
+	afterEach(async () => {
+		await closeTestApp(app);
 	});
 
 	it('/ (GET)', () => {
