@@ -30,6 +30,7 @@ Make custom-role deletion reliable when the role has user and permission relatio
   - A transaction is required to avoid partially removing relationships.
   - The toast is intentionally delayed until the refreshed list confirms the visible state is current.
   - Browser regression coverage must exercise the real role page and observable toast, not source text.
+  - CI must install the Playwright Chromium runtime before executing the browser regression suite.
 
 ## Acceptance Criteria
 
@@ -80,6 +81,7 @@ Make custom-role deletion reliable when the role has user and permission relatio
 - 2026-09-02: User explicitly skipped the requirements interview; accepted existing English copy and post-refresh timing.
 - 2026-09-02: Browser regression first failed waiting for the missing toast, then passed after the minimal implementation. Web check, lint, production build, and diff checks pass with existing warnings only.
 - 2026-09-02: Opened feature PR [#20](https://github.com/doremi31618/monorepo-system-template/pull/20) targeting `dev`.
+- 2026-09-02: The first PR CI run reached the Web suite but could not launch Playwright because Chromium was intentionally skipped during dependency installation and never installed later; added an explicit Chromium installation step before tests.
 
 ## Handoff
 
