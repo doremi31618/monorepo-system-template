@@ -1,17 +1,24 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
   import * as api from '$lib/api/admin';
   import { resolve } from '$app/paths';
   import { page } from '$app/stores';
-  import { Button } from '@platform/ui/button';
-  import { Plus, Search } from 'lucide-svelte';
-  import { Input } from '@platform/ui/input';
+  import { Button } from '@platform/svelte-ui/button';
+  import { Plus } from 'lucide-svelte';
   import UserList from '$lib/features/admin-users/components/UserList.svelte';
   import UserForm from '$lib/features/admin-users/components/UserForm.svelte';
-  import * as AlertDialog from '@platform/ui/alert-dialog';
-  import type { UserWithRoles, Role } from '@platform/contracts';
+  import * as AlertDialog from '@platform/svelte-ui/alert-dialog';
+  import type { UserWithRoles, Role } from '@platform/types-identity';
   import type { CreateUserDto } from '$lib/api/admin';
   import { toast } from 'svelte-sonner';
+  import {
+    DataViewToolbar,
+    parseDataViewQuery,
+    writeDataViewQuery,
+    type DataViewProperty,
+    type DataViewQuery,
+  } from '@platform/svelte-ui/data-view-toolbar';
 
   // State
   let users: UserWithRoles[] = [];
@@ -27,6 +34,9 @@
 
   // Query Params
   let searchQuery = '';
+  let dataViewQuery: DataViewQuery = { search: '', filters: [], sorts: [] };
+  let querySignature = '';
+  let userProperties: DataViewProperty[] = [];
   let currentPage = 1;
   // Delete Dialog State
   let showDeleteDialog = false;
@@ -35,7 +45,21 @@
 
   // Reactive params
   $: currentPage = Number($page.url.searchParams.get('page')) || 1;
-  $: searchQuery = $page.url.searchParams.get('q') || '';
+  $: userProperties = [
+    {
+      key: 'roleId',
+      label: 'Role',
+      type: 'relation',
+      operators: ['isAnyOf'],
+      options: roles.map((role) => ({ value: role.id, label: role.name })),
+    },
+    { key: 'name', label: 'Name', type: 'text', operators: [], sortable: true },
+    { key: 'email', label: 'Email', type: 'text', operators: [], sortable: true },
+    { key: 'createdAt', label: 'Created', type: 'date', operators: [], sortable: true },
+  ];
+  $: dataViewQuery = parseDataViewQuery($page.url.searchParams, userProperties);
+  $: searchQuery = dataViewQuery.search;
+  $: querySignature = JSON.stringify(dataViewQuery);
 
   async function loadUsers() {
     loading = true;
@@ -43,7 +67,11 @@
         const response = await api.getUsers({
             page: currentPage,
             limit: pageSize,
-            q: searchQuery
+            q: searchQuery,
+            roleId: dataViewQuery.filters
+              .filter((filter) => filter.property === 'roleId')
+              .flatMap((filter) => Array.isArray(filter.value) ? filter.value : [filter.value]),
+            sort: dataViewQuery.sorts.map((sort) => `${sort.property}:${sort.direction}`),
         });
         
         // Handle ApiResponse wrapper
@@ -73,7 +101,7 @@
   }
 
   // Reload when params change
-  $: { if (currentPage || searchQuery) loadUsers(); }
+  $: { if (currentPage || querySignature) loadUsers(); }
 
   onMount(async () => {
       const res = await api.getRoles();
@@ -81,12 +109,22 @@
   });
 
   // Handlers
-  function handleSearch() {
-      window.location.href = `${resolve('/admin/users')}?page=1&q=${encodeURIComponent(searchQuery)}`;
+  async function handleDataViewQueryChange(next: DataViewQuery) {
+      const params = writeDataViewQuery($page.url.searchParams, next);
+      await goto(`${resolve('/admin/users')}?${params.toString()}`, {
+        replaceState: true,
+        noScroll: true,
+        keepFocus: true,
+      });
   }
 
-  function handlePageChange(newPage: number) {
-      window.location.href = `${resolve('/admin/users')}?page=${newPage}&q=${encodeURIComponent(searchQuery)}`;
+  async function handlePageChange(newPage: number) {
+      const params = writeDataViewQuery($page.url.searchParams, dataViewQuery);
+      params.set('page', String(newPage));
+      await goto(`${resolve('/admin/users')}?${params.toString()}`, {
+        noScroll: true,
+        keepFocus: true,
+      });
   }
 
   function openCreate() {
@@ -169,21 +207,21 @@
             <p class="text-muted-foreground">Manage users and their roles.</p>
         </div>
         <div class="flex items-center gap-2">
-			<div class="relative w-full sm:w-64">
-                <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search users..."
-                  class="pl-9 bg-background"
-                  bind:value={searchQuery}
-                  onkeydown={(e) => e.key === 'Enter' && handleSearch()}
-                />
-            </div>
             <Button onclick={openCreate}>
-                <Plus class="mr-2 h-4 w-4" />
+                <Plus data-icon="inline-start" />
                 Add User
             </Button>
         </div>
+    </div>
+
+    <div class="border-y py-2">
+      <DataViewToolbar
+        properties={userProperties}
+        query={dataViewQuery}
+        searchLabel="Search users"
+        searchPlaceholder="Search name or email…"
+        onquerychange={handleDataViewQueryChange}
+      />
     </div>
     
     <!-- Content -->

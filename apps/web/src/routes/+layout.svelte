@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ModeWatcher } from 'mode-watcher';
-	import { Toaster } from '@platform/ui/sonner';
+	import { Toaster } from '@platform/svelte-ui/sonner';
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
 

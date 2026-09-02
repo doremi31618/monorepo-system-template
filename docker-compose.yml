@@ -8,7 +8,7 @@ services:
     environment:
       VITE_API_BASE_URL: http://localhost:3333/v1
     ports:
-      - "5173:5173"
+      - '5173:5173'
     volumes:
       - ./apps/web:/monorepo/apps/web
       - ./packages:/monorepo/packages
@@ -27,7 +27,7 @@ services:
       dockerfile: apps/api/Dockerfile.dev
     working_dir: /monorepo
     ports:
-      - "3333:3333"
+      - '3333:3333'
     volumes:
       - ./apps/api:/monorepo/apps/api
       - ./packages:/monorepo/packages
@@ -38,15 +38,18 @@ services:
       API_BASE_URL: http://localhost:3333
       FRONTEND_URL: http://localhost:5173
       SMTP_HOST: smtp.example.com
-      SMTP_PORT: "465"
+      SMTP_PORT: '465'
       SMTP_USER: your-smtp-user
       SMTP_PASS: your-smtp-password
       SMTP_FROM: no-reply@example.com
+      ROOT_ADMIN_EMAIL: admin@example.com
+      ROOT_ADMIN_NAME: System Administrator
+      ROOT_ADMIN_PASSWORD: change-me-admin-password
       STORAGE_ENDPOINT: http://minio:9000
       STORAGE_BUCKET: r3-assets
       STORAGE_ACCESS_KEY: minioadmin
       STORAGE_SECRET_KEY: minioadmin
-      STORAGE_FORCE_PATH_STYLE: "true"
+      STORAGE_FORCE_PATH_STYLE: 'true'
     command: sh -c "bun run build:packages && bun run dev:api"
     depends_on:
       - db
@@ -57,8 +60,8 @@ services:
     image: minio/minio
     container_name: app-minio
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - '9000:9000'
+      - '9001:9001'
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
@@ -83,7 +86,7 @@ services:
     container_name: app-db
     restart: always
     ports:
-      - "5432:5432"
+      - '5432:5432'
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres

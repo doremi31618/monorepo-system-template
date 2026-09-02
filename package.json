@@ -7,40 +7,63 @@
     "node": ">=22.12.0 <27",
     "bun": ">=1.3.0 <2"
   },
+  "overrides": {
+    "@isaacs/brace-expansion": "5.0.1",
+    "brace-expansion": "1.1.18",
+    "browserslist": "4.28.7",
+    "fast-uri": "3.1.5",
+    "flatted": "3.4.2",
+    "form-data": "4.0.6",
+    "glob": "10.5.0",
+    "handlebars": "4.7.9",
+    "js-yaml": "4.3.1",
+    "minimatch": "3.1.4",
+    "multer": "2.2.0",
+    "nanoid": "3.3.18",
+    "picomatch": "2.3.2",
+    "postcss": "8.5.18",
+    "prosemirror-model": "1.25.11",
+    "rollup": "4.59.0",
+    "serialize-javascript": "7.0.3",
+    "tmp": "0.2.7"
+  },
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/nest/*/*",
+    "packages/types/*",
+    "packages/browser/*",
+    "packages/svelte/*",
+    "packages/testing/*"
+    ,"packages/runtime/*"
   ],
   "scripts": {
     "dev": "bun run build:packages && bun run --filter '@platform/api' --filter '@platform/web' --parallel dev",
     "dev:api": "bun run --filter '@platform/api' dev",
     "dev:web": "bun run --filter '@platform/web' dev",
+    "storybook": "bun run --filter '@platform/svelte-ui' build && bun run --filter '@platform/storybook' dev",
     "build": "bun run build:packages && bun run --filter './apps/*' --if-present build",
-    "build:packages": "bun run --filter '@platform/contracts' build && bun run --filter '@platform/config' build && bun run --filter '@platform/sdk' build && bun run --filter '@platform/logger' build && bun run --filter '@platform/database' build && bun run --filter '@platform/test-utils' build && bun run --filter '@platform/task-runtime' build && bun run --filter '@platform/users' build && bun run --filter '@platform/mail' build && bun run --filter '@platform/scheduling' build && bun run --filter '@platform/auth' build && bun run --filter '@platform/oauth-server' build && bun run --filter '@platform/access-control' build && bun run --filter '@platform/assets' build && bun run --filter '@platform/cms' build && bun run --filter '@platform/nest-cms' build && bun run --filter '@platform/nest-mcp-server' build && bun run --filter '@platform/ui' build && bun run --filter '@platform/service-ui' build",
-    "check": "bun run build:packages && bun run --filter './packages/*' --if-present check && bun run --filter './apps/*' --if-present check",
-    "test": "bun run test:unit && bun run --filter '@platform/api' test && bun run --filter '@platform/storybook' test",
-    "test:unit": "bun run build:packages && bun run --filter '@platform/contracts' test:unit && bun run --filter '@platform/sdk' test:unit && bun run --filter '@platform/task-runtime' test:unit && bun run --filter '@platform/service-ui' test:unit && bun run --filter '@platform/logger' test:unit && bun run --filter '@platform/users' test:unit && bun run --filter '@platform/mail' test:unit && bun run --filter '@platform/scheduling' test:unit && bun run --filter '@platform/auth' test:unit && bun run --filter '@platform/oauth-server' test:unit && bun run --filter '@platform/access-control' test:unit && bun run --filter '@platform/assets' test:unit && bun run --filter '@platform/cms' test:unit && bun run --filter '@platform/nest-cms' test:unit && bun run --filter '@platform/nest-mcp-server' test:unit",
-    "test:storybook": "bun run build:packages && bun run --filter '@platform/storybook' test",
-    "lint": "bun run --filter './packages/*' --filter './apps/*' --if-present lint",
+    "build:packages": "bun run --filter '@platform/types-shared' build && bun run --filter '@platform/types-identity' build && bun run --filter '@platform/types-content' build && bun run --filter '@platform/runtime-task' build && bun run --filter '@platform/browser-sdk' build && bun run --filter '@platform/nest-infra-logger' build && bun run --filter '@platform/nest-infra-database' build && bun run --filter '@platform/test-utils' build && bun run --filter '@platform/nest-identity-users' build && bun run --filter '@platform/nest-infra-mail' build && bun run --filter '@platform/nest-infra-scheduling' build && bun run --filter '@platform/nest-identity-auth' build && bun run --filter '@platform/nest-infra-oauth-server' build && bun run --filter '@platform/nest-identity-access-control' build && bun run --filter '@platform/nest-content-assets' build && bun run --filter '@platform/nest-content-cms' build && bun run --filter '@platform/nest-infra-mcp-server' build && bun run --filter '@platform/svelte-ui' build && bun run --filter '@platform/svelte-service-ui' build",
+    "check": "bun run deps:check && bun run deps:graph:check && bun run build:packages && bun run --filter '@platform/*' --if-present check",
+    "test": "bun run build:packages && bun run --filter '@platform/runtime-task' test:unit && bun run --filter '@platform/svelte-service-ui' test:unit && bun run --filter '@platform/api' test && bun run --filter '@platform/browser-sdk' --if-present test && bun run --filter '@platform/web' test && bun run --filter '@platform/storybook' test",
+    "lint": "bun run --filter '@platform/*' --if-present lint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "deps:check": "bun scripts/check-package-dependencies.ts",
-    "deps:graph": "bun scripts/check-package-dependencies.ts --graph",
-    "db:generate": "bun run --filter '@platform/migrator' db:generate",
-    "db:migrate": "bun run --filter '@platform/migrator' db:migrate",
-    "db:studio": "bun run --filter '@platform/migrator' db:studio",
-    "oauth-admin": "bun run --filter '@platform/oauth-server' build && bun run --filter '@platform/oauth-server' oauth-admin"
+    "deps:check": "bun scripts/package-dependencies.mjs check",
+    "deps:graph": "bun scripts/package-dependencies.mjs graph",
+    "deps:graph:check": "bun scripts/package-dependencies.mjs check-graph",
+    "deps:report": "knip --include files,exports --reporter compact",
+    "deps:audit": "bun audit --audit-level high --ignore GHSA-r5fr-rjxr-66jc",
+    "db:generate": "bun run --filter '@platform/api' db:generate",
+    "db:migrate": "bun run --filter '@platform/api' db:migrate",
+    "db:studio": "bun run --filter '@platform/api' db:studio"
+    ,"oauth-admin": "bun run --filter '@platform/nest-infra-oauth-server' build && bun run --filter '@platform/nest-infra-oauth-server' oauth-admin"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.2",
-    "@nestjs/testing": "^10.0.0",
-    "@types/jest": "^29.5.2",
-    "ansi-regex": "5.0.1",
-    "eslint": "^9.39.2",
-    "jest": "^29.5.0",
-    "prettier": "^3.7.4",
-    "ts-jest": "^29.1.0",
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "knip": "^6.33.0",
+    "prettier": "^3.9.6",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.52.0"
+    "typescript-eslint": "^8.68.0"
   }
 }

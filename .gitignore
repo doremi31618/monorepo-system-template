@@ -5,11 +5,9 @@ yarn.lock
 bun.lockb
 .env
 .env.local
+.env.prod
 .env.production.local
 .env.development.local
-.nx/installation
-.nx/cache
-.nx/workspace-data
 
 # Build outputs
 dist/

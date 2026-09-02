@@ -1,0 +1,25 @@
+{
+  "name": "@platform/runtime-task",
+  "version": "0.1.0",
+  "description": "框架中立的背景任務執行、重試與狀態模型",
+  "private": true,
+  "platform": { "runtime": "universal", "framework": "none", "layer": "runtime", "domain": "shared" },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test:unit": "bun test src"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

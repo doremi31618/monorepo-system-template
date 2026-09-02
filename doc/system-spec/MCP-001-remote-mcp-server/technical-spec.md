@@ -16,30 +16,30 @@ apps/api (NestJS composition root)
   |-- /mcp/private ---- OAuth JWT + RBAC -----------+--- app-owned tool mapping
              |                                      |
              v                                      v
-@platform/nest-mcp-server                  @platform/nest-cms
+@platform/nest-infra-mcp-server                  @platform/nest-content-cms
   - MCP SDK v2 transport                     - CmsModule
   - server/tool registry                     - CmsService
   - HTTP/OAuth response helpers               - REST controllers/Drizzle adapter
                                                     |
                                                     v
-                                             @platform/cms
+                                             @platform/types-content
                                                - framework-neutral queries/results
 ```
 
-`apps/api` imports both Nest packages and registers handlers that call the injected `CmsService`. `@platform/nest-mcp-server` must never import CMS. There is no `@platform/nest-cms-mcp` package.
+`apps/api` imports both Nest packages and registers handlers that call the injected `CmsService`. `@platform/nest-infra-mcp-server` must never import CMS. There is no `@platform/nest-content-cms-mcp` package.
 
 ## Package migration
 
-The current `@platform/cms` package hides NestJS dependencies. MCP-001 replaces that shape with:
+The current `@platform/types-content` package hides NestJS dependencies. MCP-001 replaces that shape with:
 
-- `@platform/cms`: framework-neutral search query/result interfaces and pure shared CMS utilities needed by more than one adapter.
-- `@platform/nest-cms`: the existing schema, Drizzle-backed `CmsService`, Nest module/controllers, HTTP-specific exceptions and configuration integration. It implements/returns the framework-neutral public contracts where useful and exports `CmsService` for direct composition.
+- `@platform/types-content`: framework-neutral search query/result interfaces and pure shared CMS utilities needed by more than one adapter.
+- `@platform/nest-content-cms`: the existing schema, Drizzle-backed `CmsService`, Nest module/controllers, HTTP-specific exceptions and configuration integration. It implements/returns the framework-neutral public contracts where useful and exports `CmsService` for direct composition.
 
 All API, migrator/schema-composition, tests, and workspace dependencies must use the new package paths. No compatibility alias is retained because the old name would continue hiding the framework constraint.
 
 ## MCP package API
 
-`@platform/nest-mcp-server` exposes a small Nest-facing API:
+`@platform/nest-infra-mcp-server` exposes a small Nest-facing API:
 
 - server metadata and tool-definition types;
 - a factory/service that creates a stateless MCP server for one HTTP request;

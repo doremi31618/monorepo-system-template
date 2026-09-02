@@ -1,6 +1,6 @@
 <script lang="ts">
-	import * as DropdownMenu from "@platform/ui/dropdown-menu";
-	import * as Sidebar from "@platform/ui/sidebar";
+	import * as DropdownMenu from "@platform/svelte-ui/dropdown-menu";
+	import * as Sidebar from "@platform/svelte-ui/sidebar";
 	import CheckIcon from "@lucide/svelte/icons/check";
 	import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
 	import GalleryVerticalEndIcon from "@lucide/svelte/icons/gallery-vertical-end";

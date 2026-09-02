@@ -1,4 +1,4 @@
-import { createDatabase, createPool } from '@platform/database';
+import { createDatabase, createPool } from '@platform/nest-infra-database';
 import * as schema from './schema.js';
 
 export { schema };

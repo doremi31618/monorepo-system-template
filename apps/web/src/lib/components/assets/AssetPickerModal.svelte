@@ -256,7 +256,7 @@
                                 <p class="truncate text-xs font-medium text-slate-700" title={displayAssetName(asset)}>
                                     {displayAssetName(asset)}
                                 </p>
-                                <p class="text-xs text-slate-400">{(asset.size / 1024).toFixed(1)} KB</p>
+                                <p class="text-xs text-slate-400">{((asset.size ?? 0) / 1024).toFixed(1)} KB</p>
                             </button>
                         {/each}
                     </div>

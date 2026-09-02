@@ -1,20 +1,31 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
 	OAuthError,
 	OAuthErrorCode,
 	type AuthInfo,
 	type OAuthTokenVerifier
-} from '@platform/nest-mcp-server';
+} from '@platform/nest-infra-mcp-server';
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
-import { mcpPrivateResourceUri } from './mcp.constants.js';
+import {
+	MCP_RUNTIME_CONFIG,
+	type McpRuntimeConfig
+} from './mcp.constants.js';
 
 @Injectable()
 export class McpAccessTokenVerifier implements OAuthTokenVerifier {
-	private readonly issuer = process.env.OAUTH_ISSUER ?? 'http://localhost:3333';
-	private readonly resource = new URL(mcpPrivateResourceUri());
-	private readonly jwks = createRemoteJWKSet(
-		new URL('/.well-known/jwks.json', this.issuer)
-	);
+	private readonly issuer: string;
+	private readonly resource: URL;
+	private readonly jwks: ReturnType<typeof createRemoteJWKSet>;
+
+	constructor(
+		@Inject(MCP_RUNTIME_CONFIG) config: McpRuntimeConfig
+	) {
+		this.issuer = config.issuer;
+		this.resource = new URL(config.privateResourceUri);
+		this.jwks = createRemoteJWKSet(
+			new URL('/.well-known/jwks.json', this.issuer)
+		);
+	}
 
 	async verifyAccessToken(token: string): Promise<AuthInfo> {
 		try {

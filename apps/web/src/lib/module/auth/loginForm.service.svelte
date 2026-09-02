@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { authStore } from "$lib/store/authStore";
-	import { Button } from "@platform/ui/button";
-	import * as Card from "@platform/ui/card";
-	import { Input } from "@platform/ui/input";
+	import { Button } from "@platform/svelte-ui/button";
+	import * as Card from "@platform/svelte-ui/card";
+	import { Input } from "@platform/svelte-ui/input";
 	import { AppConfig } from "$lib/config";
 	import { appRoutePath } from "$lib/config/route";
 	import { resolve } from "$app/paths";
@@ -13,7 +13,7 @@
 		FieldLabel,
 		FieldDescription,
 		FieldError,
-	} from "@platform/ui/field";
+	} from "@platform/svelte-ui/field";
 	import { onDestroy } from "svelte";
 
 

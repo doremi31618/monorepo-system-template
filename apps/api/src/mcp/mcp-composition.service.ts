@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
-import { AccessControlService } from '@platform/access-control';
+import { Inject, Injectable } from '@nestjs/common';
+import { AccessControlService } from '@platform/nest-identity-access-control';
 import type {
 	CmsPostSummary,
 	CmsPublicPostSummary,
 	CmsSearchPage
-} from '@platform/cms';
-import { LoggerService } from '@platform/logger';
+} from '@platform/types-content';
+import { LoggerService } from '@platform/nest-infra-logger';
 import {
 	McpServer,
 	NestMcpHttpService,
@@ -14,13 +14,14 @@ import {
 	type AuthInfo,
 	type NestMcpHttpHandler,
 	type OAuthMetadata
-} from '@platform/nest-mcp-server';
-import { CmsService } from '@platform/nest-cms';
+} from '@platform/nest-infra-mcp-server';
+import { CmsService } from '@platform/nest-content-cms';
 import * as z from 'zod/v4';
 import {
 	MCP_CMS_READ_PERMISSION,
 	MCP_PRIVATE_SCOPE,
-	mcpPrivateResourceUri
+	MCP_RUNTIME_CONFIG,
+	type McpRuntimeConfig
 } from './mcp.constants.js';
 
 const publicSearchInput = z.object({
@@ -51,18 +52,21 @@ function serializePage<T>(page: CmsSearchPage<T>): Record<string, unknown> {
 export class McpCompositionService {
 	readonly publicHandler: NestMcpHttpHandler;
 	readonly privateHandler: NestMcpHttpHandler;
-	readonly privateResourceUri = new URL(mcpPrivateResourceUri());
-	readonly resourceMetadataUrl = getOAuthProtectedResourceMetadataUrl(
-		this.privateResourceUri
-	);
+	readonly privateResourceUri: URL;
+	readonly resourceMetadataUrl: string;
 
 	constructor(
 		private readonly mcpHttp: NestMcpHttpService,
 		private readonly cms: CmsService,
 		private readonly accessControl: AccessControlService,
-		private readonly logger: LoggerService
+		private readonly logger: LoggerService,
+		@Inject(MCP_RUNTIME_CONFIG) private readonly config: McpRuntimeConfig
 	) {
 		this.logger.setContext(McpCompositionService.name);
+		this.privateResourceUri = new URL(config.privateResourceUri);
+		this.resourceMetadataUrl = getOAuthProtectedResourceMetadataUrl(
+			this.privateResourceUri
+		);
 		this.publicHandler = this.mcpHttp.createHandler(() =>
 			this.createPublicServer()
 		);
@@ -72,9 +76,7 @@ export class McpCompositionService {
 	}
 
 	getProtectedResourceMetadata() {
-		const issuer = (
-			process.env.OAUTH_ISSUER ?? 'http://localhost:3333'
-		).replace(/\/$/, '');
+		const issuer = this.config.issuer.replace(/\/$/, '');
 		const oauthMetadata = {
 			issuer,
 			authorization_endpoint: `${issuer}/oauth/authorize`,

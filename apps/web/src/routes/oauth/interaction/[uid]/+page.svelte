@@ -10,11 +10,11 @@
     resumeOAuthLogin,
     type OAuthInteractionDetails,
   } from '$lib/api/oauth';
-  import { Button } from '@platform/ui/button';
-  import * as Card from '@platform/ui/card';
-  import { Input } from '@platform/ui/input';
-  import { Badge } from '@platform/ui/badge';
-  import { Field, FieldError, FieldGroup, FieldLabel } from '@platform/ui/field';
+  import { Button } from '@platform/svelte-ui/button';
+  import * as Card from '@platform/svelte-ui/card';
+  import { Input } from '@platform/svelte-ui/input';
+  import { Badge } from '@platform/svelte-ui/badge';
+  import { Field, FieldError, FieldGroup, FieldLabel } from '@platform/svelte-ui/field';
   import { AppConfig } from '$lib/config';
 
   const uid = $derived(page.params.uid ?? '');

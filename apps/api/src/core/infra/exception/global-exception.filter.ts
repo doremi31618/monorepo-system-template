@@ -1,15 +1,7 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, } from "@nestjs/common";
 import { Response, Request } from "express";
+import type { ApiErrorResponse } from '@platform/types-shared';
 // import { LoggerService } from "../logger/logger.service.js";
-
-type ApiResponse<T> = {
-    statusCode: number;
-    message: string;
-    error?: string;
-    data: T;
-    timestamp: string;
-    path: string;
-};
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -39,7 +31,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             error = exception.name;
         }
 
-        const apiResponse: ApiResponse<any> = {
+        const apiResponse: ApiErrorResponse = {
             statusCode: status,
             message: message,
             error: error,

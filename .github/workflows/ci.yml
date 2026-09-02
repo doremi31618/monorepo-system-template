@@ -27,7 +27,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
       DATABASE_URL: postgres://test:test@localhost:5432/test
       TEST_DATABASE_URL: postgres://test:test@localhost:5432/test
     steps:
@@ -42,6 +42,19 @@ jobs:
 
       - name: Migrate test database
         run: bun run db:migrate
+
+      - name: Dependency boundaries and cycles
+        run: bun run deps:check
+
+      - name: Dependency graph is current
+        run: bun run deps:graph:check
+
+      - name: High and critical vulnerability audit
+        run: bun run deps:audit
+
+      - name: Unused files and exports report
+        continue-on-error: true
+        run: bun run deps:report
 
       - name: Check
         run: bun run check

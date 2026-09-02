@@ -11,7 +11,7 @@
     import TableCell from '@tiptap/extension-table-cell';
     import TableHeader from '@tiptap/extension-table-header';
     import CodeBlock from '@tiptap/extension-code-block';
-    import { Selection } from '@tiptap/pm/state';
+    import { Selection, TextSelection } from '@tiptap/pm/state';
     
     import { 
         Bold, Italic, Type, Rows, Columns,
@@ -560,6 +560,7 @@
     }>();
 
     let element: HTMLElement | undefined = $state();
+    let interactionZone: HTMLElement | undefined = $state();
     let editor: Editor | undefined = $state();
     let bubbleMenuElement: HTMLElement | undefined = $state();
     let floatingMenuElement: HTMLElement | undefined = $state();
@@ -765,6 +766,7 @@
         };
         isMobileView = mobileMediaQuery.matches;
         mobileMediaQuery.addEventListener('change', mobileViewChangeHandler);
+        interactionZone?.addEventListener('pointerdown', handleCanvasPointerDown);
         isMounted = true;
     });
 
@@ -773,12 +775,28 @@
 
         const editorRect = element.getBoundingClientRect();
         const target = event.target as HTMLElement;
-        
+        const blocks = Array.from(
+            element.querySelectorAll<HTMLElement>(':scope > .ProseMirror > *')
+        );
+
         const isOverGutter = event.clientX >= editorRect.left - 80 && event.clientX <= editorRect.left;
+        const isInsideEditor = event.clientX >= editorRect.left
+            && event.clientX <= editorRect.right
+            && event.clientY >= editorRect.top
+            && event.clientY <= editorRect.bottom;
         const blockElement = target.closest('.tiptap-editor > .ProseMirror > *');
 
-        if (isOverGutter || blockElement) {
-            const activeEl = blockElement || document.elementFromPoint(editorRect.left + 20, event.clientY)?.closest('.tiptap-editor > .ProseMirror > *');
+        if (isOverGutter || isInsideEditor || blockElement) {
+            const activeEl = blockElement || blocks.reduce<HTMLElement | null>((nearest, block) => {
+                if (!nearest) return block;
+
+                const blockRect = block.getBoundingClientRect();
+                const nearestRect = nearest.getBoundingClientRect();
+                const blockDistance = Math.abs(event.clientY - (blockRect.top + blockRect.height / 2));
+                const nearestDistance = Math.abs(event.clientY - (nearestRect.top + nearestRect.height / 2));
+
+                return blockDistance < nearestDistance ? block : nearest;
+            }, null);
             
             if (activeEl && element.contains(activeEl)) {
                 const nodeRect = activeEl.getBoundingClientRect();
@@ -804,6 +822,42 @@
                 showSideButtons = false;
             }
         }
+    };
+
+    const handleCanvasPointerDown = (event: PointerEvent) => {
+        if (!editor || !element || !interactionZone || !editable || event.button !== 0) return;
+
+        const target = event.target;
+        if (!(target instanceof HTMLElement) || !interactionZone.contains(target)) return;
+        if (target.closest('button, a, input, select, textarea, [contenteditable="false"]')) return;
+        if (target.closest('.tiptap-editor > .ProseMirror > *')) return;
+
+        const blocks = Array.from(
+            element.querySelectorAll<HTMLElement>(':scope > .ProseMirror > *')
+        );
+        let insertionIndex = blocks.length;
+
+        for (let index = 0; index < blocks.length; index += 1) {
+            const blockRect = blocks[index].getBoundingClientRect();
+            if (event.clientY < blockRect.top + blockRect.height / 2) {
+                insertionIndex = index;
+                break;
+            }
+        }
+
+        const blockPositions: number[] = [];
+        editor.state.doc.forEach((_node, offset) => blockPositions.push(offset));
+        const insertionPos = insertionIndex < blockPositions.length
+            ? blockPositions[insertionIndex]
+            : editor.state.doc.content.size;
+        const paragraph = editor.schema.nodes.paragraph?.create();
+        if (!paragraph) return;
+
+        event.preventDefault();
+        const transaction = editor.state.tr.insert(insertionPos, paragraph);
+        transaction.setSelection(TextSelection.create(transaction.doc, insertionPos + 1));
+        editor.view.dispatch(transaction.scrollIntoView());
+        editor.view.focus();
     };
 
     const handleDragStart = (event: DragEvent) => {
@@ -941,12 +995,13 @@
         if (mobileMediaQuery && mobileViewChangeHandler) {
             mobileMediaQuery.removeEventListener('change', mobileViewChangeHandler);
         }
+        interactionZone?.removeEventListener('pointerdown', handleCanvasPointerDown);
         if (editor) editor.destroy();
     });
 
-    const btnClass = "w-8 h-8 flex items-center justify-center rounded hover:bg-slate-100 text-slate-500 transition-all duration-200";
-    const menuBtnClass = "w-full flex items-center gap-2 px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-50 transition-colors rounded-xl font-medium text-left";
-    const mobileFloatingBtnClass = "inline-flex shrink-0 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors";
+    const btnClass = "w-8 h-8 flex items-center justify-center rounded hover:bg-accent hover:text-accent-foreground text-muted-foreground transition-all duration-200";
+    const menuBtnClass = "w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-accent hover:text-accent-foreground transition-colors rounded-xl font-medium text-left";
+    const mobileFloatingBtnClass = "inline-flex shrink-0 items-center gap-1.5 rounded-full border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors";
 
     const isEditorActive = (name: string, attrs?: Record<string, unknown>) => {
         void editorStateToken;
@@ -969,21 +1024,21 @@
 <!-- 將選單元素移出 {#if isMounted} 並放入隱藏容器，確保初始化時存在 -->
 <div class="hidden">
     <!-- Bubble Menu -->
-    <div bind:this={bubbleMenuElement} class="flex items-center gap-1 bg-white border border-slate-200 shadow-xl rounded-lg p-1 z-50">
+    <div bind:this={bubbleMenuElement} class="z-50 flex items-center gap-1 rounded-lg border bg-popover p-1 text-popover-foreground shadow-xl">
         {#if editor}
             <button 
-                class="{btnClass} {isEditorActive('bold') ? 'bg-indigo-50 text-indigo-600 font-bold' : ''}" 
+                class="{btnClass} {isEditorActive('bold') ? 'bg-accent text-accent-foreground font-bold' : ''}"
                 onclick={() => editor?.chain().focus().toggleBold().run()}
             >
                 <Bold size={16} />
             </button>
             <button 
-                class="{btnClass} {isEditorActive('italic') ? 'bg-indigo-50 text-indigo-600 font-bold' : ''}" 
+                class="{btnClass} {isEditorActive('italic') ? 'bg-accent text-accent-foreground font-bold' : ''}"
                 onclick={() => editor?.chain().focus().toggleItalic().run()}
             >
                 <Italic size={16} />
             </button>
-            <div class="w-[1px] h-4 bg-slate-200 mx-1"></div>
+            <div class="mx-1 h-4 w-px bg-border"></div>
             <div class="flex items-center gap-1">
                 {#each textColorOptions as color (color)}
                     <button
@@ -1003,7 +1058,7 @@
                 </button>
             </div>
 
-            <div class="w-[1px] h-4 bg-slate-200 mx-1"></div>
+            <div class="mx-1 h-4 w-px bg-border"></div>
             <div class="flex items-center gap-1">
                 {#each textBackgroundOptions as backgroundColor (backgroundColor)}
                     <button
@@ -1024,71 +1079,71 @@
             </div>
 
             {#if isTableActive()}
-                <div class="w-[1px] h-4 bg-slate-200 mx-1"></div>
-                <button class="{btnClass} {isEditorActive('table', { headerRow: true }) ? 'bg-indigo-50 text-indigo-600' : ''}" title="標題列" onclick={() => editor?.chain().focus().toggleHeaderRow().run()}>
+                <div class="mx-1 h-4 w-px bg-border"></div>
+                <button class="{btnClass} {isEditorActive('table', { headerRow: true }) ? 'bg-accent text-accent-foreground' : ''}" title="標題列" onclick={() => editor?.chain().focus().toggleHeaderRow().run()}>
                     <PanelTop size={16} />
                 </button>
-                <button class="{btnClass} {isEditorActive('table', { headerColumn: true }) ? 'bg-indigo-50 text-indigo-600' : ''}" title="標題欄" onclick={() => editor?.chain().focus().toggleHeaderColumn().run()}>
+                <button class="{btnClass} {isEditorActive('table', { headerColumn: true }) ? 'bg-accent text-accent-foreground' : ''}" title="標題欄" onclick={() => editor?.chain().focus().toggleHeaderColumn().run()}>
                     <PanelLeft size={16} />
                 </button>
-                <div class="w-[1px] h-4 bg-slate-100 mx-1"></div>
+                <div class="mx-1 h-4 w-px bg-border"></div>
                 <button class={btnClass} title="插入列" onclick={() => editor?.chain().focus().addRowAfter().run()}><Rows size={16} /></button>
-                <button class={btnClass} title="刪除列" onclick={() => editor?.chain().focus().deleteRow().run()}><Minus size={16} class="text-red-400" /></button>
+                <button class={btnClass} title="刪除列" onclick={() => editor?.chain().focus().deleteRow().run()}><Minus size={16} class="text-destructive" /></button>
                 <button class={btnClass} title="插入欄" onclick={() => editor?.chain().focus().addColumnAfter().run()}><Columns size={16} /></button>
-                <button class={btnClass} title="刪除欄" onclick={() => editor?.chain().focus().deleteColumn().run()}><Minus size={16} class="text-red-400 rotate-90" /></button>
-                <div class="w-[1px] h-4 bg-slate-200 mx-1"></div>
-                <button class="{btnClass} text-red-500" title="刪除表格" onclick={() => editor?.chain().focus().deleteTable().run()}><Trash2 size={16} /></button>
+                <button class={btnClass} title="刪除欄" onclick={() => editor?.chain().focus().deleteColumn().run()}><Minus size={16} class="rotate-90 text-destructive" /></button>
+                <div class="mx-1 h-4 w-px bg-border"></div>
+                <button class="{btnClass} text-destructive" title="刪除表格" onclick={() => editor?.chain().focus().deleteTable().run()}><Trash2 size={16} /></button>
             {/if}
 
-            <div class="w-[1px] h-4 bg-slate-200 mx-1"></div>
-            <button class="{btnClass} text-red-500 hover:bg-red-50" onclick={() => editor?.chain().focus().unsetAllMarks().run()}>
+            <div class="mx-1 h-4 w-px bg-border"></div>
+            <button class="{btnClass} text-destructive hover:bg-destructive/10" onclick={() => editor?.chain().focus().unsetAllMarks().run()}>
                 <Trash2 size={16} />
             </button>
         {/if}
     </div>
 
     <!-- Floating Menu -->
-    <div bind:this={floatingMenuElement} class="flex flex-col bg-white border border-slate-200 shadow-2xl rounded-2xl p-2 min-w-[220px] animate-in fade-in slide-in-from-top-2 z-50">
-        <p class="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">基礎區塊</p>
-        <button class={menuBtnClass} onclick={() => convertTo('h1')}><Heading1 size={16} class="text-slate-400" /> 標題 1</button>
-        <button class={menuBtnClass} onclick={() => convertTo('h2')}><Heading2 size={16} class="text-slate-400" /> 標題 2</button>
-        <button class={menuBtnClass} onclick={() => convertTo('paragraph')}><Type size={16} class="text-slate-400" /> 純文字</button>
-        <button class={menuBtnClass} onclick={() => convertTo('bulletList')}><List size={16} class="text-slate-400" /> 無序清單</button>
-        <button class={menuBtnClass} onclick={() => convertTo('orderedList')}><ListOrdered size={16} class="text-slate-400" /> 有序清單</button>
-        <div class="h-[1px] bg-slate-100 my-1 mx-2"></div>
-        <p class="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">進階內容</p>
-        <button class={menuBtnClass} onclick={() => convertTo('table')}><TableIcon size={16} class="text-slate-400" /> 建立表格</button>
-        <button class={menuBtnClass} onclick={() => convertTo('tableOfContents')}><PanelLeft size={16} class="text-slate-400" /> 目錄區塊</button>
-        <button class={menuBtnClass} onclick={() => convertTo('linkPreview')}><Quote size={16} class="text-slate-400" /> 連結預覽</button>
-        <button class={menuBtnClass} onclick={() => convertTo('blockquote')}><Quote size={16} class="text-slate-400" /> 插入引言</button>
-        <button class={menuBtnClass} onclick={() => convertTo('codeBlock')}><Code2 size={16} class="text-slate-400" /> 程式碼區塊</button>
-        <button class={menuBtnClass} onclick={() => convertTo('image')}><ImageIcon size={16} class="text-slate-400" /> 插入圖片</button>
+    <div bind:this={floatingMenuElement} class="animate-in fade-in slide-in-from-top-2 z-50 flex min-w-[220px] flex-col rounded-2xl border bg-popover p-2 text-popover-foreground shadow-2xl">
+        <p class="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">基礎區塊</p>
+        <button class={menuBtnClass} onclick={() => convertTo('h1')}><Heading1 size={16} class="text-muted-foreground" /> 標題 1</button>
+        <button class={menuBtnClass} onclick={() => convertTo('h2')}><Heading2 size={16} class="text-muted-foreground" /> 標題 2</button>
+        <button class={menuBtnClass} onclick={() => convertTo('paragraph')}><Type size={16} class="text-muted-foreground" /> 純文字</button>
+        <button class={menuBtnClass} onclick={() => convertTo('bulletList')}><List size={16} class="text-muted-foreground" /> 無序清單</button>
+        <button class={menuBtnClass} onclick={() => convertTo('orderedList')}><ListOrdered size={16} class="text-muted-foreground" /> 有序清單</button>
+        <div class="mx-2 my-1 h-px bg-border"></div>
+        <p class="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">進階內容</p>
+        <button class={menuBtnClass} onclick={() => convertTo('table')}><TableIcon size={16} class="text-muted-foreground" /> 建立表格</button>
+        <button class={menuBtnClass} onclick={() => convertTo('tableOfContents')}><PanelLeft size={16} class="text-muted-foreground" /> 目錄區塊</button>
+        <button class={menuBtnClass} onclick={() => convertTo('linkPreview')}><Quote size={16} class="text-muted-foreground" /> 連結預覽</button>
+        <button class={menuBtnClass} onclick={() => convertTo('blockquote')}><Quote size={16} class="text-muted-foreground" /> 插入引言</button>
+        <button class={menuBtnClass} onclick={() => convertTo('codeBlock')}><Code2 size={16} class="text-muted-foreground" /> 程式碼區塊</button>
+        <button class={menuBtnClass} onclick={() => convertTo('image')}><ImageIcon size={16} class="text-muted-foreground" /> 插入圖片</button>
     </div>
 </div>
 
-<div class="max-w-4xl mx-auto p-4 pb-24 md:p-12 md:pb-12 min-h-screen bg-white transition-opacity duration-500 {isMounted ? 'opacity-100' : 'opacity-0'}">
+<div class="mx-auto min-h-screen max-w-4xl bg-card p-4 pb-24 text-card-foreground transition-opacity duration-500 md:p-12 md:pb-12 {isMounted ? 'opacity-100' : 'opacity-0'}">
     
     <!-- 編輯器主畫布 -->
-    <div class="relative group" onmousemove={handleMouseMove} onmouseleave={() => !showBlockMenu && (showSideButtons = false)}>
+    <div bind:this={interactionZone} class="relative group min-h-[calc(100vh-6rem)] md:-ml-16 md:pl-16" role="presentation" onmousemove={handleMouseMove} onmouseleave={() => !showBlockMenu && (showSideButtons = false)}>
         
         <!-- Notion 側邊按鈕 -->
         {#if showSideButtons && editable && isMounted}
             <div 
-                class="absolute -left-14 flex items-center gap-1 transition-all duration-75 ease-out z-20" 
+                class="absolute left-2 z-20 hidden items-center gap-1 transition-all duration-75 ease-out md:flex"
                 style="top: {sideButtonsTop}px;"
             >
-                <button onclick={handleAddBlock} title="在下方新增一行" class="p-1 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors">
+                <button onclick={handleAddBlock} title="在下方新增一行" class="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground">
                     <Plus size={18} />
                 </button>
                 <div class="relative">
-                    <button draggable="true" ondragstart={handleDragStart} onclick={() => showBlockMenu = !showBlockMenu} class="p-1 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded cursor-grab active:cursor-grabbing transition-colors">
+                    <button draggable="true" ondragstart={handleDragStart} onclick={() => showBlockMenu = !showBlockMenu} class="cursor-grab rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground active:cursor-grabbing">
                         <GripVertical size={18} />
                     </button>
                     {#if showBlockMenu}
-                        <div class="absolute left-10 top-0 w-56 bg-white border border-slate-200 shadow-2xl rounded-2xl p-2 z-40 animate-in fade-in zoom-in duration-150 text-left">
-                            <button class="{menuBtnClass} text-red-500 hover:bg-red-50 font-semibold" onclick={handleDeleteBlock}><Trash2 size={16} /> 刪除</button>
+                        <div class="animate-in fade-in zoom-in absolute left-10 top-0 z-40 w-56 rounded-2xl border bg-popover p-2 text-left text-popover-foreground shadow-2xl duration-150">
+                            <button class="{menuBtnClass} font-semibold text-destructive hover:bg-destructive/10" onclick={handleDeleteBlock}><Trash2 size={16} /> 刪除</button>
                             <button class="{menuBtnClass} font-semibold" onclick={handleDuplicateBlock}><Copy size={16} /> 重複製作</button>
-                            <div class="h-[1px] bg-slate-100 my-2 mx-1"></div>
+                            <div class="mx-1 my-2 h-px bg-border"></div>
                             <button class="{menuBtnClass} font-semibold" onclick={() => moveBlock('up')}><ArrowUp size={16} /> 向上移動</button>
                             <button class="{menuBtnClass} font-semibold" onclick={() => moveBlock('down')}><ArrowDown size={16} /> 向下移動</button>
                         </div>
@@ -1097,12 +1152,12 @@
             </div>
         {/if}
 
-        <div bind:this={element} class="tiptap-editor prose prose-slate max-w-none focus:outline-none"></div>
+        <div bind:this={element} class="tiptap-editor prose prose-slate max-w-none text-foreground focus:outline-none dark:prose-invert"></div>
     </div>
 </div>
 
 {#if editor && editable && isMobileView && isMobileSlashMenuVisible()}
-    <div class="mobile-floating-menu fixed inset-x-0 bottom-0 z-[60] border-t border-slate-200 bg-white/95 px-2 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] shadow-[0_-8px_24px_rgba(15,23,42,0.12)] backdrop-blur md:hidden">
+    <div class="mobile-floating-menu fixed inset-x-0 bottom-0 z-[60] border-t bg-background/95 px-2 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] text-foreground shadow-[0_-8px_24px_rgba(15,23,42,0.12)] backdrop-blur md:hidden">
         <div class="mobile-floating-menu-scroll flex items-center gap-2 overflow-x-auto">
             <button class={mobileFloatingBtnClass} onclick={() => convertTo('h1')}>
                 <Heading1 size={14} /> H1
@@ -1163,14 +1218,14 @@
         height: 0;
         pointer-events: none;
         font-style: italic;
-        color: #cbd5e1;
+        color: var(--muted-foreground);
     }
 
-    :global(.tiptap-editor h1) { font-size: 2.5rem; font-weight: 850; margin-top: 2rem; margin-bottom: 0.5rem; color: #0f172a; letter-spacing: -0.02em; }
-    :global(.tiptap-editor h2) { font-size: 1.875rem; font-weight: 750; margin-top: 1.5rem; margin-bottom: 0.5rem; color: #1e293b; }
-    :global(.tiptap-editor p) { line-height: 1.65; margin-top: 0.25rem; margin-bottom: 0.25rem; color: #334155; }
+    :global(.tiptap-editor h1) { font-size: 2.5rem; font-weight: 850; margin-top: 2rem; margin-bottom: 0.5rem; color: var(--foreground); letter-spacing: -0.02em; }
+    :global(.tiptap-editor h2) { font-size: 1.875rem; font-weight: 750; margin-top: 1.5rem; margin-bottom: 0.5rem; color: var(--foreground); }
+    :global(.tiptap-editor p) { line-height: 1.65; margin-top: 0.25rem; margin-bottom: 0.25rem; color: var(--foreground); }
 
-    :global(.tiptap-editor blockquote) { border-left: 4px solid #e2e8f0; padding-left: 1.5rem; font-style: italic; color: #64748b; margin: 1.5rem 0; }
+    :global(.tiptap-editor blockquote) { border-left: 4px solid var(--border); padding-left: 1.5rem; font-style: italic; color: var(--muted-foreground); margin: 1.5rem 0; }
     
     /* 優化後的程式碼區塊樣式：增加 Padding 與微邊框高光 */
     :global(.tiptap-editor pre) { 
@@ -1195,8 +1250,8 @@
     }
 
     :global(.tiptap-editor table) { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 1.5rem 0; overflow: hidden; }
-    :global(.tiptap-editor th, .tiptap-editor td) { border: 1px solid #e2e8f0; padding: 0.75rem; vertical-align: top; position: relative; }
-    :global(.tiptap-editor th) { background-color: #f8fafc; font-weight: bold; text-align: left; }
+    :global(.tiptap-editor th, .tiptap-editor td) { border: 1px solid var(--border); padding: 0.75rem; vertical-align: top; position: relative; }
+    :global(.tiptap-editor th) { background-color: var(--muted); font-weight: bold; text-align: left; }
 
     :global(.tiptap-editor .editor-link-preview) {
         margin: 0.75rem 0;
@@ -1207,13 +1262,13 @@
         max-width: 52rem;
         overflow: hidden;
         border-radius: 0.9rem;
-        border: 1px solid #e2e8f0;
-        background: #ffffff;
+        border: 1px solid var(--border);
+        background: var(--card);
         box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
 
     :global(.tiptap-editor .editor-link-preview-image-wrap) {
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 1px solid var(--border);
     }
 
     :global(.tiptap-editor .editor-link-preview-image) {
@@ -1229,20 +1284,20 @@
 
     :global(.tiptap-editor .editor-link-preview-title) {
         margin: 0 0 0.35rem;
-        color: #0f172a;
+        color: var(--card-foreground);
         font-size: 0.98rem;
         font-weight: 700;
     }
 
     :global(.tiptap-editor .editor-link-preview-description) {
         margin: 0 0 0.45rem;
-        color: #475569;
+        color: var(--muted-foreground);
         font-size: 0.86rem;
         line-height: 1.45;
     }
 
     :global(.tiptap-editor .editor-link-preview-url) {
-        color: #2563eb;
+        color: var(--primary);
         font-size: 0.78rem;
         text-decoration: none;
     }
@@ -1254,7 +1309,7 @@
     :global(.tiptap-editor .editor-link-preview-status) {
         min-height: 1rem;
         margin: 0.35rem 0 0;
-        color: #64748b;
+        color: var(--muted-foreground);
         font-size: 0.75rem;
     }
 
@@ -1270,9 +1325,9 @@
         display: inline-flex;
         align-items: center;
         gap: 0.2rem;
-        border: 1px solid #cbd5e1;
+        border: 1px solid var(--border);
         border-radius: 9999px;
-        background: #f8fafc;
+        background: var(--muted);
         padding: 0.12rem;
     }
 
@@ -1285,7 +1340,7 @@
         border: 0;
         border-radius: 9999px;
         background: transparent;
-        color: #475569;
+        color: var(--muted-foreground);
         font-size: 0.68rem;
         font-weight: 700;
         line-height: 1;
@@ -1294,12 +1349,12 @@
     }
 
     :global(.tiptap-editor .editor-link-preview-size-btn:hover) {
-        background: #e2e8f0;
+        background: var(--accent);
     }
 
     :global(.tiptap-editor .editor-link-preview-size-btn[data-active='true']) {
-        background: #1e293b;
-        color: #f8fafc;
+        background: var(--primary);
+        color: var(--primary-foreground);
     }
 
     :global(.tiptap-editor .editor-link-preview-size-btn:disabled) {
@@ -1311,18 +1366,18 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        border: 1px solid #cbd5e1;
+        border: 1px solid var(--border);
         border-radius: 9999px;
         padding: 0.2rem 0.65rem;
-        background: #f8fafc;
-        color: #334155;
+        background: var(--background);
+        color: var(--foreground);
         font-size: 0.72rem;
         font-weight: 600;
     }
 
     :global(.tiptap-editor .editor-link-preview-edit-btn:hover) {
-        background: #eef2ff;
-        border-color: #a5b4fc;
+        background: var(--accent);
+        border-color: var(--ring);
     }
 
     :global(.tiptap-editor .editor-link-preview-edit-btn:disabled) {
@@ -1404,9 +1459,9 @@
 
     :global(.tiptap-editor .editor-toc-block) {
         margin: 0.75rem 0;
-        border: 1px dashed #cbd5e1;
+        border: 1px dashed var(--border);
         border-radius: 0.75rem;
-        background: #f8fafc;
+        background: var(--muted);
         padding: 0.85rem 1rem;
     }
 
@@ -1414,13 +1469,13 @@
         margin: 0;
         font-size: 0.92rem;
         font-weight: 700;
-        color: #0f172a;
+        color: var(--foreground);
     }
 
     :global(.tiptap-editor .editor-toc-description) {
         margin: 0.25rem 0 0;
         font-size: 0.8rem;
-        color: #64748b;
+        color: var(--muted-foreground);
     }
 
     :global(.tiptap-editor .editor-toc-list) {
@@ -1438,22 +1493,23 @@
         padding: 0.2rem 0.5rem;
         text-align: left;
         font-size: 0.78rem;
-        color: #475569;
+        color: var(--muted-foreground);
         cursor: pointer;
     }
 
     :global(.tiptap-editor .editor-toc-item:hover) {
-        background: #e2e8f0;
+        background: var(--accent);
+        color: var(--accent-foreground);
     }
 
     :global(.tiptap-editor .editor-toc-empty) {
         margin: 0;
         padding: 0.3rem 0.5rem;
         font-size: 0.78rem;
-        color: #94a3b8;
+        color: var(--muted-foreground);
     }
 
-    :global(.tiptap-editor .ProseMirror-selectednode) { background: rgba(99, 102, 241, 0.04); outline: 2px solid rgba(99, 102, 241, 0.15); border-radius: 6px; }
+    :global(.tiptap-editor .ProseMirror-selectednode) { background: color-mix(in oklab, var(--ring) 8%, transparent); outline: 2px solid color-mix(in oklab, var(--ring) 30%, transparent); border-radius: 6px; }
 
     .mobile-floating-menu-scroll {
         -ms-overflow-style: none;
@@ -1471,26 +1527,26 @@
         width: 1.5rem;
         height: 1.5rem;
         border-radius: 9999px;
-        border: 1px solid #e2e8f0;
-        background-color: #ffffff;
+        border: 1px solid var(--border);
+        background-color: var(--card);
     }
 
     .color-swatch-btn:hover {
-        background-color: #f8fafc;
+        background-color: var(--accent);
     }
 
     .color-swatch-dot {
         width: 0.75rem;
         height: 0.75rem;
         border-radius: 9999px;
-        border: 1px solid rgba(15, 23, 42, 0.2);
+        border: 1px solid var(--border);
     }
 
     .color-swatch-square {
         width: 0.75rem;
         height: 0.75rem;
         border-radius: 0.2rem;
-        border: 1px solid rgba(15, 23, 42, 0.2);
+        border: 1px solid var(--border);
     }
 
     .color-clear-btn {
@@ -1500,15 +1556,15 @@
         height: 1.5rem;
         min-width: 1.75rem;
         padding: 0 0.35rem;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--border);
         border-radius: 0.4rem;
-        background-color: #ffffff;
-        color: #64748b;
+        background-color: var(--card);
+        color: var(--muted-foreground);
         font-size: 0.65rem;
         font-weight: 700;
     }
 
     .color-clear-btn:hover {
-        background-color: #f8fafc;
+        background-color: var(--accent);
     }
 </style>

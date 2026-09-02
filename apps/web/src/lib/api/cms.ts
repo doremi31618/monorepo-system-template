@@ -1,124 +1,29 @@
 
 import { httpClient } from '../utils';
+import type {
+    CmsDashboardAnalyticsResponse,
+    CmsLinkPreview,
+    CmsPost,
+    CmsTag,
+    ListPostsResponse,
+    ListPublicPostsResponse,
+    ListTagsResponse,
+    PublicCmsPostDetail,
+    PublicHomeResponse,
+} from '@platform/types-content';
 
-export interface CmsTag {
-    id: string;
-    name: string;
-    slug: string;
-    createdAt?: string;
-    updatedAt?: string;
-    postCount?: number;
-    totalViews?: number;
-}
-
-export interface CmsPost {
-    id: string;
-    slug: string;
-    status: 'draft' | 'published' | 'archived';
-    authorId: number;
-    createdAt: string;
-    updatedAt: string;
-    publishedAt?: string | null;
-    viewCount?: number;
-    title?: string;
-    content?: {
-        title?: string;
-        body?: unknown;
-        coverImage?: string;
-        seoTitle?: string;
-        seoDesc?: string;
-        linkPreviewUrl?: string;
-        linkPreviewTitle?: string;
-        linkPreviewDescription?: string;
-        linkPreviewImage?: string;
-    };
-    tags?: CmsTag[];
-}
-
-export interface ListPostsResponse {
-    data: CmsPost[];
-    page: number;
-    limit: number;
-    total?: number;
-}
-
-export interface ListTagsResponse {
-    data: CmsTag[];
-}
-
-export interface PublicCmsPostSummary {
-    id: string;
-    slug: string;
-    title: string;
-    excerpt: string;
-    coverImage?: string | null;
-    createdAt: string;
-    updatedAt: string;
-    publishedAt?: string | null;
-    viewCount: number;
-    tags: CmsTag[];
-}
-
-export interface PublicCmsPostDetail extends CmsPost {
-    locale?: string;
-    content: NonNullable<CmsPost['content']>;
-    tags: CmsTag[];
-    viewCount: number;
-}
-
-export interface ListPublicPostsResponse {
-    data: PublicCmsPostSummary[];
-    page: number;
-    limit: number;
-    total?: number;
-}
-
-export interface PublicHomeResponse {
-    latestPosts: PublicCmsPostSummary[];
-    hotTags: Array<{
-        id: string;
-        name: string;
-        slug: string;
-        totalViews: number;
-        posts: PublicCmsPostSummary[];
-    }>;
-}
-
-export interface CmsLinkPreview {
-    url: string;
-    title?: string | null;
-    description?: string | null;
-    image?: string | null;
-    siteName?: string | null;
-}
-
-export interface CmsDashboardDailyView {
-    date: string;
-    views: number;
-}
-
-export interface CmsDashboardTopPost {
-    id: string;
-    slug: string;
-    title: string;
-    viewCount: number;
-    publishedAt?: string | null;
-    updatedAt: string;
-}
-
-export interface CmsDashboardTopTag {
-    id: string;
-    name: string;
-    slug: string;
-    totalViews: number;
-    postCount: number;
-}
-
-export interface CmsDashboardAnalyticsResponse {
-    dailyViews: CmsDashboardDailyView[];
-    topPosts: CmsDashboardTopPost[];
-    topTags: CmsDashboardTopTag[];
-}
+export type {
+    CmsDashboardAnalyticsResponse,
+    CmsLinkPreview,
+    CmsPost,
+    CmsTag,
+    ListPostsResponse,
+    ListPublicPostsResponse,
+    ListTagsResponse,
+    PublicCmsPostDetail,
+    PublicCmsPostSummary,
+    PublicHomeResponse,
+} from '@platform/types-content';
 
 export async function getPosts(params: {
     page?: number;
@@ -129,6 +34,7 @@ export async function getPosts(params: {
     tagId?: string;
     updatedFrom?: string;
     updatedTo?: string;
+    sort?: string[];
 }) {
     const queryParams = new URLSearchParams({
         page: (params.page || 1).toString(),
@@ -154,6 +60,10 @@ export async function getPosts(params: {
 
     if (params.updatedTo?.trim()) {
         queryParams.set('updatedTo', params.updatedTo.trim());
+    }
+
+    for (const sort of params.sort ?? []) {
+        queryParams.append('sort', sort);
     }
 
     const query = queryParams.toString();

@@ -4,10 +4,10 @@ import { goto } from '$app/navigation';
 import { AppConfig } from '$lib/config';
 import * as authAPI from '$lib/api/auth';
 import { appRoutePath } from '$lib/config/route';
-import { Frontend } from '@platform/sdk';
+import { Frontend } from '@platform/browser-sdk';
 type ApiResponse<T> = Frontend.ApiResponse<T>;
 // import type { ApiResponse } from '$lib/api/httpClient';
-import type { UserWithRoles, Session } from '@platform/contracts';
+import type { UserWithRoles, Session } from '@platform/types-identity';
 import { getMe } from '$lib/api/admin';
 export type AuthStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -100,8 +100,8 @@ function createAuthStore(): AuthStore {
         const session = (response.data as Session | null) ?? (response.data as { session?: Session | null })?.session ?? null;
         return {
             session,
-            status: response.statusCode ?? (response.success ? 200 : 500),
-            message: response.message ?? 'Unknown status',
+            status: response.statusCode,
+            message: response.message,
             error: response.error,
         };
     };

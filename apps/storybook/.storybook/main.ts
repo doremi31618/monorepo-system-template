@@ -1,10 +1,12 @@
 import type { StorybookConfig } from '@storybook/sveltekit';
+import tailwindcss from '@tailwindcss/vite';
+import { mergeConfig } from 'vite';
 
 const config: StorybookConfig = {
   stories: [
     '../src/**/*.mdx',
     '../src/**/*.stories.@(js|ts|svelte)',
-    '../../../packages/*/stories/**/*.stories.@(js|ts|svelte)',
+    '../../../packages/svelte/*/stories/**/*.stories.@(js|ts|svelte)',
   ],
   addons: [
     '@storybook/addon-svelte-csf',
@@ -16,6 +18,11 @@ const config: StorybookConfig = {
   framework: {
     name: '@storybook/sveltekit',
     options: {},
+  },
+  async viteFinal(baseConfig) {
+    return mergeConfig(baseConfig, {
+      plugins: [tailwindcss()],
+    });
   },
 };
 export default config;

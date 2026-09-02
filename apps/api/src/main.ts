@@ -4,15 +4,15 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module.js';
 
-import type { AppConfig } from '@platform/config';
 import cookieParser from 'cookie-parser';
-import { LoggerService } from '@platform/logger';
+import { LoggerService } from '@platform/nest-infra-logger';
 import {
 	PostgresRateLimiter,
 	type OAuthProvider
-} from '@platform/oauth-server';
+} from '@platform/nest-infra-oauth-server';
 import { OAUTH_PROVIDER } from './oauth/oauth.constants.js';
 import type { DB } from './core/infra/db/db.js';
+import type { ApiEnv } from './config/env.validation.js';
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule, {
@@ -25,6 +25,7 @@ async function bootstrap() {
 	app.useLogger(await app.resolve(LoggerService));
 	app.enableCors({ origin: true, credentials: true });
 	app.use(cookieParser());
+	const configService = app.get<ConfigService<ApiEnv, true>>(ConfigService);
 	const oauthProvider = app.get<OAuthProvider>(OAUTH_PROVIDER);
 	const oauthRateLimiter = new PostgresRateLimiter(app.get<DB>('DB'));
 	const oauthMiddleware = oauthProvider.callback();
@@ -34,7 +35,7 @@ async function bootstrap() {
 				const rateLimit = await oauthRateLimiter.consume(
 					'login',
 					req.ip ?? req.socket.remoteAddress ?? 'unknown',
-					Number(process.env.AUTH_LOGIN_RATE_LIMIT ?? 10),
+					configService.get('AUTH_LOGIN_RATE_LIMIT', { infer: true }),
 					60
 				);
 				if (!rateLimit.allowed) {
@@ -67,11 +68,13 @@ async function bootstrap() {
 						req.ip ?? req.socket.remoteAddress ?? 'unknown',
 						Number(
 							isRegistration
-								? (process.env.OAUTH_DCR_RATE_LIMIT ?? 10)
-								: (process.env.OAUTH_TOKEN_RATE_LIMIT ?? 120)
+								? configService.get('OAUTH_DCR_RATE_LIMIT', { infer: true })
+								: configService.get('OAUTH_TOKEN_RATE_LIMIT', { infer: true })
 						),
 						isRegistration
-							? Number(process.env.OAUTH_DCR_RATE_WINDOW_SECONDS ?? 3600)
+							? configService.get('OAUTH_DCR_RATE_WINDOW_SECONDS', {
+									infer: true
+								})
 							: 60
 					);
 					res.setHeader('X-RateLimit-Remaining', String(rateLimit.remaining));
@@ -93,9 +96,6 @@ async function bootstrap() {
 		return next();
 	});
 
-	const configService = app.get(ConfigService);
-	const appConfig = configService.get<AppConfig>('app');
-
 	const config = new DocumentBuilder()
 		.setTitle('Auth API')
 		.setDescription('API documentation for the authentication service')
@@ -113,9 +113,10 @@ async function bootstrap() {
 	const document = SwaggerModule.createDocument(app, config);
 	SwaggerModule.setup('openapi', app, document);
 
-	const port = appConfig?.port ?? 3000;
+	const port = configService.getOrThrow<number>('PORT');
 	await app.listen(port);
-	const baseUrl = appConfig?.baseUrl ?? (await app.getUrl());
+	const baseUrl =
+		configService.get<string>('API_BASE_URL') ?? (await app.getUrl());
 	console.info(`Auth API listening on ${baseUrl}`);
 }
 bootstrap();

@@ -1,20 +1,30 @@
 import { Module } from '@nestjs/common';
-import { AccessControlModule } from '@platform/access-control';
-import { LoggerModule } from '@platform/logger';
-import { CmsModule as NestCmsModule } from '@platform/nest-cms';
-import { NestMcpServerModule } from '@platform/nest-mcp-server';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { NestMcpServerModule } from '@platform/nest-infra-mcp-server';
+import { CoreModule } from '../core/core.module.js';
 import { McpAccessTokenVerifier } from './mcp-access-token-verifier.service.js';
 import { McpCompositionService } from './mcp-composition.service.js';
 import { McpController } from './mcp.controller.js';
+import {
+	createMcpRuntimeConfig,
+	MCP_RUNTIME_CONFIG
+} from './mcp.constants.js';
 
 @Module({
 	imports: [
+		ConfigModule,
 		NestMcpServerModule,
-		NestCmsModule,
-		AccessControlModule,
-		LoggerModule
+		CoreModule
 	],
 	controllers: [McpController],
-	providers: [McpCompositionService, McpAccessTokenVerifier]
+	providers: [
+		{
+			provide: MCP_RUNTIME_CONFIG,
+			inject: [ConfigService],
+			useFactory: createMcpRuntimeConfig
+		},
+		McpCompositionService,
+		McpAccessTokenVerifier
+	]
 })
 export class McpModule {}

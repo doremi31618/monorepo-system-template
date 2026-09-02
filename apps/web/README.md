@@ -1,15 +1,22 @@
 # Web app
 
-SvelteKit application for the platform. Reusable primitives come from `@platform/ui`; shared API types and clients come from `@platform/contracts` and `@platform/sdk`.
+這是本平台的 SvelteKit-first 前端應用。
 
-From the repository root:
+- 可重用的 Svelte UI 元件來自 `@platform/svelte-ui`。
+- API 共用 envelope 與分頁型別來自 `@platform/types-shared`。
+- Identity 與 content 領域型別分別來自 `@platform/types-identity`、`@platform/types-content`。
+- 瀏覽器端 API client 來自 `@platform/browser-sdk`。
+
+請在 repository 根目錄執行：
 
 ```bash
 bun install
-bun run build:packages
+cp apps/web/.env.example apps/web/.env
 bun run dev:web
 bun run --filter @platform/web check
 bun run --filter @platform/web build
 ```
 
-Copy `apps/web/.env.example` to `apps/web/.env` and set `VITE_API_BASE_URL` when the API is not available at the default local URL. Build workspace packages before running the web-only check or build. Storybook is a separate application in `apps/storybook`.
+`VITE_API_BASE_URL` 是會暴露到瀏覽器的公開設定，必須包含 API global prefix，例如 `http://localhost:3333/v1`；密碼、資料庫網址與 private API key 不得使用 `VITE_*`。修改 `.env` 後需要重新啟動 Vite。Storybook 是位於 `apps/storybook` 的獨立應用。
+
+新增 capability 或串接 API 前，請先閱讀 [`doc/onboarding/how-to-use-capability-package.md`](../../doc/onboarding/how-to-use-capability-package.md)，確認套件邊界與允許的相依方向。

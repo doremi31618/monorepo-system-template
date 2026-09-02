@@ -20,7 +20,7 @@
   ],
   "moduleNameMapper": {
     "^src/(.*)$": "<rootDir>/../src/$1",
-    "^@platform/contracts$": "<rootDir>/../../../packages/contracts/src/index.ts",
+    "^@platform/types-shared$": "<rootDir>/../../../packages/types/shared/src/index.ts",
     "^(\\.{1,2}/.*)\\.js$": "$1"
   }
 }

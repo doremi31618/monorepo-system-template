@@ -1,0 +1,29 @@
+{
+  "name": "@platform/types-shared",
+  "version": "0.0.1",
+  "description": "跨大模組共用且不綁定 framework 的 TypeScript 型別",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "platform": {
+    "runtime": "universal",
+    "framework": "none",
+    "layer": "types"
+  }
+}

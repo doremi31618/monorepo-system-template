@@ -1,8 +1,8 @@
 <script lang="ts">
   import AppSidebar from "$lib/components/app-sidebar.svelte";
-  import * as Breadcrumb from "@platform/ui/breadcrumb";
-  import { Separator } from "@platform/ui/separator";
-  import * as Sidebar from "@platform/ui/sidebar";
+  import * as Breadcrumb from "@platform/svelte-ui/breadcrumb";
+  import { Separator } from "@platform/svelte-ui/separator";
+  import * as Sidebar from "@platform/svelte-ui/sidebar";
 
 </script>
 

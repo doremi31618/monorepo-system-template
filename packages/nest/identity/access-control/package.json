@@ -1,0 +1,52 @@
+{
+  "name": "@platform/nest-identity-access-control",
+  "version": "0.1.0",
+  "description": "NestJS 的 Identity／Access Control 角色與權限能力",
+  "private": true,
+  "platform": {
+    "runtime": "node",
+    "framework": "nestjs",
+    "layer": "feature",
+    "domain": "identity"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./schema": {
+      "types": "./dist/access-control.schema.d.ts",
+      "import": "./dist/access-control.schema.js",
+      "default": "./dist/access-control.schema.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@nestjs/common": "^10.4.22",
+    "@nestjs/core": "^10.4.22",
+    "@nestjs/swagger": "^7.4.2",
+    "@platform/nest-identity-auth": "workspace:*",
+    "@platform/types-identity": "workspace:*",
+    "@platform/nest-infra-database": "workspace:*",
+    "@platform/nest-infra-logger": "workspace:*",
+    "@platform/nest-identity-users": "workspace:*",
+    "bcrypt": "^6.0.0",
+    "class-validator": "^0.14.4",
+    "drizzle-orm": "^0.45.2"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "^10.4.22",
+    "@types/bcrypt": "^6.0.0",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "reflect-metadata": "^0.2.0",
+    "rxjs": "^7.8.0"
+  }
+}

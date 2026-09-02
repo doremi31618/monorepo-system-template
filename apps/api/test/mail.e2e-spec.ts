@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
+import { closeTestApp } from './close-test-app.js';
 
 describe('Mail Module (e2e)', () => {
     let app: INestApplication;
@@ -18,7 +19,7 @@ describe('Mail Module (e2e)', () => {
 
     afterAll(async () => {
         if (app) {
-            await app.close();
+            await closeTestApp(app);
         }
     });
 

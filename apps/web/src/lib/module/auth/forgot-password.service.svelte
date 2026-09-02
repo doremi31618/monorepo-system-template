@@ -1,9 +1,9 @@
 <script lang="ts" module>
     // otp form
-	import { Button } from "@platform/ui/button";
-	import * as Card from "@platform/ui/card";
-	import * as Field from "@platform/ui/field";
-	import * as InputOTP from "@platform/ui/input-otp";
+	import { Button } from "@platform/svelte-ui/button";
+	import * as Card from "@platform/svelte-ui/card";
+	import * as Field from "@platform/svelte-ui/field";
+	import * as InputOTP from "@platform/svelte-ui/input-otp";
 	// import type { ComponentProps } from "svelte";
 
 	// let { ...props }: ComponentProps<typeof Card.Root> = $props();
@@ -20,12 +20,12 @@
 	// 	FieldLabel,
 	// 	FieldDescription,
 	// 	FieldSeparator,
-	// } from "@platform/ui/field";
+	// } from "@platform/svelte-ui/field";
     import { page } from "$app/stores";
     import { goto } from "$app/navigation";
     import * as authApi from "$lib/api/auth";
-    import { Input } from "@platform/ui/input";
-	// import { Button } from "@platform/ui/button";
+    import { Input } from "@platform/svelte-ui/input";
+	// import { Button } from "@platform/svelte-ui/button";
 	import { cn, type WithElementRef } from "$lib/utils.js";
 
 	let {
