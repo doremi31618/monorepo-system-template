@@ -8,16 +8,15 @@
 monorepo-system-template/
 ├── apps/
 │   ├── api/           NestJS REST API composition root
-│   ├── migrator/      Canonical Drizzle migration history
 │   ├── storybook/     Package-owned UI story host
 │   └── web/           SvelteKit web application
 ├── packages/
-│   ├── contracts/     Shared API types and constants
-│   ├── sdk/           Browser-facing API client
-│   ├── ui/            Primitive Svelte components
-│   ├── service-ui/    Domain-neutral service presentation
-│   ├── task-runtime/  Framework-neutral task runtime
-│   └── ...            Backend capability and infrastructure packages
+│   ├── types/         Framework-neutral shared, identity, and content types
+│   ├── browser/sdk    Browser-facing API client
+│   ├── nest/          NestJS identity, content, and infrastructure packages
+│   ├── svelte/        Primitive and service presentation components
+│   ├── runtime/task   Framework-neutral task runtime
+│   └── testing/utils  Shared test utilities
 ├── doc/               Roadmap, project tasks, specs, and onboarding
 ├── scripts/           Repository automation
 ├── SQLScripts/        Historical or auxiliary SQL
@@ -34,9 +33,9 @@ Browser → SvelteKit apps/web → NestJS apps/api → Drizzle → PostgreSQL
                                       └────────→ MinIO/S3-compatible storage
 ```
 
-- `apps/web` consumes `packages/contracts`, `packages/sdk`, `packages/ui`, and `packages/service-ui`.
+- `apps/web` consumes `packages/types/*`, `packages/browser/sdk`, and `packages/svelte/*`.
 - `apps/api` composes backend capability packages and infrastructure adapters.
-- `apps/migrator` is the only migration authority for the platform database.
+- `apps/api/db` owns the only migration history; migrations remain a separate deployment command and do not run during API bootstrap.
 - `apps/storybook` discovers package-owned stories and runs visual/accessibility checks.
 
 ## 3. Toolchain
@@ -52,10 +51,10 @@ Browser → SvelteKit apps/web → NestJS apps/api → Drizzle → PostgreSQL
 ## 4. Ownership boundaries
 
 - SvelteKit routes and app-specific features remain in `apps/web/src`.
-- Primitive UI belongs in `packages/ui`; reusable service presentation belongs in `packages/service-ui`.
-- Framework-neutral task behavior belongs in `packages/task-runtime`.
+- Primitive UI belongs in `packages/svelte/ui`; reusable service presentation belongs in `packages/svelte/service-ui`.
+- Framework-neutral task behavior belongs in `packages/runtime/task`.
 - Backend capabilities own their services, repositories, and schemas; `apps/api` only composes them.
-- Shared request/response and permission types belong in `packages/contracts`.
+- Shared request/response and permission types belong in `packages/types/*`.
 - Active work and acceptance status belong in `doc/project-tasks`; product and technical designs belong in `doc/system-spec`.
 
 ## 5. Common workflows

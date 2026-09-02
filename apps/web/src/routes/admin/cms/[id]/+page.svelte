@@ -2,8 +2,8 @@
     import { page } from '$app/stores';
     import { resolve } from '$app/paths';
     import { onMount } from 'svelte';
-    import { Loader2, Search, Settings } from 'lucide-svelte';
-    import * as Sheet from '@platform/ui/sheet';
+    import { Loader2, PanelRightClose, Search, Settings } from 'lucide-svelte';
+    import * as Sheet from '@platform/svelte-ui/sheet';
     import {
         createTag,
         getPost,
@@ -27,6 +27,7 @@
     let loading = true;
     let saving = false;
     let isSettingsDrawerOpen = false;
+    let isDesktopSettingsOpen = true;
     let slugInput = '';
 
     let availableTags: CmsTag[] = [];
@@ -280,13 +281,21 @@
     });
 </script>
 
-<div class="flex h-[calc(100vh-64px)] overflow-hidden">
-    <div class="flex min-w-0 flex-1 flex-col bg-white">
+<div
+    class="grid h-[calc(100vh-64px)] grid-cols-1 overflow-hidden transition-[grid-template-columns] duration-200 ease-out {isDesktopSettingsOpen
+        ? 'lg:grid-cols-[minmax(0,1fr)_20rem]'
+        : 'lg:grid-cols-[minmax(0,1fr)_0rem]'}"
+>
+    <div
+        class="flex min-h-0 min-w-0 flex-1 flex-col bg-background text-foreground"
+        role="region"
+        aria-label="Article editor workspace"
+    >
         <header class="flex flex-col gap-3 border-b px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6 md:py-4">
             <div class="mr-4 flex-1">
                 <input
                     type="text"
-                    class="w-full border-none text-2xl font-bold placeholder-gray-300 focus:outline-none"
+                    class="w-full border-none bg-transparent text-2xl font-bold text-foreground placeholder:text-muted-foreground focus:outline-none"
                     placeholder="Post Title"
                     value={post?.content?.title || ''}
                     on:input={(event) => {
@@ -297,53 +306,66 @@
                 />
             </div>
             <div class="flex flex-wrap items-center justify-end gap-2">
-                <select bind:value={locale} on:change={loadPost} class="rounded border bg-white px-2 py-1 text-sm">
+                <select bind:value={locale} on:change={loadPost} class="rounded border border-input bg-background px-2 py-1 text-sm text-foreground">
                     <option value="en">English</option>
                     <option value="zh-TW">Traditional Chinese</option>
                 </select>
-                <a href={resolve(`/cms/preview/${id}`)} target="_blank" class="rounded border px-4 py-2 text-sm hover:bg-gray-100">
+                <a href={resolve(`/cms/preview/${id}`)} target="_blank" class="rounded border px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground">
                     Preview
                 </a>
                 {#if post?.slug}
-                    <a href={resolve(`/blog/${post.slug}`)} target="_blank" class="rounded border px-4 py-2 text-sm hover:bg-gray-100">
+                    <a href={resolve(`/blog/${post.slug}`)} target="_blank" class="rounded border px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground">
                         Public Page
                     </a>
                 {/if}
                 <button
-                    class="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+                    class="rounded bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                     disabled={saving}
                     on:click={handleSave}
                 >
                     {saving ? 'Saving...' : 'Save'}
                 </button>
 
+                {#if !isDesktopSettingsOpen}
+                    <button
+                        class="hidden h-9 w-9 items-center justify-center rounded border bg-background text-foreground hover:bg-accent hover:text-accent-foreground lg:inline-flex"
+                        aria-label="Expand article settings"
+                        aria-expanded="false"
+                        aria-controls="article-settings"
+                        title="Open article settings"
+                        on:click={() => (isDesktopSettingsOpen = true)}
+                    >
+                        <Settings size={16} />
+                    </button>
+                {/if}
+
                 <Sheet.Root bind:open={isSettingsDrawerOpen}>
                     <Sheet.Trigger
-                        class="inline-flex h-9 w-9 items-center justify-center rounded border bg-white text-slate-600 hover:bg-slate-50 lg:hidden"
+                        class="inline-flex h-9 w-9 items-center justify-center rounded border bg-background text-foreground hover:bg-accent hover:text-accent-foreground lg:hidden"
                         aria-label="Open settings"
                         title="Settings"
                     >
                         <Settings size={16} />
                     </Sheet.Trigger>
                     <Sheet.Content side="right" class="w-[90vw] max-w-sm overflow-y-auto p-4 sm:p-5 lg:hidden">
-                        <h3 class="mb-4 font-semibold text-gray-700">Settings</h3>
+                        <h3 class="mb-4 font-semibold text-foreground">Settings</h3>
 
-                        <div class="mb-6 rounded border bg-white p-4 shadow-sm">
-                            <label class="mb-2 block text-sm font-medium text-gray-600">Status</label>
-                            <select class="w-full rounded border bg-white px-3 py-2" value={post?.status} on:change={handleStatusChange}>
+                        <div class="mb-6 rounded border bg-card p-4 text-card-foreground shadow-sm">
+                            <label class="mb-2 block text-sm font-medium">Status</label>
+                            <select class="w-full rounded border border-input bg-background px-3 py-2 text-foreground" value={post?.status} on:change={handleStatusChange}>
                                 <option value="draft">Draft</option>
                                 <option value="published">Published</option>
                                 <option value="archived">Archived</option>
                             </select>
                         </div>
 
-                        <div class="mb-6 rounded border bg-white p-4 shadow-sm">
-                            <label class="mb-2 block text-sm font-medium text-gray-600">Cover Image</label>
+                        <div class="mb-6 rounded border bg-card p-4 text-card-foreground shadow-sm">
+                            <label class="mb-2 block text-sm font-medium">Cover Image</label>
                             {#if post?.content?.coverImage}
                                 <div class="group relative mb-2">
                                     <img src={post.content.coverImage} alt="Cover" class="h-32 w-full rounded border object-cover" />
                                     <button
-                                        class="absolute right-1 top-1 rounded-full bg-red-600 p-1 text-white opacity-0 shadow-sm transition group-hover:opacity-100"
+                                        class="absolute right-1 top-1 rounded-full bg-destructive p-1 text-destructive-foreground opacity-0 shadow-sm transition group-hover:opacity-100"
                                         on:click={clearCoverImage}
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -353,32 +375,32 @@
                                 </div>
                             {/if}
                             <button
-                                class="w-full rounded border-2 border-dashed border-gray-300 p-2 text-center text-sm text-gray-500 hover:bg-gray-50"
+                                class="w-full rounded border-2 border-dashed border-input p-2 text-center text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                                 on:click={openCoverImagePicker}
                             >
                                 {post?.content?.coverImage ? 'Change Image' : 'Choose Image'}
                             </button>
                         </div>
 
-                        <div class="mb-6 rounded border bg-white p-4 shadow-sm">
+                        <div class="mb-6 rounded border bg-card p-4 text-card-foreground shadow-sm">
                             <div class="mb-2 flex items-center justify-between">
-                                <h4 class="text-sm font-medium text-gray-700">Tags</h4>
+                                <h4 class="text-sm font-medium">Tags</h4>
                                 {#if loadingTags}
-                                    <Loader2 size={14} class="animate-spin text-gray-400" />
+                                    <Loader2 size={14} class="animate-spin text-muted-foreground" />
                                 {/if}
                             </div>
 
                             <div class="mb-2 flex items-center gap-2">
                                 <div class="relative flex-1">
-                                    <Search size={14} class="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                                    <Search size={14} class="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
                                     <input
                                         type="text"
-                                        class="w-full rounded border px-2 py-2 pl-7 text-sm"
+                                        class="w-full rounded border border-input bg-background px-2 py-2 pl-7 text-sm text-foreground placeholder:text-muted-foreground"
                                         placeholder="Search tags"
                                         bind:value={tagQuery}
                                     />
                                 </div>
-                                <button class="rounded border px-3 py-2 text-sm hover:bg-gray-50" on:click={() => loadTagOptions()}>
+                                <button class="rounded border px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground" on:click={() => loadTagOptions()}>
                                     Search
                                 </button>
                             </div>
@@ -386,12 +408,12 @@
                             <div class="mb-3 flex items-center gap-2">
                                 <input
                                     type="text"
-                                    class="flex-1 rounded border px-2 py-2 text-sm"
+                                    class="flex-1 rounded border border-input bg-background px-2 py-2 text-sm text-foreground placeholder:text-muted-foreground"
                                     placeholder="New tag"
                                     bind:value={newTagName}
                                 />
                                 <button
-                                    class="rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+                                    class="rounded bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                                     disabled={creatingTag}
                                     on:click={handleCreateTag}
                                 >
@@ -399,17 +421,17 @@
                                 </button>
                             </div>
 
-                            <div class="max-h-40 overflow-y-auto rounded border bg-gray-50 p-2">
+                            <div class="max-h-40 overflow-y-auto rounded border bg-muted p-2">
                                 {#if availableTags.length === 0}
-                                    <div class="px-1 py-2 text-xs text-gray-400">No tags</div>
+                                    <div class="px-1 py-2 text-xs text-muted-foreground">No tags</div>
                                 {:else}
                                     <div class="flex flex-wrap gap-2">
                                         {#each availableTags as tag (tag.id)}
                                             <button
                                                 class={`rounded-full border px-2 py-1 text-xs ${
                                                     selectedTagIds.includes(tag.id)
-                                                        ? 'border-blue-600 bg-blue-50 text-blue-700'
-                                                        : 'border-gray-300 bg-white text-gray-600'
+                                                        ? 'border-primary bg-primary text-primary-foreground'
+                                                        : 'border-border bg-background text-foreground'
                                                 }`}
                                                 on:click={() => toggleTag(tag.id)}
                                             >
@@ -422,10 +444,10 @@
 
                             <div class="mt-3 flex flex-wrap gap-2">
                                 {#if selectedTagIds.length === 0}
-                                    <span class="text-xs text-gray-400">No selected tags</span>
+                                    <span class="text-xs text-muted-foreground">No selected tags</span>
                                 {:else}
                                     {#each selectedTagIds as tagId (tagId)}
-                                        <button class="rounded-full bg-slate-800 px-2 py-1 text-xs text-white" on:click={() => toggleTag(tagId)}>
+                                        <button class="rounded-full bg-secondary px-2 py-1 text-xs text-secondary-foreground" on:click={() => toggleTag(tagId)}>
                                             {getTagDisplayName(tagId)} ×
                                         </button>
                                     {/each}
@@ -433,32 +455,32 @@
                             </div>
                         </div>
 
-                        <div class="mb-6 rounded border bg-white p-4 shadow-sm space-y-4">
-                            <h4 class="border-b pb-2 font-medium text-gray-700">SEO Settings</h4>
+                        <div class="mb-6 space-y-4 rounded border bg-card p-4 text-card-foreground shadow-sm">
+                            <h4 class="border-b pb-2 font-medium">SEO Settings</h4>
                             <div>
-                                <label class="mb-1 block text-sm font-medium text-gray-600">SEO Title</label>
+                                <label class="mb-1 block text-sm font-medium">SEO Title</label>
                                 <input
                                     type="text"
-                                    class="w-full rounded border px-3 py-2 text-sm"
+                                    class="w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground"
                                     value={post?.content?.seoTitle || ''}
                                     on:input={handleSeoTitleInput}
                                 />
                             </div>
                             <div>
-                                <label class="mb-1 block text-sm font-medium text-gray-600">SEO Description</label>
+                                <label class="mb-1 block text-sm font-medium">SEO Description</label>
                                 <textarea
-                                    class="h-24 w-full rounded border px-3 py-2 text-sm"
+                                    class="h-24 w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground"
                                     value={post?.content?.seoDesc || ''}
                                     on:input={handleSeoDescInput}
                                 ></textarea>
                             </div>
                         </div>
 
-                        <div class="mb-6 rounded border bg-white p-4 shadow-sm">
-                            <label class="mb-1 block text-sm font-medium text-gray-600">Slug</label>
+                        <div class="mb-6 rounded border bg-card p-4 text-card-foreground shadow-sm">
+                            <label class="mb-1 block text-sm font-medium">Slug</label>
                             <input
                                 type="text"
-                                class="w-full rounded border bg-white px-3 py-2 text-sm"
+                                class="w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
                                 placeholder="post-slug"
                                 value={slugInput}
                                 on:input={handleSlugInput}
@@ -469,9 +491,9 @@
             </div>
         </header>
 
-        <div class="flex-1 overflow-y-auto bg-gray-50 p-6">
-            <div class="relative mx-auto min-h-full max-w-[1100px]">
-                <div class="min-h-full max-w-4xl rounded-lg bg-white p-6 shadow-sm">
+        <div class="flex-1 overflow-y-auto bg-muted px-4 py-6 md:px-6">
+            <div class="relative mx-auto min-h-full w-full {hasTocBlock ? 'max-w-[1100px]' : 'max-w-6xl'}">
+                <div class="min-h-full w-full rounded-lg bg-card p-4 text-card-foreground shadow-sm md:p-6 {hasTocBlock ? 'lg:max-w-4xl' : ''}">
                     {#if !loading && post}
                         <TiptapEditor
                             content={content}
@@ -480,24 +502,24 @@
                             onRequestLinkPreview={requestLinkPreview}
                         />
                     {:else}
-                        <div class="p-10 text-center text-gray-500">Loading...</div>
+                        <div class="p-10 text-center text-muted-foreground">Loading...</div>
                     {/if}
                 </div>
 
                 {#if hasTocBlock}
                     <aside class="group absolute right-0 top-8 hidden items-start lg:flex">
-                        <div class="flex h-28 w-6 items-center justify-center rounded-l border border-r-0 border-slate-200 bg-white text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 shadow-sm">
+                        <div class="flex h-28 w-6 items-center justify-center rounded-l border border-r-0 bg-card text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground shadow-sm">
                             TOC
                         </div>
-                        <div class="max-h-[70vh] w-0 overflow-hidden rounded-r border border-slate-200 bg-white opacity-0 shadow-lg transition-all duration-200 group-hover:w-64 group-hover:opacity-100">
-                            <div class="border-b px-3 py-2 text-xs font-semibold text-slate-600">Table of contents</div>
+                        <div class="max-h-[70vh] w-0 overflow-hidden rounded-r border bg-card text-card-foreground opacity-0 shadow-lg transition-all duration-200 group-hover:w-64 group-hover:opacity-100">
+                            <div class="border-b px-3 py-2 text-xs font-semibold">Table of contents</div>
                             <div class="space-y-1 p-2">
                                 {#if tocItems.length === 0}
-                                    <p class="px-2 py-2 text-xs text-slate-400">Add heading blocks to generate a TOC.</p>
+                                    <p class="px-2 py-2 text-xs text-muted-foreground">Add heading blocks to generate a TOC.</p>
                                 {:else}
                                     {#each tocItems as item, index (item.id)}
                                         <button
-                                            class="block w-full rounded px-2 py-1 text-left text-xs text-slate-600 hover:bg-slate-100"
+                                            class="block w-full rounded px-2 py-1 text-left text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                                             style="padding-left: {item.level === 1 ? '0.5rem' : item.level === 2 ? '1rem' : '1.5rem'}"
                                             on:click={() => scrollToHeading(index)}
                                         >
@@ -513,25 +535,45 @@
         </div>
     </div>
 
-    <div class="hidden w-80 overflow-y-auto border-l bg-gray-50 p-4 lg:block">
-        <h3 class="mb-4 font-semibold text-gray-700">Settings</h3>
+    <aside
+        id="article-settings"
+        class="hidden min-h-0 w-full overflow-x-hidden overflow-y-auto bg-muted transition-[padding,border-color] duration-200 lg:block {isDesktopSettingsOpen
+            ? 'border-l p-4'
+            : 'border-transparent p-0'}"
+        aria-label="Article settings"
+        aria-hidden={!isDesktopSettingsOpen}
+    >
+        {#if isDesktopSettingsOpen}
+        <div class="mb-4 flex items-center justify-between gap-2">
+            <h3 class="font-semibold text-foreground">Settings</h3>
+            <button
+                class="inline-flex h-8 w-8 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                aria-label="Collapse article settings"
+                aria-expanded="true"
+                aria-controls="article-settings"
+                title="Collapse article settings"
+                on:click={() => (isDesktopSettingsOpen = false)}
+            >
+                <PanelRightClose size={16} />
+            </button>
+        </div>
 
-        <div class="mb-6 rounded border bg-white p-4 shadow-sm">
-            <label class="mb-2 block text-sm font-medium text-gray-600">Status</label>
-            <select class="w-full rounded border bg-white px-3 py-2" value={post?.status} on:change={handleStatusChange}>
+        <div class="mb-6 rounded border bg-card p-4 text-card-foreground shadow-sm">
+            <label class="mb-2 block text-sm font-medium">Status</label>
+            <select class="w-full rounded border border-input bg-background px-3 py-2 text-foreground" value={post?.status} on:change={handleStatusChange}>
                 <option value="draft">Draft</option>
                 <option value="published">Published</option>
                 <option value="archived">Archived</option>
             </select>
         </div>
 
-        <div class="mb-6 rounded border bg-white p-4 shadow-sm">
-            <label class="mb-2 block text-sm font-medium text-gray-600">Cover Image</label>
+        <div class="mb-6 rounded border bg-card p-4 text-card-foreground shadow-sm">
+            <label class="mb-2 block text-sm font-medium">Cover Image</label>
             {#if post?.content?.coverImage}
                 <div class="group relative mb-2">
                     <img src={post.content.coverImage} alt="Cover" class="h-32 w-full rounded border object-cover" />
                     <button
-                        class="absolute right-1 top-1 rounded-full bg-red-600 p-1 text-white opacity-0 shadow-sm transition group-hover:opacity-100"
+                        class="absolute right-1 top-1 rounded-full bg-destructive p-1 text-destructive-foreground opacity-0 shadow-sm transition group-hover:opacity-100"
                         on:click={clearCoverImage}
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -541,32 +583,32 @@
                 </div>
             {/if}
             <button
-                class="w-full rounded border-2 border-dashed border-gray-300 p-2 text-center text-sm text-gray-500 hover:bg-gray-50"
+                class="w-full rounded border-2 border-dashed border-input p-2 text-center text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 on:click={openCoverImagePicker}
             >
                 {post?.content?.coverImage ? 'Change Image' : 'Choose Image'}
             </button>
         </div>
 
-        <div class="mb-6 rounded border bg-white p-4 shadow-sm">
+        <div class="mb-6 rounded border bg-card p-4 text-card-foreground shadow-sm">
             <div class="mb-2 flex items-center justify-between">
-                <h4 class="text-sm font-medium text-gray-700">Tags</h4>
+                <h4 class="text-sm font-medium">Tags</h4>
                 {#if loadingTags}
-                    <Loader2 size={14} class="animate-spin text-gray-400" />
+                    <Loader2 size={14} class="animate-spin text-muted-foreground" />
                 {/if}
             </div>
 
             <div class="mb-2 flex items-center gap-2">
                 <div class="relative flex-1">
-                    <Search size={14} class="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <Search size={14} class="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <input
                         type="text"
-                        class="w-full rounded border px-2 py-2 pl-7 text-sm"
+                        class="w-full rounded border border-input bg-background px-2 py-2 pl-7 text-sm text-foreground placeholder:text-muted-foreground"
                         placeholder="Search tags"
                         bind:value={tagQuery}
                     />
                 </div>
-                <button class="rounded border px-3 py-2 text-sm hover:bg-gray-50" on:click={() => loadTagOptions()}>
+                <button class="rounded border px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground" on:click={() => loadTagOptions()}>
                     Search
                 </button>
             </div>
@@ -574,12 +616,12 @@
             <div class="mb-3 flex items-center gap-2">
                 <input
                     type="text"
-                    class="flex-1 rounded border px-2 py-2 text-sm"
+                    class="flex-1 rounded border border-input bg-background px-2 py-2 text-sm text-foreground placeholder:text-muted-foreground"
                     placeholder="New tag"
                     bind:value={newTagName}
                 />
                 <button
-                    class="rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+                    class="rounded bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                     disabled={creatingTag}
                     on:click={handleCreateTag}
                 >
@@ -587,17 +629,17 @@
                 </button>
             </div>
 
-            <div class="max-h-40 overflow-y-auto rounded border bg-gray-50 p-2">
+            <div class="max-h-40 overflow-y-auto rounded border bg-muted p-2">
                 {#if availableTags.length === 0}
-                    <div class="px-1 py-2 text-xs text-gray-400">No tags</div>
+                    <div class="px-1 py-2 text-xs text-muted-foreground">No tags</div>
                 {:else}
                     <div class="flex flex-wrap gap-2">
                         {#each availableTags as tag (tag.id)}
                             <button
                                 class={`rounded-full border px-2 py-1 text-xs ${
                                     selectedTagIds.includes(tag.id)
-                                        ? 'border-blue-600 bg-blue-50 text-blue-700'
-                                        : 'border-gray-300 bg-white text-gray-600'
+                                        ? 'border-primary bg-primary text-primary-foreground'
+                                        : 'border-border bg-background text-foreground'
                                 }`}
                                 on:click={() => toggleTag(tag.id)}
                             >
@@ -610,10 +652,10 @@
 
             <div class="mt-3 flex flex-wrap gap-2">
                 {#if selectedTagIds.length === 0}
-                    <span class="text-xs text-gray-400">No selected tags</span>
+                    <span class="text-xs text-muted-foreground">No selected tags</span>
                 {:else}
                     {#each selectedTagIds as tagId (tagId)}
-                        <button class="rounded-full bg-slate-800 px-2 py-1 text-xs text-white" on:click={() => toggleTag(tagId)}>
+                        <button class="rounded-full bg-secondary px-2 py-1 text-xs text-secondary-foreground" on:click={() => toggleTag(tagId)}>
                             {getTagDisplayName(tagId)} ×
                         </button>
                     {/each}
@@ -621,38 +663,39 @@
             </div>
         </div>
 
-        <div class="mb-6 space-y-4 rounded border bg-white p-4 shadow-sm">
-            <h4 class="border-b pb-2 font-medium text-gray-700">SEO Settings</h4>
+        <div class="mb-6 space-y-4 rounded border bg-card p-4 text-card-foreground shadow-sm">
+            <h4 class="border-b pb-2 font-medium">SEO Settings</h4>
             <div>
-                <label class="mb-1 block text-sm font-medium text-gray-600">SEO Title</label>
+                <label class="mb-1 block text-sm font-medium">SEO Title</label>
                 <input
                     type="text"
-                    class="w-full rounded border px-3 py-2 text-sm"
+                    class="w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground"
                     value={post?.content?.seoTitle || ''}
                     on:input={handleSeoTitleInput}
                 />
             </div>
             <div>
-                <label class="mb-1 block text-sm font-medium text-gray-600">SEO Description</label>
+                <label class="mb-1 block text-sm font-medium">SEO Description</label>
                 <textarea
-                    class="h-24 w-full rounded border px-3 py-2 text-sm"
+                    class="h-24 w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground"
                     value={post?.content?.seoDesc || ''}
                     on:input={handleSeoDescInput}
                 ></textarea>
             </div>
         </div>
 
-        <div class="mb-6 rounded border bg-white p-4 shadow-sm">
-            <label class="mb-1 block text-sm font-medium text-gray-600">Slug</label>
+        <div class="mb-6 rounded border bg-card p-4 text-card-foreground shadow-sm">
+            <label class="mb-1 block text-sm font-medium">Slug</label>
             <input
                 type="text"
-                class="w-full rounded border bg-white px-3 py-2 text-sm"
+                class="w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
                 placeholder="post-slug"
                 value={slugInput}
                 on:input={handleSlugInput}
             />
         </div>
-    </div>
+        {/if}
+    </aside>
 </div>
 
 <AssetPickerModal

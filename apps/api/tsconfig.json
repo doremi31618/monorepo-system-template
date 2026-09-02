@@ -27,15 +27,11 @@
 	"exclude": [
 		"node_modules",
 		"test",
-		"drizzle.config.ts",
 		"**/*.spec.ts"
 	],
 	"references": [
 		{
-			"path": "../../packages/sdk"
-		},
-		{
-			"path": "../../packages/contracts"
+			"path": "../../packages/types/shared"
 		}
 	]
 }

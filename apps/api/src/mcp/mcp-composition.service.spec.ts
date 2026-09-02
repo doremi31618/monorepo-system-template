@@ -1,7 +1,7 @@
 import express from 'express';
 import request from 'supertest';
-import type { AuthInfo } from '@platform/nest-mcp-server';
-import { NestMcpHttpService } from '@platform/nest-mcp-server';
+import type { AuthInfo } from '@platform/nest-infra-mcp-server';
+import { NestMcpHttpService } from '@platform/nest-infra-mcp-server';
 import { McpCompositionService } from './mcp-composition.service.js';
 import { McpController } from './mcp.controller.js';
 
@@ -59,7 +59,11 @@ describe('McpCompositionService', () => {
 			http,
 			cms as any,
 			accessControl as any,
-			logger as any
+			logger as any,
+			{
+				issuer: 'https://auth.example.com',
+				privateResourceUri: 'https://api.example.com/mcp/private'
+			}
 		);
 	});
 
@@ -187,8 +191,8 @@ describe('McpCompositionService', () => {
 
 	it('publishes protected-resource metadata for the exact private resource', () => {
 		expect(composition.getProtectedResourceMetadata()).toMatchObject({
-			resource: 'http://localhost:3333/mcp/private',
-			authorization_servers: ['http://localhost:3333'],
+			resource: 'https://api.example.com/mcp/private',
+			authorization_servers: ['https://auth.example.com'],
 			scopes_supported: ['mcp:tools']
 		});
 	});
@@ -204,7 +208,7 @@ describe('McpCompositionService', () => {
 		const response = await mcpRequest(app, '/mcp/private', 'tools/list', {});
 		expect(response.status).toBe(401);
 		expect(response.headers['www-authenticate']).toContain(
-			'resource_metadata="http://localhost:3333/.well-known/oauth-protected-resource/mcp/private"'
+			'resource_metadata="https://api.example.com/.well-known/oauth-protected-resource/mcp/private"'
 		);
 	});
 

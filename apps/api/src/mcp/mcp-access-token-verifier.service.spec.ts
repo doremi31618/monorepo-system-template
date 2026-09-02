@@ -1,10 +1,9 @@
-import { OAuthError, OAuthErrorCode } from '@platform/nest-mcp-server';
+import { OAuthError, OAuthErrorCode } from '@platform/nest-infra-mcp-server';
 import { createServer, type Server } from 'node:http';
 import { SignJWT, exportJWK, generateKeyPair, type CryptoKey } from 'jose';
 import { McpAccessTokenVerifier } from './mcp-access-token-verifier.service.js';
 
 describe('McpAccessTokenVerifier', () => {
-	const originalEnv = process.env;
 	let issuer: string;
 	let signingKey: CryptoKey;
 	let jwksServer: Server;
@@ -30,23 +29,14 @@ describe('McpAccessTokenVerifier', () => {
 		issuer = `http://127.0.0.1:${address.port}`;
 	});
 
-	beforeEach(() => {
-		process.env = {
-			...originalEnv,
-			OAUTH_ISSUER: 'https://auth.example.com',
-			MCP_PRIVATE_RESOURCE_URI: 'https://api.example.com/mcp/private'
-		};
-	});
-
 	afterAll(async () => {
 		await new Promise<void>((resolve, reject) =>
 			jwksServer.close((error) => (error ? reject(error) : resolve()))
 		);
-		process.env = originalEnv;
 	});
 
 	it('maps validated OAuth JWT claims to MCP AuthInfo', async () => {
-		const verifier = new McpAccessTokenVerifier();
+		const verifier = createVerifier();
 		jest.spyOn(verifier as any, 'verifyJwt').mockResolvedValue({
 			sub: '42',
 			client_id: 'chatgpt-client',
@@ -66,7 +56,7 @@ describe('McpAccessTokenVerifier', () => {
 	});
 
 	it('converts invalid signatures, audiences, or required claims to invalid_token', async () => {
-		const verifier = new McpAccessTokenVerifier();
+		const verifier = createVerifier();
 		jest
 			.spyOn(verifier as any, 'verifyJwt')
 			.mockRejectedValue(new Error('unexpected audience'));
@@ -79,10 +69,7 @@ describe('McpAccessTokenVerifier', () => {
 	});
 
 	it('cryptographically enforces issuer, ES256 signature, expiry, and exact audience', async () => {
-		process.env.OAUTH_ISSUER = issuer;
-		process.env.MCP_PRIVATE_RESOURCE_URI =
-			'https://api.example.com/mcp/private';
-		const verifier = new McpAccessTokenVerifier();
+		const verifier = createVerifier(issuer);
 		const valid = await tokenFor('https://api.example.com/mcp/private');
 		const wrongAudience = await tokenFor('https://api.example.com/mcp/public');
 
@@ -109,5 +96,12 @@ describe('McpAccessTokenVerifier', () => {
 			.setIssuedAt()
 			.setExpirationTime('15m')
 			.sign(signingKey);
+	}
+
+	function createVerifier(oauthIssuer = 'https://auth.example.com') {
+		return new McpAccessTokenVerifier({
+			issuer: oauthIssuer,
+			privateResourceUri: 'https://api.example.com/mcp/private'
+		});
 	}
 });

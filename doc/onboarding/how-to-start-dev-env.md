@@ -58,7 +58,7 @@ docker compose down
 
 ## Database migrations
 
-`apps/migrator/drizzle` 是唯一 migration history：
+`apps/api/db/migrations` 是唯一 migration history：
 
 ```bash
 bun run db:generate
@@ -66,7 +66,7 @@ bun run db:migrate
 bun run db:studio
 ```
 
-新增或修改 schema 時，請在擁有該資料表的 capability package 中編輯 `*.schema.ts`，再由 migrator 產生 migration。不要另建第二套 Supabase migration history。
+新增或修改 schema 時，請在擁有該資料表的 capability package 中編輯 `*.schema.ts`，再由 `apps/api/db/drizzle.config.ts` 產生 migration。Migration 必須在部署流程中明確執行，不會隨 API 啟動自動套用；也不要另建第二套 Supabase migration history。
 
 ## 提交前驗證
 

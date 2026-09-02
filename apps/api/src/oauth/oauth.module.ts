@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { AuthModule } from '@platform/auth';
-import { IUserService, UserModule } from '@platform/users';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { IUserService } from '@platform/nest-identity-users';
 import {
 	createOAuthProvider,
 	createPostgresAdapterFactory,
@@ -9,10 +9,12 @@ import {
 	OAuthInteractionService,
 	PostgresOAuthAudit,
 	PostgresOAuthResourceProvider
-} from '@platform/oauth-server';
+} from '@platform/nest-infra-oauth-server';
 import type { DB } from '../core/infra/db/db.js';
 import { OAuthInteractionController } from './oauth-interaction.controller.js';
 import { OAUTH_PROVIDER } from './oauth.constants.js';
+import type { ApiEnv } from '../config/env.validation.js';
+import { CoreModule } from '../core/core.module.js';
 
 function csv(value: string | undefined): string[] {
 	return (value ?? '')
@@ -22,24 +24,28 @@ function csv(value: string | undefined): string[] {
 }
 
 @Module({
-	imports: [AuthModule, UserModule],
+	imports: [ConfigModule, CoreModule],
 	controllers: [OAuthInteractionController],
 	providers: [
 		{
 			provide: OAUTH_PROVIDER,
-			inject: ['DB', IUserService],
-			useFactory: async (db: DB, users: IUserService) => {
-				const privateJwks = process.env.OAUTH_PRIVATE_JWKS;
+			inject: ['DB', IUserService, ConfigService],
+			useFactory: async (
+				db: DB,
+				users: IUserService,
+				config: ConfigService<ApiEnv, true>
+			) => {
+				const privateJwks = config.get('OAUTH_PRIVATE_JWKS', { infer: true });
 				const signingKeyProvider = privateJwks
 					? new JsonSigningKeyProvider(privateJwks)
-					: process.env.NODE_ENV !== 'prd'
+					: config.get('NODE_ENV', { infer: true }) !== 'prd'
 						? new EphemeralDevelopmentSigningKeyProvider()
 						: (() => {
 								throw new Error('OAUTH_PRIVATE_JWKS is required in production');
 							})();
 
 				const provider = await createOAuthProvider({
-					issuer: process.env.OAUTH_ISSUER ?? 'http://localhost:3333',
+					issuer: config.get('OAUTH_ISSUER', { infer: true }),
 					adapter: createPostgresAdapterFactory(db),
 					signingKeyProvider,
 					accountProvider: {
@@ -59,11 +65,16 @@ function csv(value: string | undefined): string[] {
 					},
 					resourceProvider: new PostgresOAuthResourceProvider(db),
 					interactionUrl: (uid) =>
-						`${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/oauth/interaction/${encodeURIComponent(uid)}`,
+						`${config.get('FRONTEND_URL', { infer: true })}/oauth/interaction/${encodeURIComponent(uid)}`,
 					dynamicClientRegistration: {
-						enabled: process.env.OAUTH_DCR_ENABLED !== 'false',
-						allowedResources: csv(process.env.OAUTH_DCR_RESOURCES),
-						allowedScopes: csv(process.env.OAUTH_DCR_SCOPES)
+						enabled:
+							config.get('OAUTH_DCR_ENABLED', { infer: true }) !== 'false',
+						allowedResources: csv(
+							config.get('OAUTH_DCR_RESOURCES', { infer: true })
+						),
+						allowedScopes: csv(
+							config.get('OAUTH_DCR_SCOPES', { infer: true })
+						)
 					}
 				});
 				const audit = new PostgresOAuthAudit(db);

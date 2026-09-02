@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
 import { GlobalExceptionFilter } from './global-exception.filter.js';
-import { LoggerModule } from '@platform/logger';
+import { LoggerModule } from '@platform/nest-infra-logger';
 
 @Module({
     imports: [LoggerModule],

@@ -1,0 +1,50 @@
+{
+	"name": "@platform/nest-infra-oauth-server",
+	"version": "0.1.0",
+	"description": "NestJS API 使用的 OAuth 2.1／OpenID Connect 授權伺服器能力",
+	"private": true,
+	"platform": { "runtime": "node", "framework": "nestjs", "layer": "infra", "domain": "infra" },
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		},
+		"./schema": {
+			"types": "./dist/oauth-server.schema.d.ts",
+			"import": "./dist/oauth-server.schema.js",
+			"default": "./dist/oauth-server.schema.js"
+		}
+	},
+	"bin": {
+		"oauth-admin": "./dist/cli.js"
+	},
+	"scripts": {
+		"build": "tsc -p tsconfig.json",
+		"test:unit": "node --experimental-vm-modules ../../../../node_modules/jest/bin/jest.js --config ../../../../jest.capability.config.cjs --runInBand --testPathPattern /packages/nest/infra/oauth-server/",
+		"oauth-admin": "node ./dist/cli.js"
+	},
+	"dependencies": {
+		"@nestjs/common": "^10.0.0",
+		"@platform/nest-infra-database": "workspace:*",
+		"@platform/nest-identity-users": "workspace:*",
+		"drizzle-orm": "^0.45.2",
+		"jose": "^6.2.10",
+		"oidc-provider": "^9.11.4"
+	},
+	"devDependencies": {
+		"@types/pg": "^8.15.6",
+		"@types/supertest": "^6.0.0",
+		"@types/oidc-provider": "^9.11.0",
+		"pg": "^8.16.3",
+		"supertest": "^7.2.2",
+		"typescript": "^5.9.3"
+	},
+	"peerDependencies": {
+		"reflect-metadata": "^0.2.0",
+		"rxjs": "^7.8.0"
+	}
+}

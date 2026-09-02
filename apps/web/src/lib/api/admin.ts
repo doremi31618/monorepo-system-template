@@ -1,11 +1,17 @@
 
 import { httpClient } from '../utils';
-import type { Role, Permission, UserWithRoles, PaginatedResponse } from '@platform/contracts';
+import type { PaginatedResponse } from '@platform/types-shared';
+import type { Role, Permission, UserWithRoles } from '@platform/types-identity';
 
 export type { Role, Permission, UserWithRoles };
 
-export async function getRoles() {
-    return await httpClient.get<Role[]>('/admin/roles');
+export async function getRoles(params: { q?: string; kind?: string; sort?: string[] } = {}) {
+    const queryParams = new URLSearchParams();
+    if (params.q?.trim()) queryParams.set('q', params.q.trim());
+    if (params.kind) queryParams.set('kind', params.kind);
+    for (const sort of params.sort ?? []) queryParams.append('sort', sort);
+    const query = queryParams.toString();
+    return await httpClient.get<Role[]>(`/admin/roles${query ? `?${query}` : ''}`);
 }
 
 export async function createRole(role: { name: string; description?: string; id?: string }) {
@@ -54,6 +60,8 @@ export interface UserQueryParams {
     page?: number;
     limit?: number;
     q?: string;
+    roleId?: string[];
+    sort?: string[];
 }
 
 export async function getUsers(params?: UserQueryParams) {
@@ -61,6 +69,10 @@ export async function getUsers(params?: UserQueryParams) {
     if (params) {
         Object.entries(params).forEach(([key, value]) => {
             if (value === undefined || value === null) return;
+            if (Array.isArray(value)) {
+                for (const item of value) queryParams.append(key, String(item));
+                return;
+            }
             queryParams.set(key, String(value));
         });
     }

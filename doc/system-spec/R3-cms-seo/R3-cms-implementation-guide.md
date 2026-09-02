@@ -4,14 +4,14 @@ This guide describes the current SvelteKit/NestJS capability implementation for 
 
 ## Phase 1: Backend capability
 
-CMS contracts and pure utilities are owned by `packages/cms`; the NestJS/Drizzle adapter is owned by `packages/nest-cms`:
+CMS contracts and pure utilities are owned by `packages/types/content`; the NestJS/Drizzle adapter is owned by `packages/nest/content/cms`:
 
 ```text
-packages/nest-cms/src/cms.schema.ts
-packages/nest-cms/src/cms.service.ts
-packages/nest-cms/src/cms.module.ts
-packages/nest-cms/src/cms.controller.ts
-packages/nest-cms/src/cms-public.controller.ts
+packages/nest/content/cms/src/cms.schema.ts
+packages/nest/content/cms/src/cms.service.ts
+packages/nest/content/cms/src/cms.module.ts
+packages/nest/content/cms/src/cms.controller.ts
+packages/nest/content/cms/src/cms-public.controller.ts
 ```
 
 After changing a CMS or asset schema, generate and apply the canonical migration from the repository root:
@@ -30,7 +30,7 @@ Do not create a second migration history for the platform database.
 - Admin editor: `apps/web/src/routes/admin/cms/[id]/+page.svelte`.
 - Browser API client: `apps/web/src/lib/api/cms.ts`.
 
-The editor emits Tiptap JSON. Keep toolbar, block-menu, autosave, preview, and status changes in the Svelte feature boundary; shared visual primitives remain in `packages/ui` or `packages/service-ui`.
+The editor emits Tiptap JSON. Keep toolbar, block-menu, autosave, preview, and status changes in the Svelte feature boundary; shared visual primitives remain in `packages/svelte/ui` or `packages/svelte/service-ui`.
 
 ## Phase 3: Public rendering and SEO
 
@@ -42,7 +42,7 @@ Render only published posts. Set title, description, canonical URL, and social m
 
 ## Phase 4: Assets
 
-Asset schema and storage adapters live in `packages/assets`. Browser uploads use the flow implemented in `apps/web/src/lib/api/assets.ts`:
+Asset schema and storage adapters live in `packages/nest/content/assets`. Browser uploads use the flow implemented in `apps/web/src/lib/api/assets.ts`:
 
 1. `POST /v1/cms/assets/init` returns an upload URL.
 2. The browser uploads directly to the S3-compatible storage endpoint.

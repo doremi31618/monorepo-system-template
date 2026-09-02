@@ -1,8 +1,8 @@
 import { relations } from 'drizzle-orm';
-import { users } from '@platform/users/schema';
-import { posts, postContents, cmsTags, postTags, postDailyViews } from '@platform/nest-cms/schema';
-import { assets } from '@platform/assets/schema';
-import { userRoles } from '@platform/access-control/schema';
+import { users } from '@platform/nest-identity-users/schema';
+import { posts, postContents, cmsTags, postTags, postDailyViews } from '@platform/nest-content-cms/schema';
+import { assets } from '@platform/nest-content-assets/schema';
+import { userRoles } from '@platform/nest-identity-access-control/schema';
 
 export const usersRelations = relations(users, ({ many }) => ({
     posts: many(posts),

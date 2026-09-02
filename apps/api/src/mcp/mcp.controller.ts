@@ -10,7 +10,7 @@ import {
 	bearerAuthChallengeResponse,
 	verifyBearerToken,
 	type AuthInfo
-} from '@platform/nest-mcp-server';
+} from '@platform/nest-infra-mcp-server';
 import type { Request, Response } from 'express';
 import { MCP_PRIVATE_SCOPE } from './mcp.constants.js';
 import { McpAccessTokenVerifier } from './mcp-access-token-verifier.service.js';

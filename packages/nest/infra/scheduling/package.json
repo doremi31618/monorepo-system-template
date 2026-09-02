@@ -1,0 +1,45 @@
+{
+  "name": "@platform/nest-infra-scheduling",
+  "version": "0.1.0",
+  "description": "NestJS 的排程鎖定、執行與稽核能力",
+  "private": true,
+  "platform": {
+    "runtime": "node",
+    "framework": "nestjs",
+    "layer": "infra",
+    "domain": "infra"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./schema": {
+      "types": "./dist/scheduling.schema.d.ts",
+      "import": "./dist/scheduling.schema.js",
+      "default": "./dist/scheduling.schema.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@nestjs/common": "^10.4.22",
+    "@nestjs/config": "^4.0.4",
+    "@platform/nest-infra-database": "workspace:*",
+    "@platform/nest-infra-logger": "workspace:*",
+    "drizzle-orm": "^0.45.2"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "^10.4.22",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "reflect-metadata": "^0.2.0",
+    "rxjs": "^7.8.0"
+  }
+}

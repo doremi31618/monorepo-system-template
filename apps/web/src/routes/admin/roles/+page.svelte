@@ -1,21 +1,58 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
+  import { page } from '$app/stores';
   import * as api from '$lib/api/admin';
   import RoleList from '$lib/features/admin-roles/components/RoleList.svelte';
   import PermissionMatrix from '../components/PermissionMatrix.svelte';
-  import * as Sheet from '@platform/ui/sheet';
-  import * as AlertDialog from '@platform/ui/alert-dialog';
-  import { Button } from '@platform/ui/button';
-  import { Input } from '@platform/ui/input';
-  import { Label } from '@platform/ui/label';
-  import { Textarea } from '@platform/ui/textarea';
-  import type { Role, Permission } from '@platform/contracts';
+  import * as Sheet from '@platform/svelte-ui/sheet';
+  import * as AlertDialog from '@platform/svelte-ui/alert-dialog';
+  import { Button } from '@platform/svelte-ui/button';
+  import { Input } from '@platform/svelte-ui/input';
+  import { Label } from '@platform/svelte-ui/label';
+  import { Textarea } from '@platform/svelte-ui/textarea';
+  import type { Role, Permission } from '@platform/types-identity';
+  import { Plus } from 'lucide-svelte';
+  import {
+    DataViewToolbar,
+    parseDataViewQuery,
+    writeDataViewQuery,
+    type DataViewProperty,
+    type DataViewQuery,
+  } from '@platform/svelte-ui/data-view-toolbar';
 
   type RoleWithPermissions = Role & {
     rolePermissions?: Array<{ permission: { id: string } }>;
   };
 
   let roles: Role[] = [];
+  let dataViewQuery: DataViewQuery = { search: '', filters: [], sorts: [] };
+  const roleProperties: DataViewProperty[] = [
+    {
+      key: 'kind',
+      label: 'Type',
+      type: 'enum',
+      operators: ['is'],
+      options: [
+        { value: 'system', label: 'System' },
+        { value: 'custom', label: 'Custom' },
+      ],
+    },
+    { key: 'name', label: 'Name', type: 'text', operators: [], sortable: true },
+    { key: 'createdAt', label: 'Created', type: 'date', operators: [], sortable: true },
+  ];
+
+  async function handleDataViewQueryChange(next: DataViewQuery) {
+    dataViewQuery = next;
+    const params = writeDataViewQuery($page.url.searchParams, next);
+    await goto(`${resolve('/admin/roles')}?${params.toString()}`, {
+      replaceState: true,
+      noScroll: true,
+      keepFocus: true,
+    });
+    await loadRoles(next);
+  }
   
   // Edit/Create Sheet
   let showSheet = false;
@@ -31,20 +68,26 @@
   let roleToDelete: Role | null = null;
   
   onMount(async () => {
+    dataViewQuery = parseDataViewQuery($page.url.searchParams, roleProperties);
     await loadInitialData();
   });
 
   async function loadInitialData() {
-    const [roleRes, permRes] = await Promise.all([
-        api.getRoles(),
-        api.getPermissions()
+    const [, permRes] = await Promise.all([
+        loadRoles(dataViewQuery),
+        api.getPermissions(),
     ]);
-    roles = roleRes.data || [];
     allPermissions = permRes.data || [];
   }
 
-  async function loadRoles() {
-      const res = await api.getRoles();
+  async function loadRoles(query: DataViewQuery = dataViewQuery) {
+      const kindRule = query.filters.find((filter) => filter.property === 'kind');
+      const kindValue = Array.isArray(kindRule?.value) ? kindRule.value[0] : kindRule?.value;
+      const res = await api.getRoles({
+        q: query.search,
+        kind: kindValue,
+        sort: query.sorts.map((sort) => `${sort.property}:${sort.direction}`),
+      });
       roles = res.data || [];
   }
 
@@ -122,10 +165,25 @@
 
 </script>
 
-<div class="p-4 md:p-8 max-w-7xl mx-auto w-full">
+<div class="mx-auto w-full max-w-7xl p-4 md:p-8">
+    <div class="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight">Roles</h1>
+        <p class="text-muted-foreground">Manage roles and permissions.</p>
+      </div>
+      <Button onclick={openCreate}><Plus data-icon="inline-start" />Create Role</Button>
+    </div>
+    <div class="mb-6 border-y py-2">
+      <DataViewToolbar
+        properties={roleProperties}
+        query={dataViewQuery}
+        searchLabel="Search roles"
+        searchPlaceholder="Search name or description…"
+        onquerychange={handleDataViewQueryChange}
+      />
+    </div>
     <RoleList 
         {roles}
-        oncreate={openCreate}
         onedit={openEdit}
         ondelete={openDelete}
     />

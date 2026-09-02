@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { Button } from "@platform/ui/button";
-	import * as Card from "@platform/ui/card";
-	import * as Field from "@platform/ui/field";
-	import { Input } from "@platform/ui/input";
+	import { Button } from "@platform/svelte-ui/button";
+	import * as Card from "@platform/svelte-ui/card";
+	import * as Field from "@platform/svelte-ui/field";
+	import { Input } from "@platform/svelte-ui/input";
 	import type { ComponentProps } from "svelte";
 	import { authStore } from "$lib/store/authStore";
 	import { AppConfig } from "$lib/config";
@@ -10,7 +10,7 @@
 	import { resolve } from "$app/paths";
 	import type { AuthState } from "$lib/store/authStore";
 	import { onDestroy } from "svelte";
-	import { Spinner } from "@platform/ui/spinner";
+	import { Spinner } from "@platform/svelte-ui/spinner";
 
 
 	let authState = $state<AuthState>({ session: null, user: null, status: "idle", message: null });

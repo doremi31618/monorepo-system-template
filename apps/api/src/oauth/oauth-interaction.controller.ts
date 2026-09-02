@@ -9,8 +9,8 @@ import {
 	UnauthorizedException,
 	VERSION_NEUTRAL
 } from '@nestjs/common';
-import { AuthService, extractSessionToken } from '@platform/auth';
-import { OAuthInteractionService } from '@platform/oauth-server';
+import { AuthService, extractSessionToken } from '@platform/nest-identity-auth';
+import { OAuthInteractionService } from '@platform/nest-infra-oauth-server';
 import type { Request, Response } from 'express';
 
 @Controller({ path: 'oauth/interaction', version: VERSION_NEUTRAL })

@@ -7,9 +7,9 @@
 		FieldLabel,
 		FieldDescription,
 		FieldSeparator,
-	} from "@platform/ui/field";
-	import { Input } from "@platform/ui/input";
-	import { Button } from "@platform/ui/button";
+	} from "@platform/svelte-ui/field";
+	import { Input } from "@platform/svelte-ui/input";
+	import { Button } from "@platform/svelte-ui/button";
 	import { cn, type WithElementRef } from "$lib/utils.js";
 
 	let {

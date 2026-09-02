@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './../src/app.module';
+import { closeTestApp } from './close-test-app.js';
 
 describe('Auth Module (e2e)', () => {
     let app: INestApplication;
@@ -26,7 +27,7 @@ describe('Auth Module (e2e)', () => {
 
     afterAll(async () => {
         if (app) {
-            await app.close();
+            await closeTestApp(app);
         }
     });
 

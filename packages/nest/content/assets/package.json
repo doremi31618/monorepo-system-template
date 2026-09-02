@@ -1,0 +1,28 @@
+{
+  "name": "@platform/nest-content-assets",
+  "version": "0.1.0",
+  "description": "NestJS 的 Content／Assets 上傳、儲存與存取能力",
+  "private": true,
+  "platform": { "runtime": "node", "framework": "nestjs", "layer": "feature", "domain": "content" },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "default": "./dist/index.js" },
+    "./schema": { "types": "./dist/assets.schema.d.ts", "import": "./dist/assets.schema.js", "default": "./dist/assets.schema.js" }
+  },
+  "scripts": { "build": "tsc -p tsconfig.json" },
+  "dependencies": {
+    "@platform/types-content": "workspace:*",
+    "@aws-sdk/client-s3": "^3.1121.0",
+    "@aws-sdk/s3-request-presigner": "^3.1121.0",
+    "@nestjs/common": "^10.4.22",
+    "@nestjs/config": "^4.0.4",
+    "@nestjs/platform-express": "^10.4.22",
+    "@platform/nest-identity-users": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": { "@types/express": "^4.17.17", "@types/multer": "^2.0.0", "express": "^4.22.2", "typescript": "^5.9.3" },
+  "peerDependencies": { "reflect-metadata": "^0.2.0", "rxjs": "^7.8.0" }
+}

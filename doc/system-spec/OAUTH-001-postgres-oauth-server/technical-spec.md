@@ -14,12 +14,12 @@ Vocab / MCP client
 apps/api (NestJS composition root)
        |
        v
-@platform/oauth-server
+@platform/nest-infra-oauth-server
   - oidc-provider protocol engine
   - platform policy and interactions
   - Drizzle persistence adapter
        |
-       +------> @platform/auth + @platform/users
+       +------> @platform/nest-identity-auth + @platform/nest-identity-users
        |
        v
 PostgreSQL
@@ -28,7 +28,7 @@ apps/web       -> login, consent, and interaction error UI
 apps/migrator  -> canonical Drizzle migration history
 ```
 
-`@platform/oauth-server` owns the capability implementation and exposes provider factories, policy/services, the Drizzle adapter, and schema exports. `apps/api` owns the NestJS composition module and must not reimplement protocol behavior.
+`@platform/nest-infra-oauth-server` owns the capability implementation and exposes provider factories, policy/services, the Drizzle adapter, and schema exports. `apps/api` owns the NestJS composition module and must not reimplement protocol behavior.
 
 ## External endpoints
 
@@ -103,7 +103,7 @@ Every one-time consume and refresh rotation uses atomic PostgreSQL operations or
 
 ## Accounts and interactions
 
-`@platform/oauth-server` depends on public interfaces from `@platform/auth` and `@platform/users` to:
+`@platform/nest-infra-oauth-server` depends on public interfaces from `@platform/nest-identity-auth` and `@platform/nest-identity-users` to:
 
 - validate the existing platform session during an interaction;
 - load `sub`, email, email-verification state, and profile claims;

@@ -1,5 +1,5 @@
 import { httpClient } from '../utils';
-import { type Session } from '@platform/contracts';
+import { type Session } from '@platform/types-identity';
 
 
 export async function InspectSession() {

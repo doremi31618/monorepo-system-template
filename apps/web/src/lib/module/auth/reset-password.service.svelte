@@ -4,9 +4,9 @@
 	import { page } from "$app/stores";
 	import * as authApi from "$lib/api/auth";
     import { appRoutePath } from "$lib/config/route";
-	import { Button } from "@platform/ui/button";
-	import * as Field from "@platform/ui/field";
-	import { Input } from "@platform/ui/input";
+	import { Button } from "@platform/svelte-ui/button";
+	import * as Field from "@platform/svelte-ui/field";
+	import { Input } from "@platform/svelte-ui/input";
 	import { cn, type WithElementRef } from "$lib/utils.js";
 	import type { HTMLAttributes } from "svelte/elements";
 

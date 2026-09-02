@@ -1,6 +1,6 @@
 # 如何新增 Remote MCP Tool
 
-本專案的 Remote MCP 與 REST 共用同一個 NestJS capability service。`@platform/nest-mcp-server`
+本專案的 Remote MCP 與 REST 共用同一個 NestJS capability service。`@platform/nest-infra-mcp-server`
 只處理 MCP protocol/HTTP lifecycle；業務 tool 在 `apps/api` composition root 註冊。不要建立
 `nest-<capability>-mcp` package，也不要讓 capability 反向 import MCP。
 
@@ -67,6 +67,11 @@ bun run oauth-admin -- resource:create \
 OAuth scope `mcp:tools` 只代表 client/token 可進入 MCP resource；實際 CMS 資料授權仍由
 `cms.posts.read` 決定。不要為每一個 CMS action 增加 OAuth scope。
 
+`McpModule` 必須匯入 Nest `ConfigModule`，由 app-owned `apiEnvSchema` 驗證環境變數後，
+再建立窄型別 `McpRuntimeConfig` 注入 token verifier 與 composition service。MCP service、
+controller 與 package 不得直接讀取 `process.env`；新增設定時要同時更新
+`apps/api/src/config/env.validation.ts` 與 `apps/api/.env.example`。
+
 ## Protocol smoke test
 
 Public tool list：
@@ -88,7 +93,7 @@ OpenAI release smoke 需驗證 Responses API Remote MCP 與 ChatGPT developer mo
 ## 驗證命令
 
 ```bash
-bun run --filter @platform/nest-mcp-server test:unit
+bun run --filter @platform/nest-infra-mcp-server test:unit
 bun run --filter @platform/api test -- --runInBand src/mcp
 bun run deps:check
 bun run check

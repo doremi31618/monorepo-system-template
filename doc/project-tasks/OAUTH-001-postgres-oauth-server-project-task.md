@@ -21,14 +21,14 @@ Add a reusable, PostgreSQL-backed OAuth 2.1 and OpenID Connect authorization-ser
 - **Mode**: Grill Me enabled
 - **Gate status**: Approved
 - **Approved at**: 2026-08-28
-- **Summary**: Build `@platform/oauth-server` as a deep capability package. `apps/api` composes it, `apps/migrator` remains the only migration authority, and `apps/web` supplies login and consent interactions. Vocab remains out of this Work Item and may continue using Supabase for business data while trusting tokens issued by this server.
+- **Summary**: Build `@platform/nest-infra-oauth-server` as a deep capability package. `apps/api` composes it, `apps/migrator` remains the only migration authority, and `apps/web` supplies login and consent interactions. Vocab remains out of this Work Item and may continue using Supabase for business data while trusting tokens issued by this server.
 - **Key decisions**:
   - The authorization server will ultimately replace Clerk as Vocab's identity source, but no Vocab or user-data migration is included here.
   - Use Authorization Code with mandatory PKCE S256 and rotating refresh tokens; do not support password, implicit, or client-credentials grants.
   - Support pre-registered confidential clients and DCR-created public clients. DCR is configurable and may be disabled.
   - Access tokens are ES256 JWTs with one registered RFC 8707 resource audience. ID token audience is the client ID.
   - Use `oidc-provider` for protocol behavior and a custom Drizzle adapter for PostgreSQL persistence.
-  - Reuse `@platform/auth` and `@platform/users` for email/password, Google login, password reset, and account claims.
+  - Reuse `@platform/nest-identity-auth` and `@platform/nest-identity-users` for email/password, Google login, password reset, and account claims.
   - Manage first-party clients and resources through a CLI; no admin UI is included.
 - **Assumptions**:
   - Node.js 22 and the selected `oidc-provider` release are compatible with the NestJS Express composition root.
@@ -57,7 +57,7 @@ Add a reusable, PostgreSQL-backed OAuth 2.1 and OpenID Connect authorization-ser
 
 ### In scope
 
-- `@platform/oauth-server` package, NestJS module, protocol configuration, Drizzle schema and persistence adapter.
+- `@platform/nest-infra-oauth-server` package, NestJS module, protocol configuration, Drizzle schema and persistence adapter.
 - OAuth/OIDC discovery, JWKS, authorization, token, DCR, revocation, and UserInfo behavior.
 - Email/password and Google login integration plus SvelteKit consent/error UI.
 - ES256 signing-key provider, resource/scope policy, rate limiting, audit events, and management CLI.
