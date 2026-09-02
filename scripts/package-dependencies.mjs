@@ -6,7 +6,15 @@ import ts from 'typescript';
 
 const root = resolve(import.meta.dirname, '..');
 const sourceExtensions = new Set(['.js', '.mjs', '.cjs', '.ts', '.tsx', '.svelte']);
-const ignoredDirectories = new Set(['node_modules', 'dist', 'build', '.git', '.svelte-kit', 'coverage']);
+const ignoredDirectories = new Set([
+  'node_modules',
+  'dist',
+  'build',
+  '.git',
+  '.nx',
+  '.svelte-kit',
+  'coverage',
+]);
 const builtins = new Set([...builtinModules, ...builtinModules.map((name) => `node:${name}`)]);
 
 async function walk(directory, predicate) {
