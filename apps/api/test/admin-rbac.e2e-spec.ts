@@ -182,4 +182,28 @@ describe('Admin RBAC (e2e)', () => {
 			expect(profileRes.status).toBe(200);
 		});
 	});
+
+	describe('Role deletion', () => {
+		it('should delete a custom role that has permissions and assigned users', async () => {
+			const deleteRes = await request(app.getHttpServer())
+				.delete(`/v1/admin/roles/${editorRoleId}`)
+				.set('Authorization', `Bearer ${superAdminToken}`);
+
+			expect(deleteRes.status).toBe(200);
+
+			const rolesRes = await request(app.getHttpServer())
+				.get('/v1/admin/roles')
+				.set('Authorization', `Bearer ${superAdminToken}`);
+			const remainingRoles = rolesRes.body.data;
+			expect(remainingRoles.some((role: any) => role.id === editorRoleId)).toBe(false);
+
+			const usersRes = await request(app.getHttpServer())
+				.get(`/v1/admin/users?q=${encodeURIComponent(editorEmail)}`)
+				.set('Authorization', `Bearer ${superAdminToken}`);
+			const editorUser = usersRes.body.data.data.find(
+				(user: any) => user.email === editorEmail
+			);
+			expect(editorUser.userRoles.some((userRole: any) => userRole.role.id === editorRoleId)).toBe(false);
+		});
+	});
 });
