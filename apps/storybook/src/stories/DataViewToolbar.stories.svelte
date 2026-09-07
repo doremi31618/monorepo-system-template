@@ -140,6 +140,28 @@
 </Story>
 
 <Story
+  name="Persistent localized search"
+  asChild
+  play={async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole('searchbox', { name: '搜尋資料' }),
+    ).toBeVisible();
+    await expect(
+      canvas.getByRole('button', { name: '新增篩選' }),
+    ).toBeVisible();
+  }}
+>
+  <DataViewToolbar
+    {properties}
+    {query}
+    searchMode="persistent"
+    labels={{ addFilter: '新增篩選', search: '搜尋資料' }}
+    onquerychange={(next) => (query = next)}
+  />
+</Story>
+
+<Story
   name="Custom datatype editor"
   asChild
   play={async ({ canvasElement }) => {

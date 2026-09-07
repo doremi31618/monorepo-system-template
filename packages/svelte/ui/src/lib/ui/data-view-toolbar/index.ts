@@ -1,5 +1,10 @@
 export { default as DataViewToolbar } from './data-view-toolbar.svelte';
 export {
+  defaultDataViewToolbarLabels,
+  type DataViewToolbarLabelOverrides,
+  type DataViewToolbarLabels,
+} from './labels.js';
+export {
   parseDataViewQuery,
   writeDataViewQuery,
   type DataViewBuiltInPropertyType,

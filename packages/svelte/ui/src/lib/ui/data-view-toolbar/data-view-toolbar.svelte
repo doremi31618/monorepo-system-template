@@ -11,6 +11,10 @@
   import * as Drawer from '$lib/ui/drawer/index.js';
   import { Input } from '$lib/ui/input/index.js';
   import * as Popover from '$lib/ui/popover/index.js';
+  import {
+    defaultDataViewToolbarLabels,
+    type DataViewToolbarLabelOverrides,
+  } from './labels.js';
   import type {
     DataViewFilterOperator,
     DataViewFilterEditorContext,
@@ -24,8 +28,10 @@
   let {
     properties,
     query,
-    searchLabel = 'Search',
-    searchPlaceholder = 'Search…',
+    searchLabel,
+    searchPlaceholder,
+    searchMode = 'toggle',
+    labels = {},
     filterEditors = {},
     onquerychange,
   }: {
@@ -33,6 +39,8 @@
     query: DataViewQuery;
     searchLabel?: string;
     searchPlaceholder?: string;
+    searchMode?: 'toggle' | 'persistent';
+    labels?: DataViewToolbarLabelOverrides;
     filterEditors?: Record<
       string,
       Snippet<[context: DataViewFilterEditorContext]>
@@ -41,14 +49,18 @@
   } = $props();
 
   const isMobile = new IsMobile();
-  const operatorLabels: Record<DataViewFilterOperator, string> = {
-    is: 'is',
-    isNot: 'is not',
-    isAnyOf: 'is any of',
-    before: 'before',
-    after: 'after',
-    between: 'between',
-  };
+  const copy = $derived({
+    ...defaultDataViewToolbarLabels,
+    ...labels,
+    operators: {
+      ...defaultDataViewToolbarLabels.operators,
+      ...labels.operators,
+    },
+  });
+  const effectiveSearchLabel = $derived(searchLabel ?? copy.search);
+  const effectiveSearchPlaceholder = $derived(
+    searchPlaceholder ?? copy.searchPlaceholder,
+  );
 
   let searchExpanded = $state(false);
   let searchDraft = $state('');
@@ -137,7 +149,7 @@
     if (event.key !== 'Escape') return;
     event.preventDefault();
     if (searchDraft) clearSearch();
-    else void closeSearch();
+    else if (searchMode !== 'persistent') void closeSearch();
   }
 
   function resetFilterEditor() {
@@ -268,8 +280,8 @@
     if (property.options?.length) return property.options;
     if (property.type === 'boolean')
       return [
-        { value: 'true', label: 'True' },
-        { value: 'false', label: 'False' },
+        { value: 'true', label: copy.booleanTrue },
+        { value: 'false', label: copy.booleanFalse },
       ];
     return [];
   }
@@ -345,7 +357,7 @@
   function filterSummary(filter: DataViewFilterRule) {
     const property = propertyFor(filter.property);
     const values = Array.isArray(filter.value) ? filter.value : [filter.value];
-    return `${property?.label ?? filter.property} ${operatorLabels[filter.operator]} ${values.map((value) => optionLabel(property, value)).join(', ')}`;
+    return `${property?.label ?? filter.property} ${copy.operators[filter.operator]} ${values.map((value) => optionLabel(property, value)).join(', ')}`;
   }
 
   function resetSortEditor() {
@@ -393,7 +405,7 @@
   <div class="grid gap-2" aria-label="Filter editor">
     {#if !filterProperty}
       <p class="px-2 pt-1 text-xs font-medium text-muted-foreground">
-        Filter by
+        {copy.filterBy}
       </p>
       {#each filterableProperties as property (property.key)}
         <Button
@@ -414,19 +426,19 @@
           variant="ghost"
           class="justify-start"
           onclick={() => selectFilterOperator(operator)}
-          >{operatorLabels[operator]}</Button
+          >{copy.operators[operator]}</Button
         >
       {/each}
     {:else if isChoiceProperty(filterProperty)}
       <p class="px-2 pt-1 text-xs text-muted-foreground">
         {filterProperty.label}
-        {operatorLabels[filterOperator]}
+        {copy.operators[filterOperator]}
       </p>
       {#if filterProperty.type !== 'boolean'}
         <Input
           type="search"
           aria-label={`Search ${filterProperty.label} options`}
-          placeholder="Search options…"
+          placeholder={copy.searchOptionsPlaceholder}
           bind:value={filterOptionSearch}
           oninput={handleFilterOptionSearch}
         />
@@ -449,30 +461,30 @@
         {/each}
         {#if filterOptionLoading}
           <p class="px-2 py-3 text-sm text-muted-foreground" role="status">
-            Loading options…
+            {copy.loadingOptions}
           </p>
         {:else if filterOptionError}
           <div class="grid gap-2 px-2 py-3" role="alert">
             <p class="text-sm text-destructive">{filterOptionError}</p>
             <Button variant="outline" size="sm" onclick={() => loadFilterOptions(true)}
-              >Retry</Button
+              >{copy.retry}</Button
             >
           </div>
         {:else if !visibleFilterOptions().length}
-          <p class="px-2 py-3 text-sm text-muted-foreground">No options found.</p>
+          <p class="px-2 py-3 text-sm text-muted-foreground">{copy.noOptions}</p>
         {/if}
       </div>
     {:else if filterEditors[filterProperty.type]}
       {@const editor = filterEditors[filterProperty.type]}
       <p class="px-2 pt-1 text-xs text-muted-foreground">
         {filterProperty.label}
-        {operatorLabels[filterOperator]}
+        {copy.operators[filterOperator]}
       </p>
       {@render editor(filterEditorContext())}
     {:else}
       <p class="px-2 pt-1 text-xs text-muted-foreground">
         {filterProperty.label}
-        {operatorLabels[filterOperator]}
+        {copy.operators[filterOperator]}
       </p>
       <Input
         type={filterProperty.type === 'date'
@@ -494,7 +506,7 @@
     {#if filterProperty && filterOperator}
       <div class="flex items-center justify-end gap-2 pt-2">
         <Button onclick={confirmFilter} disabled={!canConfirmFilter()}
-          >Confirm filter</Button
+          >{copy.confirmFilter}</Button
         >
       </div>
     {/if}
@@ -504,7 +516,7 @@
 {#snippet sortEditor()}
   <div class="grid gap-2" aria-label="Sort editor">
     {#if sortStep === 'property'}
-      <p class="px-2 pt-1 text-xs font-medium text-muted-foreground">Sort by</p>
+      <p class="px-2 pt-1 text-xs font-medium text-muted-foreground">{copy.sortBy}</p>
       {#each sortableProperties as property (property.key)}
         <Button
           variant="ghost"
@@ -568,7 +580,7 @@
           variant="ghost"
           class="justify-start"
           onclick={() => (sortStep = 'property')}
-          ><PlusIcon data-icon="inline-start" />Add sort</Button
+          ><PlusIcon data-icon="inline-start" />{copy.addSort}</Button
         >
       {/if}
     {/if}
@@ -584,14 +596,14 @@
               {...props}
               variant="ghost"
               size="sm"
-              aria-label="Add filter"
-              ><PlusIcon data-icon="inline-start" />Add filter</Button
+              aria-label={copy.addFilter}
+              ><PlusIcon data-icon="inline-start" />{copy.addFilter}</Button
             >{/snippet}</Drawer.Trigger
         >
         <Drawer.Content class="max-h-[85dvh]">
           <Drawer.Header
-            ><Drawer.Title>Filter</Drawer.Title><Drawer.Description
-              >Show items that match all selected rules.</Drawer.Description
+            ><Drawer.Title>{copy.filter}</Drawer.Title><Drawer.Description
+              >{copy.filterDescription}</Drawer.Description
             ></Drawer.Header
           >
           <div class="overflow-y-auto px-4 pb-4">{@render filterEditor()}</div>
@@ -604,8 +616,8 @@
               {...props}
               variant="ghost"
               size="sm"
-              aria-label="Add filter"
-              ><PlusIcon data-icon="inline-start" />Add filter</Button
+              aria-label={copy.addFilter}
+              ><PlusIcon data-icon="inline-start" />{copy.addFilter}</Button
             >{/snippet}</Popover.Trigger
         >
         <Popover.Content align="end">{@render filterEditor()}</Popover.Content>
@@ -620,17 +632,17 @@
               variant="ghost"
               size="sm"
               aria-label={query.sorts.length
-                ? `Sort · ${query.sorts.length}`
-                : 'Sort'}
+                ? `${copy.sort} · ${query.sorts.length}`
+                : copy.sort}
               ><ArrowUpDownIcon data-icon="inline-start" />{query.sorts.length
-                ? `Sort · ${query.sorts.length}`
-                : 'Sort'}</Button
+                ? `${copy.sort} · ${query.sorts.length}`
+                : copy.sort}</Button
             >{/snippet}</Drawer.Trigger
         >
         <Drawer.Content class="max-h-[85dvh]">
           <Drawer.Header
-            ><Drawer.Title>Sort</Drawer.Title><Drawer.Description
-              >Earlier rules have higher priority.</Drawer.Description
+            ><Drawer.Title>{copy.sort}</Drawer.Title><Drawer.Description
+              >{copy.sortDescription}</Drawer.Description
             ></Drawer.Header
           >
           <div class="overflow-y-auto px-4 pb-4">{@render sortEditor()}</div>
@@ -644,24 +656,24 @@
               variant="ghost"
               size="sm"
               aria-label={query.sorts.length
-                ? `Sort · ${query.sorts.length}`
-                : 'Sort'}
+                ? `${copy.sort} · ${query.sorts.length}`
+                : copy.sort}
               ><ArrowUpDownIcon data-icon="inline-start" />{query.sorts.length
-                ? `Sort · ${query.sorts.length}`
-                : 'Sort'}</Button
+                ? `${copy.sort} · ${query.sorts.length}`
+                : copy.sort}</Button
             >{/snippet}</Popover.Trigger
         >
         <Popover.Content align="end">{@render sortEditor()}</Popover.Content>
       </Popover.Root>
     {/if}
 
-    {#if searchExpanded}
+    {#if searchMode === 'persistent' || searchExpanded}
       <div class="flex min-w-52 flex-1 items-center gap-1 sm:max-w-80">
         <Input
           bind:ref={searchInput}
           type="search"
-          aria-label={searchLabel}
-          placeholder={searchPlaceholder}
+          aria-label={effectiveSearchLabel}
+          placeholder={effectiveSearchPlaceholder}
           bind:value={searchDraft}
           oninput={scheduleSearch}
           onkeydown={handleSearchKeydown}
@@ -670,7 +682,7 @@
             variant="ghost"
             size="icon-sm"
             class="max-md:size-11"
-            aria-label="Clear search"
+            aria-label={copy.clearSearch}
             onclick={clearSearch}><XIcon /></Button
           >{/if}
       </div>
@@ -679,9 +691,9 @@
         bind:ref={searchTrigger}
         variant="ghost"
         size="sm"
-        aria-label={searchLabel}
+        aria-label={effectiveSearchLabel}
         onclick={openSearch}
-        ><SearchIcon data-icon="inline-start" />Search</Button
+        ><SearchIcon data-icon="inline-start" />{copy.search}</Button
       >
     {/if}
   </div>
@@ -708,8 +720,8 @@
       <Button
         variant="ghost"
         size="sm"
-        aria-label="Clear all filters"
-        onclick={clearFilters}>Clear all</Button
+        aria-label={`${copy.clearAll} filters`}
+        onclick={clearFilters}>{copy.clearAll}</Button
       >
     </div>
   {/if}
