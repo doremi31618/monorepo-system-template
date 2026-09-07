@@ -234,6 +234,7 @@
   play={async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
+    await expect(canvas.queryByRole('button', { name: 'Sort' })).not.toBeInTheDocument();
     await userEvent.click(canvas.getByRole('button', { name: 'Add filter' }));
     await userEvent.click(body.getByRole('button', { name: 'Budget' }));
     await userEvent.click(body.getByRole('button', { name: 'is' }));

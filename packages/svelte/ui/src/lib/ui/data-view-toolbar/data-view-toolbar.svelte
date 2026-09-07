@@ -100,6 +100,9 @@
         !query.sorts.some((sort) => sort.property === property.key),
     ),
   );
+  const hasSortableProperties = $derived(
+    properties.some((property) => property.sortable),
+  );
 
   $effect(() => {
     if (searchDirty) return;
@@ -640,7 +643,8 @@
       </Popover.Root>
     {/if}
 
-    {#if isMobile.current}
+    {#if hasSortableProperties}
+      {#if isMobile.current}
       <Drawer.Root bind:open={sortOpen}>
         <Drawer.Trigger
           >{#snippet child({ props })}<Button
@@ -683,6 +687,7 @@
         >
         <Popover.Content align="end">{@render sortEditor()}</Popover.Content>
       </Popover.Root>
+      {/if}
     {/if}
 
     {#if searchMode === 'persistent' || searchExpanded}
