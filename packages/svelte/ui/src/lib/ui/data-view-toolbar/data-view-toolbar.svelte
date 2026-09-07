@@ -55,6 +55,7 @@
   let filterOperator = $state<DataViewFilterOperator | undefined>();
   let filterValueDraft = $state('');
   let filterEndDraft = $state('');
+  let filterOptionDraft = $state<string[]>([]);
   let sortOpen = $state(false);
   let sortStep = $state<'property' | 'direction' | 'list'>('property');
   let sortProperty = $state<DataViewProperty | undefined>();
@@ -130,20 +131,26 @@
     filterOperator = undefined;
     filterValueDraft = '';
     filterEndDraft = '';
+    filterOptionDraft = [];
   }
   function selectFilterProperty(property: DataViewProperty) {
     resetFilterEditor();
     filterProperty = property;
   }
-  function selectedFilterValues(): string[] {
-    if (!filterProperty || !filterOperator) return [];
+  function selectFilterOperator(operator: DataViewFilterOperator) {
+    filterOperator = operator;
     const existing = query.filters.find(
-      (filter) =>
-        filter.property === filterProperty?.key &&
-        filter.operator === filterOperator,
+      (filter) => filter.property === filterProperty?.key,
     );
-    if (!existing) return [];
-    return Array.isArray(existing.value) ? existing.value : [existing.value];
+    if (!existing || existing.operator !== operator) return;
+    const values = Array.isArray(existing.value)
+      ? existing.value
+      : [existing.value];
+    if (filterProperty?.options?.length) filterOptionDraft = values;
+    else {
+      filterValueDraft = values[0] ?? '';
+      filterEndDraft = values[1] ?? '';
+    }
   }
   function commitFilter(value: string | string[]) {
     if (!filterProperty || !filterOperator) return;
@@ -162,23 +169,30 @@
   }
   function toggleFilterOption(value: string) {
     if (filterOperator !== 'isAnyOf') {
-      commitFilter(value);
+      filterOptionDraft = [value];
       return;
     }
-    const selected = selectedFilterValues();
-    const next = selected.includes(value)
-      ? selected.filter((item) => item !== value)
-      : [...selected, value];
-    if (!next.length && filterProperty) removeFilter(filterProperty.key);
-    else commitFilter(next);
+    filterOptionDraft = filterOptionDraft.includes(value)
+      ? filterOptionDraft.filter((item) => item !== value)
+      : [...filterOptionDraft, value];
   }
-  function applyDraftFilter() {
-    if (!filterValueDraft.trim()) return;
-    commitFilter(
-      filterOperator === 'between'
-        ? [filterValueDraft.trim(), filterEndDraft.trim()].filter(Boolean)
-        : filterValueDraft.trim(),
-    );
+  function canConfirmFilter() {
+    if (!filterProperty || !filterOperator) return false;
+    if (filterProperty.options?.length) return filterOptionDraft.length > 0;
+    if (!filterValueDraft.trim()) return false;
+    return filterOperator !== 'between' || Boolean(filterEndDraft.trim());
+  }
+  function confirmFilter() {
+    if (!canConfirmFilter()) return;
+    const value = filterProperty?.options?.length
+      ? filterOperator === 'isAnyOf'
+        ? filterOptionDraft
+        : filterOptionDraft[0]
+      : filterOperator === 'between'
+        ? [filterValueDraft.trim(), filterEndDraft.trim()]
+        : filterValueDraft.trim();
+    commitFilter(value);
+    filterOpen = false;
   }
   function removeFilter(property: string) {
     emit({
@@ -266,7 +280,7 @@
         <Button
           variant="ghost"
           class="justify-start"
-          onclick={() => (filterOperator = operator)}
+          onclick={() => selectFilterOperator(operator)}
           >{operatorLabels[operator]}</Button
         >
       {/each}
@@ -277,11 +291,11 @@
       </p>
       {#each filterProperty.options as option (option.value)}
         <Button
-          variant={selectedFilterValues().includes(option.value)
+          variant={filterOptionDraft.includes(option.value)
             ? 'secondary'
             : 'ghost'}
           class="justify-start"
-          aria-pressed={selectedFilterValues().includes(option.value)}
+          aria-pressed={filterOptionDraft.includes(option.value)}
           onclick={() => toggleFilterOption(option.value)}
           >{option.label}</Button
         >
@@ -307,12 +321,13 @@
           bind:value={filterEndDraft}
         />
       {/if}
-      <Button
-        onclick={applyDraftFilter}
-        disabled={!filterValueDraft.trim() ||
-          (filterOperator === 'between' && !filterEndDraft.trim())}
-        >Apply filter</Button
-      >
+    {/if}
+    {#if filterProperty && filterOperator}
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <Button onclick={confirmFilter} disabled={!canConfirmFilter()}
+          >Confirm filter</Button
+        >
+      </div>
     {/if}
   </div>
 {/snippet}

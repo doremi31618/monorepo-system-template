@@ -112,6 +112,8 @@
     await userEvent.click(body.getByRole('button', { name: 'Status' }));
     await userEvent.click(body.getByRole('button', { name: 'is any of' }));
     await userEvent.click(body.getByRole('button', { name: 'Draft' }));
+    await expect(canvas.getByTestId('filter-state')).toHaveTextContent('empty');
+    await userEvent.click(body.getByRole('button', { name: 'Confirm filter' }));
     await expect(canvas.getByText('Status is any of Draft')).toBeVisible();
     await expect(canvas.getByRole('button', { name: 'Filter · 1' })).toBeVisible();
 
@@ -140,6 +142,9 @@
     />
     <output data-testid="sort-state">
       {query.sorts.map((sort) => `${sort.property}:${sort.direction}`).join(',') || 'empty'}
+    </output>
+    <output data-testid="filter-state">
+      {query.filters.map((filter) => filter.property).join(',') || 'empty'}
     </output>
   </div>
 </Story>
