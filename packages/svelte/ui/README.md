@@ -57,3 +57,4 @@ query 轉成 API request；元件不認識任何產品 API。
   `Confirm filter` 統一提交。
 - 窄螢幕的 Filter 與 Sort 使用 bottom Drawer；桌面使用 Popover。
 - `searchMode="persistent"` 保持搜尋欄常駐；預設 `toggle` 保留原本的緊湊工具列。
+- `actions` snippet 可放清單／卡片切換等 consumer action，不需 fork 共用 toolbar。

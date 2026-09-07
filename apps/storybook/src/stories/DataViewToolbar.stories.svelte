@@ -122,6 +122,10 @@
   />
 {/snippet}
 
+{#snippet viewActions()}
+  <button type="button">View mode</button>
+{/snippet}
+
 <Story
   name="Search interaction"
   asChild
@@ -160,6 +164,7 @@
     const canvas = within(canvasElement);
     await expect(canvas.getByRole('searchbox', { name: '搜尋資料' })).toBeVisible();
     await expect(canvas.getByRole('button', { name: '新增篩選' })).toBeVisible();
+    await expect(canvas.getByRole('button', { name: 'View mode' })).toBeVisible();
   }}
 >
   <DataViewToolbar
@@ -167,6 +172,7 @@
     {query}
     searchMode="persistent"
     labels={{ addFilter: '新增篩選', search: '搜尋資料' }}
+    actions={viewActions}
     onquerychange={(next) => (query = next)}
   />
 </Story>

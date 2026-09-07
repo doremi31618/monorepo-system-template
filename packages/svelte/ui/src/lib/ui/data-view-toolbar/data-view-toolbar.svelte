@@ -31,8 +31,10 @@
     searchLabel,
     searchPlaceholder,
     searchMode = 'toggle',
+    ariaLabel = 'Data search and filters',
     labels = {},
     filterEditors = {},
+    actions,
     onquerychange,
   }: {
     properties: DataViewProperty[];
@@ -40,11 +42,13 @@
     searchLabel?: string;
     searchPlaceholder?: string;
     searchMode?: 'toggle' | 'persistent';
+    ariaLabel?: string;
     labels?: DataViewToolbarLabelOverrides;
     filterEditors?: Record<
       string,
       Snippet<[context: DataViewFilterEditorContext]>
     >;
+    actions?: Snippet;
     onquerychange?: (query: DataViewQuery) => void;
   } = $props();
 
@@ -589,7 +593,12 @@
   </div>
 {/snippet}
 
-<div data-slot="data-view-toolbar" class="flex w-full flex-col gap-2">
+<div
+  data-slot="data-view-toolbar"
+  role="search"
+  aria-label={ariaLabel}
+  class="flex w-full flex-col gap-2"
+>
   <div class="flex min-h-9 flex-wrap items-center justify-end gap-1">
     {#if isMobile.current}
       <Drawer.Root bind:open={filterOpen}>
@@ -598,6 +607,7 @@
               {...props}
               variant="ghost"
               size="sm"
+              class="order-2"
               aria-label={copy.addFilter}
               ><PlusIcon data-icon="inline-start" />{copy.addFilter}</Button
             >{/snippet}</Drawer.Trigger
@@ -618,6 +628,7 @@
               {...props}
               variant="ghost"
               size="sm"
+              class="order-2"
               aria-label={copy.addFilter}
               ><PlusIcon data-icon="inline-start" />{copy.addFilter}</Button
             >{/snippet}</Popover.Trigger
@@ -633,6 +644,7 @@
               {...props}
               variant="ghost"
               size="sm"
+              class="order-3"
               aria-label={query.sorts.length
                 ? `${copy.sort} · ${query.sorts.length}`
                 : copy.sort}
@@ -657,6 +669,7 @@
               {...props}
               variant="ghost"
               size="sm"
+              class="order-3"
               aria-label={query.sorts.length
                 ? `${copy.sort} · ${query.sorts.length}`
                 : copy.sort}
@@ -670,7 +683,7 @@
     {/if}
 
     {#if searchMode === 'persistent' || searchExpanded}
-      <div class="flex min-w-52 flex-1 items-center gap-1 sm:max-w-80">
+      <div class="order-1 flex min-w-52 flex-1 items-center gap-1 sm:max-w-80">
         <Input
           bind:ref={searchInput}
           type="search"
@@ -693,10 +706,14 @@
         bind:ref={searchTrigger}
         variant="ghost"
         size="sm"
+        class="order-1"
         aria-label={effectiveSearchLabel}
         onclick={openSearch}
         ><SearchIcon data-icon="inline-start" />{copy.search}</Button
       >
+    {/if}
+    {#if actions}
+      <div class="order-4">{@render actions()}</div>
     {/if}
   </div>
 
