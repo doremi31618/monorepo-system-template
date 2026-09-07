@@ -162,16 +162,26 @@
   asChild
   play={async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
     await expect(canvas.getByRole('searchbox', { name: '搜尋資料' })).toBeVisible();
     await expect(canvas.getByRole('button', { name: '新增篩選' })).toBeVisible();
     await expect(canvas.getByRole('button', { name: 'View mode' })).toBeVisible();
+    await userEvent.click(canvas.getByRole('button', { name: '排序' }));
+    await userEvent.click(body.getByRole('button', { name: 'Updated' }));
+    await expect(body.getByRole('button', { name: '最新優先' })).toBeVisible();
+    await userEvent.keyboard('{Escape}');
   }}
 >
   <DataViewToolbar
     {properties}
     {query}
     searchMode="persistent"
-    labels={{ addFilter: '新增篩選', search: '搜尋資料' }}
+    labels={{
+      addFilter: '新增篩選',
+      search: '搜尋資料',
+      sort: '排序',
+      newestFirst: '最新優先',
+    }}
     actions={viewActions}
     onquerychange={(next) => (query = next)}
   />

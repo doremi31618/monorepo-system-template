@@ -20,6 +20,12 @@ export interface DataViewToolbarLabels {
   noOptions: string;
   booleanTrue: string;
   booleanFalse: string;
+  oldestFirst: string;
+  newestFirst: string;
+  lowestFirst: string;
+  highestFirst: string;
+  ascendingAlphabetical: string;
+  descendingAlphabetical: string;
   operators: Record<DataViewFilterOperator, string>;
 }
 
@@ -49,6 +55,12 @@ export const defaultDataViewToolbarLabels: DataViewToolbarLabels = {
   noOptions: 'No options found.',
   booleanTrue: 'True',
   booleanFalse: 'False',
+  oldestFirst: 'Oldest first',
+  newestFirst: 'Newest first',
+  lowestFirst: 'Lowest first',
+  highestFirst: 'Highest first',
+  ascendingAlphabetical: 'A–Z',
+  descendingAlphabetical: 'Z–A',
   operators: {
     is: 'is',
     isNot: 'is not',

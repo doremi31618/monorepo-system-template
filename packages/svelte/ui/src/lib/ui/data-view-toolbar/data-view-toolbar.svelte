@@ -374,10 +374,13 @@
   }
   function directionLabels(property: DataViewProperty | undefined) {
     if (property?.type === 'date')
-      return { asc: 'Oldest first', desc: 'Newest first' };
+      return { asc: copy.oldestFirst, desc: copy.newestFirst };
     if (property?.type === 'number')
-      return { asc: 'Lowest first', desc: 'Highest first' };
-    return { asc: 'A–Z', desc: 'Z–A' };
+      return { asc: copy.lowestFirst, desc: copy.highestFirst };
+    return {
+      asc: copy.ascendingAlphabetical,
+      desc: copy.descendingAlphabetical,
+    };
   }
   function addSort(direction: DataViewSortRule['direction']) {
     if (!sortProperty) return;
