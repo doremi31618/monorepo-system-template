@@ -87,7 +87,7 @@ option source, and a bottom Drawer on narrow screens.
   repository-standard `origin/dev` base preserves the user-nominated main-package baseline.
 - 2026-09-07: The owner approved a reusable contract with consumer-owned data fetching and a later
   versioned source snapshot into the Databricks repository.
-- 2026-09-07: Six browser interaction stories, six query/drawer unit tests, package checks/build,
+- 2026-09-07: Seven browser interaction stories, six query/drawer unit tests, package checks/build,
   dependency boundaries, and Storybook production build passed. `vaul-svelte` is a runtime package
   dependency because the published Drawer source imports it.
 - 2026-09-07: Full repository `bun run check` passed with only 15 pre-existing Web warnings; full

@@ -6,7 +6,7 @@
     type DataViewProperty,
     type DataViewQuery,
   } from '@platform/svelte-ui/data-view-toolbar';
-  import { expect, userEvent, waitFor, within } from 'storybook/test';
+  import { expect, fireEvent, userEvent, waitFor, within } from 'storybook/test';
 
   const { Story } = defineMeta({
     title: 'UI Library/Data View Toolbar',
@@ -81,6 +81,17 @@
       operators: ['is', 'between'],
     },
   ];
+  const datatypeProperties: DataViewProperty[] = [
+    { key: 'name', label: 'Name', type: 'text', operators: ['is'] },
+    { key: 'score', label: 'Score', type: 'number', operators: ['is', 'between'] },
+    {
+      key: 'createdAt',
+      label: 'Created',
+      type: 'date',
+      operators: ['before', 'between'],
+    },
+    { key: 'active', label: 'Active', type: 'boolean', operators: ['is'] },
+  ];
 </script>
 
 <script lang="ts">
@@ -91,6 +102,11 @@
     sorts: [],
   });
   let customQuery = $state<DataViewQuery>({
+    search: '',
+    filters: [],
+    sorts: [],
+  });
+  let datatypeQuery = $state<DataViewQuery>({
     search: '',
     filters: [],
     sorts: [],
@@ -156,6 +172,47 @@
 </Story>
 
 <Story
+  name="Built-in datatype editors"
+  asChild
+  play={async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Add filter' }));
+    await userEvent.click(body.getByRole('button', { name: 'Active' }));
+    await userEvent.click(body.getByRole('button', { name: 'is' }));
+    await expect(body.getByRole('button', { name: 'True' })).toBeVisible();
+    await userEvent.keyboard('{Escape}');
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Add filter' }));
+    await userEvent.click(body.getByRole('button', { name: 'Score' }));
+    await userEvent.click(body.getByRole('button', { name: 'between' }));
+    await expect(body.getByRole('spinbutton', { name: 'Score value' })).toBeVisible();
+    await expect(body.getByRole('spinbutton', { name: 'Score end value' })).toBeVisible();
+    await userEvent.keyboard('{Escape}');
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Add filter' }));
+    await userEvent.click(body.getByRole('button', { name: 'Created' }));
+    await userEvent.click(body.getByRole('button', { name: 'between' }));
+    await expect(body.getByLabelText('Created value')).toHaveAttribute('type', 'date');
+    await expect(body.getByLabelText('Created end value')).toHaveAttribute('type', 'date');
+    await userEvent.keyboard('{Escape}');
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Add filter' }));
+    await userEvent.click(body.getByRole('button', { name: 'Name' }));
+    await userEvent.click(body.getByRole('button', { name: 'is' }));
+    await expect(body.getByRole('textbox', { name: 'Name value' })).toBeVisible();
+    await userEvent.keyboard('{Escape}');
+  }}
+>
+  <DataViewToolbar
+    properties={datatypeProperties}
+    query={datatypeQuery}
+    onquerychange={(next) => (datatypeQuery = next)}
+  />
+</Story>
+
+<Story
   name="Custom datatype editor"
   asChild
   play={async ({ canvasElement }) => {
@@ -193,6 +250,8 @@
     await userEvent.click(body.getByRole('button', { name: 'Provider' }));
     await userEvent.click(body.getByRole('button', { name: 'is any of' }));
     await expect(await body.findByRole('button', { name: 'Acme' })).toBeVisible();
+    await fireEvent.scroll(body.getByLabelText('Provider options'));
+    await expect(await body.findByRole('button', { name: 'Initech' })).toBeVisible();
 
     const optionSearch = body.getByRole('searchbox', {
       name: 'Search Provider options',

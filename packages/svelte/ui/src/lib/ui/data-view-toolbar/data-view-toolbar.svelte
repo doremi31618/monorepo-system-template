@@ -504,7 +504,9 @@
       {/if}
     {/if}
     {#if filterProperty && filterOperator}
-      <div class="flex items-center justify-end gap-2 pt-2">
+      <div
+        class="sticky bottom-0 flex items-center justify-end gap-2 border-t bg-background pt-2"
+      >
         <Button onclick={confirmFilter} disabled={!canConfirmFilter()}
           >{copy.confirmFilter}</Button
         >
