@@ -1,5 +1,8 @@
-export type DataViewPropertyType =
+export type DataViewBuiltInPropertyType =
   'text' | 'enum' | 'date' | 'number' | 'relation' | 'boolean';
+export type DataViewPropertyType =
+  | DataViewBuiltInPropertyType
+  | (string & Record<never, never>);
 
 export type DataViewFilterOperator =
   'is' | 'isNot' | 'isAnyOf' | 'before' | 'after' | 'between';
@@ -23,6 +26,17 @@ export interface DataViewOptionPage {
 export type DataViewOptionLoader = (
   request: DataViewOptionRequest,
 ) => Promise<DataViewOptionPage>;
+
+export interface DataViewFilterEditorContext {
+  property: DataViewProperty;
+  operator: DataViewFilterOperator;
+  value: string;
+  endValue: string;
+  selectedValues: string[];
+  setValue: (value: string) => void;
+  setEndValue: (value: string) => void;
+  setSelectedValues: (values: string[]) => void;
+}
 
 export interface DataViewProperty {
   key: string;

@@ -2,6 +2,8 @@ export { default as DataViewToolbar } from './data-view-toolbar.svelte';
 export {
   parseDataViewQuery,
   writeDataViewQuery,
+  type DataViewBuiltInPropertyType,
+  type DataViewFilterEditorContext,
   type DataViewFilterOperator,
   type DataViewFilterRule,
   type DataViewOption,

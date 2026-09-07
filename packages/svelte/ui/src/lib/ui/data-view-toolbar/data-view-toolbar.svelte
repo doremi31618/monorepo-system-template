@@ -5,7 +5,7 @@
   import PlusIcon from '@lucide/svelte/icons/plus';
   import SearchIcon from '@lucide/svelte/icons/search';
   import XIcon from '@lucide/svelte/icons/x';
-  import { tick } from 'svelte';
+  import { tick, type Snippet } from 'svelte';
   import { IsMobile } from '$lib/hooks/is-mobile.svelte.js';
   import { Button } from '$lib/ui/button/index.js';
   import * as Drawer from '$lib/ui/drawer/index.js';
@@ -13,6 +13,7 @@
   import * as Popover from '$lib/ui/popover/index.js';
   import type {
     DataViewFilterOperator,
+    DataViewFilterEditorContext,
     DataViewFilterRule,
     DataViewOption,
     DataViewProperty,
@@ -25,12 +26,17 @@
     query,
     searchLabel = 'Search',
     searchPlaceholder = 'Search…',
+    filterEditors = {},
     onquerychange,
   }: {
     properties: DataViewProperty[];
     query: DataViewQuery;
     searchLabel?: string;
     searchPlaceholder?: string;
+    filterEditors?: Record<
+      string,
+      Snippet<[context: DataViewFilterEditorContext]>
+    >;
     onquerychange?: (query: DataViewQuery) => void;
   } = $props();
 
@@ -322,6 +328,20 @@
     if (filterProperty?.loadOptions) void loadFilterOptions(false);
     else filterOptionVisibleCount += 10;
   }
+  function filterEditorContext(): DataViewFilterEditorContext {
+    if (!filterProperty || !filterOperator)
+      throw new Error('Filter editor context requires a property and operator');
+    return {
+      property: filterProperty,
+      operator: filterOperator,
+      value: filterValueDraft,
+      endValue: filterEndDraft,
+      selectedValues: filterOptionDraft,
+      setValue: (value) => (filterValueDraft = value),
+      setEndValue: (value) => (filterEndDraft = value),
+      setSelectedValues: (values) => (filterOptionDraft = values),
+    };
+  }
   function filterSummary(filter: DataViewFilterRule) {
     const property = propertyFor(filter.property);
     const values = Array.isArray(filter.value) ? filter.value : [filter.value];
@@ -442,6 +462,13 @@
           <p class="px-2 py-3 text-sm text-muted-foreground">No options found.</p>
         {/if}
       </div>
+    {:else if filterEditors[filterProperty.type]}
+      {@const editor = filterEditors[filterProperty.type]}
+      <p class="px-2 pt-1 text-xs text-muted-foreground">
+        {filterProperty.label}
+        {operatorLabels[filterOperator]}
+      </p>
+      {@render editor(filterEditorContext())}
     {:else}
       <p class="px-2 pt-1 text-xs text-muted-foreground">
         {filterProperty.label}

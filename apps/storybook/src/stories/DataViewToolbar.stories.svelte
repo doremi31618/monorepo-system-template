@@ -2,6 +2,7 @@
   import { defineMeta } from '@storybook/addon-svelte-csf';
   import {
     DataViewToolbar,
+    type DataViewFilterEditorContext,
     type DataViewProperty,
     type DataViewQuery,
   } from '@platform/svelte-ui/data-view-toolbar';
@@ -73,6 +74,14 @@
       },
     },
   ];
+  const customProperties: DataViewProperty[] = [
+    {
+      key: 'budget',
+      label: 'Budget',
+      type: 'currency',
+      operators: ['is', 'between'],
+    },
+  ];
 </script>
 
 <script lang="ts">
@@ -82,7 +91,22 @@
     filters: [],
     sorts: [],
   });
+  let customQuery = $state<DataViewQuery>({
+    search: '',
+    filters: [],
+    sorts: [],
+  });
 </script>
+
+{#snippet currencyEditor(context: DataViewFilterEditorContext)}
+  <input
+    type="number"
+    aria-label="Budget amount"
+    value={context.value}
+    oninput={(event) =>
+      context.setValue((event.currentTarget as HTMLInputElement).value)}
+  />
+{/snippet}
 
 <Story
   name="Search interaction"
@@ -112,6 +136,37 @@
       onquerychange={(next) => (query = next)}
     />
     <output data-testid="search-state">{query.search || 'empty'}</output>
+  </div>
+</Story>
+
+<Story
+  name="Custom datatype editor"
+  asChild
+  play={async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(canvas.getByRole('button', { name: 'Add filter' }));
+    await userEvent.click(body.getByRole('button', { name: 'Budget' }));
+    await userEvent.click(body.getByRole('button', { name: 'is' }));
+    await userEvent.type(body.getByRole('spinbutton', { name: 'Budget amount' }), '42');
+    await userEvent.click(body.getByRole('button', { name: 'Confirm filter' }));
+    await expect(canvas.getByTestId('custom-filter-state')).toHaveTextContent(
+      'budget:42',
+    );
+  }}
+>
+  <div class="flex w-full flex-col gap-4">
+    <DataViewToolbar
+      properties={customProperties}
+      query={customQuery}
+      filterEditors={{ currency: currencyEditor }}
+      onquerychange={(next) => (customQuery = next)}
+    />
+    <output data-testid="custom-filter-state">
+      {customQuery.filters
+        .map((filter) => `${filter.property}:${filter.value}`)
+        .join('|') || 'empty'}
+    </output>
   </div>
 </Story>
 
