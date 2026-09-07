@@ -90,13 +90,15 @@ option source, and a bottom Drawer on narrow screens.
 - 2026-09-07: Six browser interaction stories, six query/drawer unit tests, package checks/build,
   dependency boundaries, and Storybook production build passed. `vaul-svelte` is a runtime package
   dependency because the published Drawer source imports it.
+- 2026-09-07: Full repository `bun run check` passed with only 15 pre-existing Web warnings; full
+  `bun run test` passed (API 56, runtime 4, service UI 2, browser SDK 1, Storybook 41, Web regression).
 
 ## Handoff
 
 - **Commit/PR**: branch commits complete; PR pending
 - **Branch/Worktree**: recorded above
-- **Validation**: unit 5/5; component 6/6; Svelte check 0 errors/warnings; package and Storybook
-  builds passed; dependency checks passed
+- **Validation**: package unit 6/6; component 6/6; full repository check and test passed; Svelte UI
+  check 0 errors/warnings; package and Storybook builds passed; dependency checks passed
 - **Known issues**: None
 - **Next action**: push branch and open the monorepo PR against `dev`, then import the reviewed source
   snapshot into DBX-CS-APP-073
