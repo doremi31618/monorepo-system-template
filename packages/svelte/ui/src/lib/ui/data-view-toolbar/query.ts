@@ -1,8 +1,7 @@
 export type DataViewBuiltInPropertyType =
   'text' | 'enum' | 'date' | 'number' | 'relation' | 'boolean';
 export type DataViewPropertyType =
-  | DataViewBuiltInPropertyType
-  | (string & Record<never, never>);
+  DataViewBuiltInPropertyType | (string & Record<never, never>);
 
 export type DataViewFilterOperator =
   'is' | 'isNot' | 'isAnyOf' | 'before' | 'after' | 'between';
@@ -131,7 +130,8 @@ export function parseDataViewQuery(
         !candidate.operator ||
         !property.operators.includes(candidate.operator) ||
         !hasValue(candidate.value) ||
-        !isAllowedValue(property, candidate.value)
+        !isAllowedValue(property, candidate.value) ||
+        filters.some((filter) => filter.property === property.key)
       ) {
         continue;
       }

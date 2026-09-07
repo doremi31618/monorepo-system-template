@@ -68,8 +68,7 @@
         const nextOffset = offset + items.length;
         return {
           items,
-          nextCursor:
-            nextOffset < matching.length ? String(nextOffset) : undefined,
+          nextCursor: nextOffset < matching.length ? String(nextOffset) : undefined,
         };
       },
     },
@@ -103,8 +102,7 @@
     type="number"
     aria-label="Budget amount"
     value={context.value}
-    oninput={(event) =>
-      context.setValue((event.currentTarget as HTMLInputElement).value)}
+    oninput={(event) => context.setValue((event.currentTarget as HTMLInputElement).value)}
   />
 {/snippet}
 
@@ -144,12 +142,8 @@
   asChild
   play={async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(
-      canvas.getByRole('searchbox', { name: '搜尋資料' }),
-    ).toBeVisible();
-    await expect(
-      canvas.getByRole('button', { name: '新增篩選' }),
-    ).toBeVisible();
+    await expect(canvas.getByRole('searchbox', { name: '搜尋資料' })).toBeVisible();
+    await expect(canvas.getByRole('button', { name: '新增篩選' })).toBeVisible();
   }}
 >
   <DataViewToolbar
@@ -172,9 +166,7 @@
     await userEvent.click(body.getByRole('button', { name: 'is' }));
     await userEvent.type(body.getByRole('spinbutton', { name: 'Budget amount' }), '42');
     await userEvent.click(body.getByRole('button', { name: 'Confirm filter' }));
-    await expect(canvas.getByTestId('custom-filter-state')).toHaveTextContent(
-      'budget:42',
-    );
+    await expect(canvas.getByTestId('custom-filter-state')).toHaveTextContent('budget:42');
   }}
 >
   <div class="flex w-full flex-col gap-4">
@@ -185,9 +177,8 @@
       onquerychange={(next) => (customQuery = next)}
     />
     <output data-testid="custom-filter-state">
-      {customQuery.filters
-        .map((filter) => `${filter.property}:${filter.value}`)
-        .join('|') || 'empty'}
+      {customQuery.filters.map((filter) => `${filter.property}:${filter.value}`).join('|') ||
+        'empty'}
     </output>
   </div>
 </Story>
@@ -201,22 +192,16 @@
     await userEvent.click(canvas.getByRole('button', { name: 'Add filter' }));
     await userEvent.click(body.getByRole('button', { name: 'Provider' }));
     await userEvent.click(body.getByRole('button', { name: 'is any of' }));
-    await expect(
-      await body.findByRole('button', { name: 'Acme' }),
-    ).toBeVisible();
+    await expect(await body.findByRole('button', { name: 'Acme' })).toBeVisible();
 
     const optionSearch = body.getByRole('searchbox', {
       name: 'Search Provider options',
     });
     await userEvent.type(optionSearch, 'glob');
-    await expect(
-      await body.findByRole('button', { name: 'Globex' }),
-    ).toBeVisible();
+    await expect(await body.findByRole('button', { name: 'Globex' })).toBeVisible();
     await userEvent.click(body.getByRole('button', { name: 'Globex' }));
     await userEvent.click(body.getByRole('button', { name: 'Confirm filter' }));
-    await expect(canvas.getByTestId('async-filter-state')).toHaveTextContent(
-      'provider:globex',
-    );
+    await expect(canvas.getByTestId('async-filter-state')).toHaveTextContent('provider:globex');
   }}
 >
   <div class="flex w-full flex-col gap-4">
@@ -227,8 +212,9 @@
     />
     <output data-testid="async-filter-state">
       {asyncQuery.filters
-        .map((filter) =>
-          `${filter.property}:${Array.isArray(filter.value) ? filter.value.join(',') : filter.value}`,
+        .map(
+          (filter) =>
+            `${filter.property}:${Array.isArray(filter.value) ? filter.value.join(',') : filter.value}`,
         )
         .join('|') || 'empty'}
     </output>
@@ -286,9 +272,7 @@
     );
 
     await userEvent.keyboard('{Escape}');
-    await userEvent.click(
-      canvas.getByRole('button', { name: 'Remove Status filter' }),
-    );
+    await userEvent.click(canvas.getByRole('button', { name: 'Remove Status filter' }));
     await expect(canvas.getByTestId('filter-state')).toHaveTextContent('empty');
 
     await userEvent.click(canvas.getByRole('button', { name: 'Add filter' }));

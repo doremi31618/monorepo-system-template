@@ -53,7 +53,8 @@ DataViewQuery
 
 ### Search
 
-- 非主要操作時維持緊湊，點擊後展開並 autofocus。
+- 支援 `toggle` 與 `persistent`；Admin 預設維持緊湊，Databricks directory consumer 使用常駐
+  搜尋欄。
 - 遠端搜尋 debounce 300ms；Enter 立即提交。
 - 有文字時顯示 clear action；Escape 先清空，空白時再次 Escape 收合並將焦點還給 trigger。
 - Placeholder 或 accessible description 說明實際可搜尋欄位。
@@ -70,11 +71,10 @@ DataViewQuery
   cursor 分頁，consumer 負責資料來源。
 - Confirm 套用一條完整 rule；active rules 在 toolbar 下方以可編輯、可移除 chip 呈現，
   並提供 Add Filter 與 Clear All。
-- Clear filters 放在 editor 尾端，不放在 primary toolbar。
 
 ### Sort
 
-- Desktop 使用 Popover；窄螢幕使用有 Title 的 Sheet。
+- Desktop 使用 Popover；窄螢幕使用有 Title 與 Description 的 bottom Drawer。
 - 每條 sort 顯示欄位、語意化方向與優先順序，可向前／向後調整及移除。
 - 完整 sort rule 立即套用，trigger 顯示 active count。
 
