@@ -77,14 +77,16 @@
 </Story>
 
 <Story
-  name="Mobile filter sheet"
+  name="Mobile filter drawer"
   asChild
   parameters={{ viewport: { defaultViewport: 'mobile1' } }}
   play={async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(canvas.getByRole('button', { name: 'Filter' }));
-    await expect(body.getByRole('dialog')).toBeVisible();
+    const drawer = body.getByRole('dialog');
+    await expect(drawer).toBeVisible();
+    await expect(drawer).toHaveAttribute('data-vaul-drawer');
     await expect(body.getByRole('heading', { name: 'Filter' })).toBeVisible();
     await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(body.queryByRole('dialog')).not.toBeInTheDocument());

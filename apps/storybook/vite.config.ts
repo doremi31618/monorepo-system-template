@@ -13,6 +13,8 @@ export default defineConfig({
       '@lucide/svelte/icons/arrow-up-down',
       '@lucide/svelte/icons/list-filter',
       '@lucide/svelte/icons/plus',
+      'lz-string',
+      'vaul-svelte',
     ],
   },
   test: {

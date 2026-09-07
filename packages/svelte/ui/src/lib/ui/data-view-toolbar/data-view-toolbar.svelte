@@ -9,9 +9,9 @@
   import { tick } from 'svelte';
   import { IsMobile } from '$lib/hooks/is-mobile.svelte.js';
   import { Button } from '$lib/ui/button/index.js';
+  import * as Drawer from '$lib/ui/drawer/index.js';
   import { Input } from '$lib/ui/input/index.js';
   import * as Popover from '$lib/ui/popover/index.js';
-  import * as Sheet from '$lib/ui/sheet/index.js';
   import type {
     DataViewFilterOperator,
     DataViewFilterRule,
@@ -394,8 +394,8 @@
 <div data-slot="data-view-toolbar" class="flex w-full flex-col gap-2">
   <div class="flex min-h-9 flex-wrap items-center justify-end gap-1">
     {#if isMobile.current}
-      <Sheet.Root bind:open={filterOpen}>
-        <Sheet.Trigger
+      <Drawer.Root bind:open={filterOpen}>
+        <Drawer.Trigger
           >{#snippet child({ props })}<Button
               {...props}
               variant="ghost"
@@ -406,17 +406,17 @@
               ><ListFilterIcon data-icon="inline-start" />{query.filters.length
                 ? `Filter · ${query.filters.length}`
                 : 'Filter'}</Button
-            >{/snippet}</Sheet.Trigger
+            >{/snippet}</Drawer.Trigger
         >
-        <Sheet.Content side="bottom" class="max-h-[85vh] overflow-y-auto">
-          <Sheet.Header
-            ><Sheet.Title>Filter</Sheet.Title><Sheet.Description
-              >Show items that match all selected rules.</Sheet.Description
-            ></Sheet.Header
+        <Drawer.Content class="max-h-[85dvh]">
+          <Drawer.Header
+            ><Drawer.Title>Filter</Drawer.Title><Drawer.Description
+              >Show items that match all selected rules.</Drawer.Description
+            ></Drawer.Header
           >
-          {@render filterEditor()}
-        </Sheet.Content>
-      </Sheet.Root>
+          <div class="overflow-y-auto px-4 pb-4">{@render filterEditor()}</div>
+        </Drawer.Content>
+      </Drawer.Root>
     {:else}
       <Popover.Root bind:open={filterOpen}>
         <Popover.Trigger
@@ -437,8 +437,8 @@
     {/if}
 
     {#if isMobile.current}
-      <Sheet.Root bind:open={sortOpen}>
-        <Sheet.Trigger
+      <Drawer.Root bind:open={sortOpen}>
+        <Drawer.Trigger
           >{#snippet child({ props })}<Button
               {...props}
               variant="ghost"
@@ -449,17 +449,17 @@
               ><ArrowUpDownIcon data-icon="inline-start" />{query.sorts.length
                 ? `Sort · ${query.sorts.length}`
                 : 'Sort'}</Button
-            >{/snippet}</Sheet.Trigger
+            >{/snippet}</Drawer.Trigger
         >
-        <Sheet.Content side="bottom" class="max-h-[85vh] overflow-y-auto">
-          <Sheet.Header
-            ><Sheet.Title>Sort</Sheet.Title><Sheet.Description
-              >Earlier rules have higher priority.</Sheet.Description
-            ></Sheet.Header
+        <Drawer.Content class="max-h-[85dvh]">
+          <Drawer.Header
+            ><Drawer.Title>Sort</Drawer.Title><Drawer.Description
+              >Earlier rules have higher priority.</Drawer.Description
+            ></Drawer.Header
           >
-          {@render sortEditor()}
-        </Sheet.Content>
-      </Sheet.Root>
+          <div class="overflow-y-auto px-4 pb-4">{@render sortEditor()}</div>
+        </Drawer.Content>
+      </Drawer.Root>
     {:else}
       <Popover.Root bind:open={sortOpen}>
         <Popover.Trigger
