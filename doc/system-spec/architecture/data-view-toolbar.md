@@ -1,7 +1,8 @@
 # 共用 Data View Toolbar 規格
 
-> **Work Item**: CAP-001
-> **Project Task**: `doc/project-tasks/CAP-001-package-architecture.md`
+> **Work Items**: CAP-001, SUI-001
+> **Project Tasks**: `doc/project-tasks/CAP-001-package-architecture.md`,
+> `doc/project-tasks/SUI-001-notion-filter-builder.md`
 > **Status**: Approved for implementation
 > **Approved at**: 2026-09-02
 
@@ -40,7 +41,10 @@ DataViewQuery
 - Search、Filter、Sort 保持不同語意，但共用同一份 committed query state。
 - Filter 第一版只支援多條 `AND`；不支援巢狀 group 或 `OR`。
 - Enum／relation 欄位可提供 `is`、`is not` 與 `is any of`；日期提供 before／after／between；完整 operator 由 property definition 限制。
-- 未選完 property、operator 或 value 的 draft 不得進入 committed query。
+- 一個 property 最多有一條 rule；再次選取既有 property 時進入編輯。不同 property 的
+  rules 使用 AND，同一個多選 rule 的 values 使用 OR。
+- 未選完 property、operator 或 value 的 draft 不得進入 committed query；SUI-001 要求
+  使用者按下 Confirm 後才提交完整 rule，直接關閉 overlay 必須捨棄草稿。
 - 多欄位排序依畫面順序決定優先級，後端另加穩定 ID tie-breaker。
 - URL 是可分享與可還原的 committed state；無效欄位、operator、value 或 direction 必須安全忽略。
 - Search、Filter、Sort 變更時回到第一頁，後端在 pagination 前完成所有限制與排序。
@@ -56,9 +60,16 @@ DataViewQuery
 
 ### Filter
 
-- Desktop 使用 Popover；窄螢幕使用有 Title 的 Sheet。
+- Desktop 使用 Popover；窄螢幕使用有 Title、Description 與固定 action footer 的 bottom
+  Drawer，並支援下滑關閉。
 - Rule editor 依序選 Property、相容的 Operator、型別適合的 Value。
-- 完整 rule 立即套用；active rules 在 toolbar 下方以可移除 chip 呈現。
+- text、enum、relation、number、date、boolean 使用各自適合的 value editor。新的 datatype
+  可由明確的 custom editor contract 擴充，不得把 app API 放進 UI package。
+- enum／relation 可使用靜態 options，或由 consumer 注入
+  `loadOptions({ search, cursor, signal })`；UI 負責 loading、error、empty、取消舊請求與
+  cursor 分頁，consumer 負責資料來源。
+- Confirm 套用一條完整 rule；active rules 在 toolbar 下方以可編輯、可移除 chip 呈現，
+  並提供 Add Filter 與 Clear All。
 - Clear filters 放在 editor 尾端，不放在 primary toolbar。
 
 ### Sort
@@ -72,7 +83,7 @@ DataViewQuery
 - 所有 trigger 使用 button 語意，公開 `aria-expanded`／`aria-pressed` 與 accessible name。
 - Overlay 關閉後恢復 trigger focus；list／select 支援標準鍵盤操作。
 - Query 更新以 `aria-live="polite"` 提示結果狀態，不以顏色作為唯一狀態訊號。
-- 小螢幕保留同一 query model；Search 保持一個動作可達，Filter／Sort editor 改用 Sheet。
+- 小螢幕保留同一 query model；Search 保持一個動作可達，Filter editor 改用 bottom Drawer。
 
 ## 5. Admin 欄位矩陣
 
@@ -104,7 +115,10 @@ DataViewQuery
 - URL 可重現 Search、Filter、Sort 與 page；重新整理與返回 collection 不遺失 committed state。
 - API 在 pagination 前套用所有條件，multi-sort 順序正確且結果穩定。
 - Incomplete draft 不觸發查詢；active rule／sort count 與 chip 可見且可單獨移除。
+- Filter rule 只有 Confirm 才提交；關閉未完成或未確認的 editor 不改變 committed query。
+- 六種 built-in datatype editor 與 async option provider 的 loading／error／pagination contract
+  均有可執行測試。
 - Search 的 debounce、Enter、Escape、clear 與 focus 行為符合本規格。
-- Desktop Popover、mobile Sheet、鍵盤流程、focus restoration 與 ARIA state 可驗證。
+- Desktop Popover、mobile bottom Drawer、鍵盤流程、focus restoration 與 ARIA state 可驗證。
 - Loading、empty、no-results、invalid-query 與 error state 不破壞 toolbar state。
 - Package check/build、Storybook component tests/build、Web check/build、API unit/E2E 與既有 regression tests 通過。
