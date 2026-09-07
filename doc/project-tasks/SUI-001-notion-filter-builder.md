@@ -7,7 +7,7 @@
 > **Branch**: `feat/SUI-001-notion-filter-builder`
 > **Base**: `origin/dev` (`55e4ad6`)
 > **Worktree**: `/Users/ericzhan/Documents/SIRAYA-project/monorepo-system-template-worktrees/SUI-001-notion-filter-builder`
-> **PR**: pending
+> **PR**: https://github.com/doremi31618/monorepo-system-template/pull/21
 > **Related Spec**: `doc/system-spec/architecture/data-view-toolbar.md`
 > **Release**: pending
 > **Last updated**: 2026-09-07
@@ -95,7 +95,7 @@ option source, and a bottom Drawer on narrow screens.
 
 ## Handoff
 
-- **Commit/PR**: branch commits complete; PR pending
+- **Commit/PR**: `d096bb8`; https://github.com/doremi31618/monorepo-system-template/pull/21
 - **Branch/Worktree**: recorded above
 - **Validation**: package unit 6/6; component 6/6; full repository check and test passed; Svelte UI
   check 0 errors/warnings; package and Storybook builds passed; dependency checks passed
