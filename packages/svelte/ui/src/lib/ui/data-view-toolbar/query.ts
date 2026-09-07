@@ -9,12 +9,28 @@ export interface DataViewOption {
   label: string;
 }
 
+export interface DataViewOptionRequest {
+  search: string;
+  cursor?: string;
+  signal: AbortSignal;
+}
+
+export interface DataViewOptionPage {
+  items: DataViewOption[];
+  nextCursor?: string;
+}
+
+export type DataViewOptionLoader = (
+  request: DataViewOptionRequest,
+) => Promise<DataViewOptionPage>;
+
 export interface DataViewProperty {
   key: string;
   label: string;
   type: DataViewPropertyType;
   operators: DataViewFilterOperator[];
   options?: DataViewOption[];
+  loadOptions?: DataViewOptionLoader;
   sortable?: boolean;
 }
 

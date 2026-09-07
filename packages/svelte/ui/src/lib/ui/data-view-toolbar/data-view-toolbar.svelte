@@ -14,6 +14,7 @@
   import type {
     DataViewFilterOperator,
     DataViewFilterRule,
+    DataViewOption,
     DataViewProperty,
     DataViewQuery,
     DataViewSortRule,
@@ -55,6 +56,14 @@
   let filterValueDraft = $state('');
   let filterEndDraft = $state('');
   let filterOptionDraft = $state<string[]>([]);
+  let filterOptionSearch = $state('');
+  let filterOptions = $state<DataViewOption[]>([]);
+  let filterOptionNextCursor = $state<string | undefined>();
+  let filterOptionLoading = $state(false);
+  let filterOptionError = $state('');
+  let filterOptionVisibleCount = $state(10);
+  let filterOptionController: AbortController | undefined;
+  const optionLabelCache = new Map<string, string>();
   let sortOpen = $state(false);
   let sortStep = $state<'property' | 'direction' | 'list'>('property');
   let sortProperty = $state<DataViewProperty | undefined>();
@@ -126,11 +135,18 @@
   }
 
   function resetFilterEditor() {
+    filterOptionController?.abort();
     filterProperty = undefined;
     filterOperator = undefined;
     filterValueDraft = '';
     filterEndDraft = '';
     filterOptionDraft = [];
+    filterOptionSearch = '';
+    filterOptions = [];
+    filterOptionNextCursor = undefined;
+    filterOptionLoading = false;
+    filterOptionError = '';
+    filterOptionVisibleCount = 10;
   }
   function selectFilterProperty(property: DataViewProperty) {
     resetFilterEditor();
@@ -141,15 +157,17 @@
     const existing = query.filters.find(
       (filter) => filter.property === filterProperty?.key,
     );
-    if (!existing || existing.operator !== operator) return;
-    const values = Array.isArray(existing.value)
-      ? existing.value
-      : [existing.value];
-    if (filterProperty?.options?.length) filterOptionDraft = values;
-    else {
-      filterValueDraft = values[0] ?? '';
-      filterEndDraft = values[1] ?? '';
+    if (existing && existing.operator === operator) {
+      const values = Array.isArray(existing.value)
+        ? existing.value
+        : [existing.value];
+      if (isChoiceProperty(filterProperty)) filterOptionDraft = values;
+      else {
+        filterValueDraft = values[0] ?? '';
+        filterEndDraft = values[1] ?? '';
+      }
     }
+    if (isChoiceProperty(filterProperty)) void loadFilterOptions(true);
   }
   function commitFilter(value: string | string[]) {
     if (!filterProperty || !filterOperator) return;
@@ -177,13 +195,13 @@
   }
   function canConfirmFilter() {
     if (!filterProperty || !filterOperator) return false;
-    if (filterProperty.options?.length) return filterOptionDraft.length > 0;
+    if (isChoiceProperty(filterProperty)) return filterOptionDraft.length > 0;
     if (!filterValueDraft.trim()) return false;
     return filterOperator !== 'between' || Boolean(filterEndDraft.trim());
   }
   function confirmFilter() {
     if (!canConfirmFilter()) return;
-    const value = filterProperty?.options?.length
+    const value = isChoiceProperty(filterProperty)
       ? filterOperator === 'isAnyOf'
         ? filterOptionDraft
         : filterOptionDraft[0]
@@ -202,12 +220,13 @@
     const values = Array.isArray(filter.value)
       ? filter.value
       : [filter.value];
-    if (filterProperty.options?.length) filterOptionDraft = values;
+    if (isChoiceProperty(filterProperty)) filterOptionDraft = values;
     else {
       filterValueDraft = values[0] ?? '';
       filterEndDraft = values[1] ?? '';
     }
     filterOpen = true;
+    if (isChoiceProperty(filterProperty)) void loadFilterOptions(true);
   }
   function removeFilter(property: string) {
     emit({
@@ -224,8 +243,84 @@
   function optionLabel(property: DataViewProperty | undefined, value: string) {
     return (
       property?.options?.find((option) => option.value === value)?.label ??
+      optionLabelCache.get(`${property?.key}:${value}`) ??
       value
     );
+  }
+  function isChoiceProperty(property: DataViewProperty | undefined) {
+    return Boolean(
+      property &&
+        (property.type === 'enum' ||
+          property.type === 'relation' ||
+          property.type === 'boolean' ||
+          property.options?.length ||
+          property.loadOptions),
+    );
+  }
+  function staticOptions(property: DataViewProperty | undefined) {
+    if (!property) return [];
+    if (property.options?.length) return property.options;
+    if (property.type === 'boolean')
+      return [
+        { value: 'true', label: 'True' },
+        { value: 'false', label: 'False' },
+      ];
+    return [];
+  }
+  function visibleFilterOptions() {
+    if (filterProperty?.loadOptions) return filterOptions;
+    const search = filterOptionSearch.trim().toLowerCase();
+    return staticOptions(filterProperty)
+      .filter((option) => option.label.toLowerCase().includes(search))
+      .slice(0, filterOptionVisibleCount);
+  }
+  async function loadFilterOptions(reset: boolean) {
+    const property = filterProperty;
+    if (!property?.loadOptions) {
+      filterOptions = staticOptions(property);
+      return;
+    }
+    if (!reset && (filterOptionLoading || !filterOptionNextCursor)) return;
+
+    if (reset) {
+      filterOptionController?.abort();
+      filterOptions = [];
+      filterOptionNextCursor = undefined;
+    }
+    const controller = new AbortController();
+    filterOptionController = controller;
+    filterOptionLoading = true;
+    filterOptionError = '';
+    try {
+      const page = await property.loadOptions({
+        search: filterOptionSearch.trim(),
+        cursor: reset ? undefined : filterOptionNextCursor,
+        signal: controller.signal,
+      });
+      if (controller.signal.aborted) return;
+      for (const option of page.items) {
+        optionLabelCache.set(`${property.key}:${option.value}`, option.label);
+      }
+      filterOptions = reset ? page.items : [...filterOptions, ...page.items];
+      filterOptionNextCursor = page.nextCursor;
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      filterOptionError =
+        error instanceof Error ? error.message : 'Unable to load options';
+    } finally {
+      if (!controller.signal.aborted) filterOptionLoading = false;
+    }
+  }
+  function handleFilterOptionSearch() {
+    filterOptionVisibleCount = 10;
+    if (filterProperty?.loadOptions) void loadFilterOptions(true);
+  }
+  function handleFilterOptionScroll(event: Event) {
+    const target = event.currentTarget as HTMLElement;
+    if (target.scrollHeight - target.scrollTop - target.clientHeight > 24)
+      return;
+    if (filterProperty?.loadOptions) void loadFilterOptions(false);
+    else filterOptionVisibleCount += 10;
   }
   function filterSummary(filter: DataViewFilterRule) {
     const property = propertyFor(filter.property);
@@ -302,22 +397,51 @@
           >{operatorLabels[operator]}</Button
         >
       {/each}
-    {:else if filterProperty.options?.length}
+    {:else if isChoiceProperty(filterProperty)}
       <p class="px-2 pt-1 text-xs text-muted-foreground">
         {filterProperty.label}
         {operatorLabels[filterOperator]}
       </p>
-      {#each filterProperty.options as option (option.value)}
-        <Button
-          variant={filterOptionDraft.includes(option.value)
-            ? 'secondary'
-            : 'ghost'}
-          class="justify-start"
-          aria-pressed={filterOptionDraft.includes(option.value)}
-          onclick={() => toggleFilterOption(option.value)}
-          >{option.label}</Button
-        >
-      {/each}
+      {#if filterProperty.type !== 'boolean'}
+        <Input
+          type="search"
+          aria-label={`Search ${filterProperty.label} options`}
+          placeholder="Search options…"
+          bind:value={filterOptionSearch}
+          oninput={handleFilterOptionSearch}
+        />
+      {/if}
+      <div
+        class="grid max-h-64 gap-1 overflow-y-auto"
+        aria-label={`${filterProperty.label} options`}
+        onscroll={handleFilterOptionScroll}
+      >
+        {#each visibleFilterOptions() as option (option.value)}
+          <Button
+            variant={filterOptionDraft.includes(option.value)
+              ? 'secondary'
+              : 'ghost'}
+            class="justify-start"
+            aria-pressed={filterOptionDraft.includes(option.value)}
+            onclick={() => toggleFilterOption(option.value)}
+            >{option.label}</Button
+          >
+        {/each}
+        {#if filterOptionLoading}
+          <p class="px-2 py-3 text-sm text-muted-foreground" role="status">
+            Loading options…
+          </p>
+        {:else if filterOptionError}
+          <div class="grid gap-2 px-2 py-3" role="alert">
+            <p class="text-sm text-destructive">{filterOptionError}</p>
+            <Button variant="outline" size="sm" onclick={() => loadFilterOptions(true)}
+              >Retry</Button
+            >
+          </div>
+        {:else if !visibleFilterOptions().length}
+          <p class="px-2 py-3 text-sm text-muted-foreground">No options found.</p>
+        {/if}
+      </div>
     {:else}
       <p class="px-2 pt-1 text-xs text-muted-foreground">
         {filterProperty.label}

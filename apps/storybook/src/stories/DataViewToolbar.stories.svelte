@@ -39,10 +39,49 @@
       sortable: true,
     },
   ];
+
+  const relationOptions = [
+    { value: 'acme', label: 'Acme' },
+    { value: 'globex', label: 'Globex' },
+    { value: 'initech', label: 'Initech' },
+  ];
+  const asyncProperties: DataViewProperty[] = [
+    {
+      key: 'provider',
+      label: 'Provider',
+      type: 'relation',
+      operators: ['is', 'isAnyOf'],
+      loadOptions: async ({ search, cursor, signal }) => {
+        await new Promise((resolve, reject) => {
+          const timer = setTimeout(resolve, 10);
+          signal.addEventListener('abort', () => {
+            clearTimeout(timer);
+            reject(new DOMException('Aborted', 'AbortError'));
+          });
+        });
+        const matching = relationOptions.filter((option) =>
+          option.label.toLowerCase().includes(search.toLowerCase()),
+        );
+        const offset = cursor ? Number(cursor) : 0;
+        const items = matching.slice(offset, offset + 2);
+        const nextOffset = offset + items.length;
+        return {
+          items,
+          nextCursor:
+            nextOffset < matching.length ? String(nextOffset) : undefined,
+        };
+      },
+    },
+  ];
 </script>
 
 <script lang="ts">
   let query = $state<DataViewQuery>({ search: '', filters: [], sorts: [] });
+  let asyncQuery = $state<DataViewQuery>({
+    search: '',
+    filters: [],
+    sorts: [],
+  });
 </script>
 
 <Story
@@ -73,6 +112,49 @@
       onquerychange={(next) => (query = next)}
     />
     <output data-testid="search-state">{query.search || 'empty'}</output>
+  </div>
+</Story>
+
+<Story
+  name="Async relation options"
+  asChild
+  play={async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(canvas.getByRole('button', { name: 'Add filter' }));
+    await userEvent.click(body.getByRole('button', { name: 'Provider' }));
+    await userEvent.click(body.getByRole('button', { name: 'is any of' }));
+    await expect(
+      await body.findByRole('button', { name: 'Acme' }),
+    ).toBeVisible();
+
+    const optionSearch = body.getByRole('searchbox', {
+      name: 'Search Provider options',
+    });
+    await userEvent.type(optionSearch, 'glob');
+    await expect(
+      await body.findByRole('button', { name: 'Globex' }),
+    ).toBeVisible();
+    await userEvent.click(body.getByRole('button', { name: 'Globex' }));
+    await userEvent.click(body.getByRole('button', { name: 'Confirm filter' }));
+    await expect(canvas.getByTestId('async-filter-state')).toHaveTextContent(
+      'provider:globex',
+    );
+  }}
+>
+  <div class="flex w-full flex-col gap-4">
+    <DataViewToolbar
+      properties={asyncProperties}
+      query={asyncQuery}
+      onquerychange={(next) => (asyncQuery = next)}
+    />
+    <output data-testid="async-filter-state">
+      {asyncQuery.filters
+        .map((filter) =>
+          `${filter.property}:${Array.isArray(filter.value) ? filter.value.join(',') : filter.value}`,
+        )
+        .join('|') || 'empty'}
+    </output>
   </div>
 </Story>
 
