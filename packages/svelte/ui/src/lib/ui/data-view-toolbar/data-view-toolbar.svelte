@@ -2,7 +2,6 @@
   import ArrowUpDownIcon from '@lucide/svelte/icons/arrow-up-down';
   import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
   import ChevronUpIcon from '@lucide/svelte/icons/chevron-up';
-  import ListFilterIcon from '@lucide/svelte/icons/list-filter';
   import PlusIcon from '@lucide/svelte/icons/plus';
   import SearchIcon from '@lucide/svelte/icons/search';
   import XIcon from '@lucide/svelte/icons/x';
@@ -415,12 +414,8 @@
               {...props}
               variant="ghost"
               size="sm"
-              aria-label={query.filters.length
-                ? `Filter · ${query.filters.length}`
-                : 'Filter'}
-              ><ListFilterIcon data-icon="inline-start" />{query.filters.length
-                ? `Filter · ${query.filters.length}`
-                : 'Filter'}</Button
+              aria-label="Add filter"
+              ><PlusIcon data-icon="inline-start" />Add filter</Button
             >{/snippet}</Drawer.Trigger
         >
         <Drawer.Content class="max-h-[85dvh]">
@@ -439,12 +434,8 @@
               {...props}
               variant="ghost"
               size="sm"
-              aria-label={query.filters.length
-                ? `Filter · ${query.filters.length}`
-                : 'Filter'}
-              ><ListFilterIcon data-icon="inline-start" />{query.filters.length
-                ? `Filter · ${query.filters.length}`
-                : 'Filter'}</Button
+              aria-label="Add filter"
+              ><PlusIcon data-icon="inline-start" />Add filter</Button
             >{/snippet}</Popover.Trigger
         >
         <Popover.Content align="end">{@render filterEditor()}</Popover.Content>
@@ -528,10 +519,13 @@
   {#if query.filters.length}
     <div class="flex flex-wrap items-center gap-1" aria-label="Active filters">
       {#each query.filters as filter (filter.property)}
-        <div
-          class="inline-flex h-8 items-center rounded-md bg-secondary pl-2 text-xs text-secondary-foreground"
-        >
-          <span>{filterSummary(filter)}</span>
+        <div class="inline-flex items-center gap-1">
+          <Button
+            variant="secondary"
+            size="sm"
+            aria-label={`Edit filter: ${filterSummary(filter)}`}
+            >{filterSummary(filter)}</Button
+          >
           <Button
             variant="ghost"
             size="icon-sm"

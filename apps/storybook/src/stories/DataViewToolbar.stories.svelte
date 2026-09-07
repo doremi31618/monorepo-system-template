@@ -83,7 +83,7 @@
   play={async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(canvas.getByRole('button', { name: 'Filter' }));
+    await userEvent.click(canvas.getByRole('button', { name: 'Add filter' }));
     const drawer = body.getByRole('dialog');
     await expect(drawer).toBeVisible();
     await expect(drawer).toHaveAttribute('data-vaul-drawer');
@@ -108,14 +108,17 @@
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
 
-    await userEvent.click(canvas.getByRole('button', { name: 'Filter' }));
+    await userEvent.click(canvas.getByRole('button', { name: 'Add filter' }));
     await userEvent.click(body.getByRole('button', { name: 'Status' }));
     await userEvent.click(body.getByRole('button', { name: 'is any of' }));
     await userEvent.click(body.getByRole('button', { name: 'Draft' }));
     await expect(canvas.getByTestId('filter-state')).toHaveTextContent('empty');
     await userEvent.click(body.getByRole('button', { name: 'Confirm filter' }));
     await expect(canvas.getByText('Status is any of Draft')).toBeVisible();
-    await expect(canvas.getByRole('button', { name: 'Filter · 1' })).toBeVisible();
+    await expect(canvas.getByRole('button', { name: 'Add filter' })).toBeVisible();
+    await expect(
+      canvas.getByRole('button', { name: 'Edit filter: Status is any of Draft' }),
+    ).toBeVisible();
 
     await userEvent.keyboard('{Escape}');
     await userEvent.click(canvas.getByRole('button', { name: 'Sort' }));
