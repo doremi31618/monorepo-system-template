@@ -79,7 +79,7 @@
     if (debounceTimer) clearTimeout(debounceTimer);
   });
   $effect(() => {
-    if (filterOpen) resetFilterEditor();
+    if (!filterOpen) resetFilterEditor();
   });
   $effect(() => {
     if (sortOpen) resetSortEditor();
@@ -192,6 +192,22 @@
         : filterValueDraft.trim();
     commitFilter(value);
     filterOpen = false;
+  }
+  function editFilter(filter: DataViewFilterRule) {
+    resetFilterEditor();
+    filterProperty = propertyFor(filter.property);
+    if (!filterProperty) return;
+
+    filterOperator = filter.operator;
+    const values = Array.isArray(filter.value)
+      ? filter.value
+      : [filter.value];
+    if (filterProperty.options?.length) filterOptionDraft = values;
+    else {
+      filterValueDraft = values[0] ?? '';
+      filterEndDraft = values[1] ?? '';
+    }
+    filterOpen = true;
   }
   function removeFilter(property: string) {
     emit({
@@ -524,6 +540,7 @@
             variant="secondary"
             size="sm"
             aria-label={`Edit filter: ${filterSummary(filter)}`}
+            onclick={() => editFilter(filter)}
             >{filterSummary(filter)}</Button
           >
           <Button

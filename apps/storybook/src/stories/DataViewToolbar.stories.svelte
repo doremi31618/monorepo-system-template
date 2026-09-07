@@ -116,9 +116,15 @@
     await userEvent.click(body.getByRole('button', { name: 'Confirm filter' }));
     await expect(canvas.getByText('Status is any of Draft')).toBeVisible();
     await expect(canvas.getByRole('button', { name: 'Add filter' })).toBeVisible();
-    await expect(
-      canvas.getByRole('button', { name: 'Edit filter: Status is any of Draft' }),
-    ).toBeVisible();
+    const appliedFilter = canvas.getByRole('button', {
+      name: 'Edit filter: Status is any of Draft',
+    });
+    await expect(appliedFilter).toBeVisible();
+    await userEvent.click(appliedFilter);
+    await expect(body.getByRole('button', { name: 'Draft' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
 
     await userEvent.keyboard('{Escape}');
     await userEvent.click(canvas.getByRole('button', { name: 'Sort' }));
