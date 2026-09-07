@@ -127,6 +127,19 @@
     );
 
     await userEvent.keyboard('{Escape}');
+    await userEvent.click(
+      canvas.getByRole('button', { name: 'Remove Status filter' }),
+    );
+    await expect(canvas.getByTestId('filter-state')).toHaveTextContent('empty');
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Add filter' }));
+    await userEvent.click(body.getByRole('button', { name: 'Status' }));
+    await userEvent.click(body.getByRole('button', { name: 'is any of' }));
+    await userEvent.click(body.getByRole('button', { name: 'Published' }));
+    await userEvent.click(body.getByRole('button', { name: 'Confirm filter' }));
+    await userEvent.click(canvas.getByRole('button', { name: 'Clear all filters' }));
+    await expect(canvas.getByTestId('filter-state')).toHaveTextContent('empty');
+
     await userEvent.click(canvas.getByRole('button', { name: 'Sort' }));
     await userEvent.click(body.getByRole('button', { name: 'Updated' }));
     await userEvent.click(body.getByRole('button', { name: 'Newest first' }));

@@ -215,6 +215,9 @@
       filters: query.filters.filter((filter) => filter.property !== property),
     });
   }
+  function clearFilters() {
+    emit({ ...query, filters: [] });
+  }
   function propertyFor(key: string) {
     return properties.find((property) => property.key === key);
   }
@@ -551,6 +554,12 @@
           >
         </div>
       {/each}
+      <Button
+        variant="ghost"
+        size="sm"
+        aria-label="Clear all filters"
+        onclick={clearFilters}>Clear all</Button
+      >
     </div>
   {/if}
 </div>
