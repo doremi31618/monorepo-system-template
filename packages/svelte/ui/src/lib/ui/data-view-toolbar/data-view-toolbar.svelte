@@ -2,19 +2,24 @@
   import ArrowUpDownIcon from '@lucide/svelte/icons/arrow-up-down';
   import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
   import ChevronUpIcon from '@lucide/svelte/icons/chevron-up';
-  import ListFilterIcon from '@lucide/svelte/icons/list-filter';
   import PlusIcon from '@lucide/svelte/icons/plus';
   import SearchIcon from '@lucide/svelte/icons/search';
   import XIcon from '@lucide/svelte/icons/x';
-  import { tick } from 'svelte';
+  import { tick, type Snippet } from 'svelte';
   import { IsMobile } from '$lib/hooks/is-mobile.svelte.js';
   import { Button } from '$lib/ui/button/index.js';
+  import * as Drawer from '$lib/ui/drawer/index.js';
   import { Input } from '$lib/ui/input/index.js';
   import * as Popover from '$lib/ui/popover/index.js';
-  import * as Sheet from '$lib/ui/sheet/index.js';
+  import {
+    defaultDataViewToolbarLabels,
+    type DataViewToolbarLabelOverrides,
+  } from './labels.js';
   import type {
     DataViewFilterOperator,
+    DataViewFilterEditorContext,
     DataViewFilterRule,
+    DataViewOption,
     DataViewProperty,
     DataViewQuery,
     DataViewSortRule,
@@ -23,26 +28,43 @@
   let {
     properties,
     query,
-    searchLabel = 'Search',
-    searchPlaceholder = 'Search…',
+    searchLabel,
+    searchPlaceholder,
+    searchMode = 'toggle',
+    ariaLabel = 'Data search and filters',
+    labels = {},
+    filterEditors = {},
+    actions,
     onquerychange,
   }: {
     properties: DataViewProperty[];
     query: DataViewQuery;
     searchLabel?: string;
     searchPlaceholder?: string;
+    searchMode?: 'toggle' | 'persistent';
+    ariaLabel?: string;
+    labels?: DataViewToolbarLabelOverrides;
+    filterEditors?: Record<
+      string,
+      Snippet<[context: DataViewFilterEditorContext]>
+    >;
+    actions?: Snippet;
     onquerychange?: (query: DataViewQuery) => void;
   } = $props();
 
   const isMobile = new IsMobile();
-  const operatorLabels: Record<DataViewFilterOperator, string> = {
-    is: 'is',
-    isNot: 'is not',
-    isAnyOf: 'is any of',
-    before: 'before',
-    after: 'after',
-    between: 'between',
-  };
+  const copy = $derived({
+    ...defaultDataViewToolbarLabels,
+    ...labels,
+    operators: {
+      ...defaultDataViewToolbarLabels.operators,
+      ...labels.operators,
+    },
+  });
+  const effectiveSearchLabel = $derived(searchLabel ?? copy.search);
+  const effectiveSearchPlaceholder = $derived(
+    searchPlaceholder ?? copy.searchPlaceholder,
+  );
 
   let searchExpanded = $state(false);
   let searchDraft = $state('');
@@ -55,6 +77,15 @@
   let filterOperator = $state<DataViewFilterOperator | undefined>();
   let filterValueDraft = $state('');
   let filterEndDraft = $state('');
+  let filterOptionDraft = $state<string[]>([]);
+  let filterOptionSearch = $state('');
+  let filterOptions = $state<DataViewOption[]>([]);
+  let filterOptionNextCursor = $state<string | undefined>();
+  let filterOptionLoading = $state(false);
+  let filterOptionError = $state('');
+  let filterOptionVisibleCount = $state(10);
+  let filterOptionController: AbortController | undefined;
+  const optionLabelCache = new Map<string, string>();
   let sortOpen = $state(false);
   let sortStep = $state<'property' | 'direction' | 'list'>('property');
   let sortProperty = $state<DataViewProperty | undefined>();
@@ -69,6 +100,9 @@
         !query.sorts.some((sort) => sort.property === property.key),
     ),
   );
+  const hasSortableProperties = $derived(
+    properties.some((property) => property.sortable),
+  );
 
   $effect(() => {
     if (searchDirty) return;
@@ -79,7 +113,7 @@
     if (debounceTimer) clearTimeout(debounceTimer);
   });
   $effect(() => {
-    if (filterOpen) resetFilterEditor();
+    if (!filterOpen) resetFilterEditor();
   });
   $effect(() => {
     if (sortOpen) resetSortEditor();
@@ -122,28 +156,43 @@
     if (event.key !== 'Escape') return;
     event.preventDefault();
     if (searchDraft) clearSearch();
-    else void closeSearch();
+    else if (searchMode !== 'persistent') void closeSearch();
   }
 
   function resetFilterEditor() {
+    filterOptionController?.abort();
     filterProperty = undefined;
     filterOperator = undefined;
     filterValueDraft = '';
     filterEndDraft = '';
+    filterOptionDraft = [];
+    filterOptionSearch = '';
+    filterOptions = [];
+    filterOptionNextCursor = undefined;
+    filterOptionLoading = false;
+    filterOptionError = '';
+    filterOptionVisibleCount = 10;
   }
   function selectFilterProperty(property: DataViewProperty) {
     resetFilterEditor();
     filterProperty = property;
   }
-  function selectedFilterValues(): string[] {
-    if (!filterProperty || !filterOperator) return [];
+  function selectFilterOperator(operator: DataViewFilterOperator) {
+    filterOperator = operator;
     const existing = query.filters.find(
-      (filter) =>
-        filter.property === filterProperty?.key &&
-        filter.operator === filterOperator,
+      (filter) => filter.property === filterProperty?.key,
     );
-    if (!existing) return [];
-    return Array.isArray(existing.value) ? existing.value : [existing.value];
+    if (existing && existing.operator === operator) {
+      const values = Array.isArray(existing.value)
+        ? existing.value
+        : [existing.value];
+      if (isChoiceProperty(filterProperty)) filterOptionDraft = values;
+      else {
+        filterValueDraft = values[0] ?? '';
+        filterEndDraft = values[1] ?? '';
+      }
+    }
+    if (isChoiceProperty(filterProperty)) void loadFilterOptions(true);
   }
   function commitFilter(value: string | string[]) {
     if (!filterProperty || !filterOperator) return;
@@ -162,23 +211,47 @@
   }
   function toggleFilterOption(value: string) {
     if (filterOperator !== 'isAnyOf') {
-      commitFilter(value);
+      filterOptionDraft = [value];
       return;
     }
-    const selected = selectedFilterValues();
-    const next = selected.includes(value)
-      ? selected.filter((item) => item !== value)
-      : [...selected, value];
-    if (!next.length && filterProperty) removeFilter(filterProperty.key);
-    else commitFilter(next);
+    filterOptionDraft = filterOptionDraft.includes(value)
+      ? filterOptionDraft.filter((item) => item !== value)
+      : [...filterOptionDraft, value];
   }
-  function applyDraftFilter() {
-    if (!filterValueDraft.trim()) return;
-    commitFilter(
-      filterOperator === 'between'
-        ? [filterValueDraft.trim(), filterEndDraft.trim()].filter(Boolean)
-        : filterValueDraft.trim(),
-    );
+  function canConfirmFilter() {
+    if (!filterProperty || !filterOperator) return false;
+    if (isChoiceProperty(filterProperty)) return filterOptionDraft.length > 0;
+    if (!filterValueDraft.trim()) return false;
+    return filterOperator !== 'between' || Boolean(filterEndDraft.trim());
+  }
+  function confirmFilter() {
+    if (!canConfirmFilter()) return;
+    const value = isChoiceProperty(filterProperty)
+      ? filterOperator === 'isAnyOf'
+        ? filterOptionDraft
+        : filterOptionDraft[0]
+      : filterOperator === 'between'
+        ? [filterValueDraft.trim(), filterEndDraft.trim()]
+        : filterValueDraft.trim();
+    commitFilter(value);
+    filterOpen = false;
+  }
+  function editFilter(filter: DataViewFilterRule) {
+    resetFilterEditor();
+    filterProperty = propertyFor(filter.property);
+    if (!filterProperty) return;
+
+    filterOperator = filter.operator;
+    const values = Array.isArray(filter.value)
+      ? filter.value
+      : [filter.value];
+    if (isChoiceProperty(filterProperty)) filterOptionDraft = values;
+    else {
+      filterValueDraft = values[0] ?? '';
+      filterEndDraft = values[1] ?? '';
+    }
+    filterOpen = true;
+    if (isChoiceProperty(filterProperty)) void loadFilterOptions(true);
   }
   function removeFilter(property: string) {
     emit({
@@ -186,19 +259,112 @@
       filters: query.filters.filter((filter) => filter.property !== property),
     });
   }
+  function clearFilters() {
+    emit({ ...query, filters: [] });
+  }
   function propertyFor(key: string) {
     return properties.find((property) => property.key === key);
   }
   function optionLabel(property: DataViewProperty | undefined, value: string) {
     return (
       property?.options?.find((option) => option.value === value)?.label ??
+      optionLabelCache.get(`${property?.key}:${value}`) ??
       value
     );
+  }
+  function isChoiceProperty(property: DataViewProperty | undefined) {
+    return Boolean(
+      property &&
+        (property.type === 'enum' ||
+          property.type === 'relation' ||
+          property.type === 'boolean' ||
+          property.options?.length ||
+          property.loadOptions),
+    );
+  }
+  function staticOptions(property: DataViewProperty | undefined) {
+    if (!property) return [];
+    if (property.options?.length) return property.options;
+    if (property.type === 'boolean')
+      return [
+        { value: 'true', label: copy.booleanTrue },
+        { value: 'false', label: copy.booleanFalse },
+      ];
+    return [];
+  }
+  function visibleFilterOptions() {
+    if (filterProperty?.loadOptions) return filterOptions;
+    const search = filterOptionSearch.trim().toLowerCase();
+    return staticOptions(filterProperty)
+      .filter((option) => option.label.toLowerCase().includes(search))
+      .slice(0, filterOptionVisibleCount);
+  }
+  async function loadFilterOptions(reset: boolean) {
+    const property = filterProperty;
+    if (!property?.loadOptions) {
+      filterOptions = staticOptions(property);
+      return;
+    }
+    if (!reset && (filterOptionLoading || !filterOptionNextCursor)) return;
+
+    if (reset) {
+      filterOptionController?.abort();
+      filterOptions = [];
+      filterOptionNextCursor = undefined;
+    }
+    const controller = new AbortController();
+    filterOptionController = controller;
+    filterOptionLoading = true;
+    filterOptionError = '';
+    try {
+      const page = await property.loadOptions({
+        search: filterOptionSearch.trim(),
+        cursor: reset ? undefined : filterOptionNextCursor,
+        signal: controller.signal,
+      });
+      if (controller.signal.aborted) return;
+      for (const option of page.items) {
+        optionLabelCache.set(`${property.key}:${option.value}`, option.label);
+      }
+      filterOptions = reset ? page.items : [...filterOptions, ...page.items];
+      filterOptionNextCursor = page.nextCursor;
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      filterOptionError =
+        error instanceof Error ? error.message : 'Unable to load options';
+    } finally {
+      if (!controller.signal.aborted) filterOptionLoading = false;
+    }
+  }
+  function handleFilterOptionSearch() {
+    filterOptionVisibleCount = 10;
+    if (filterProperty?.loadOptions) void loadFilterOptions(true);
+  }
+  function handleFilterOptionScroll(event: Event) {
+    const target = event.currentTarget as HTMLElement;
+    if (target.scrollHeight - target.scrollTop - target.clientHeight > 24)
+      return;
+    if (filterProperty?.loadOptions) void loadFilterOptions(false);
+    else filterOptionVisibleCount += 10;
+  }
+  function filterEditorContext(): DataViewFilterEditorContext {
+    if (!filterProperty || !filterOperator)
+      throw new Error('Filter editor context requires a property and operator');
+    return {
+      property: filterProperty,
+      operator: filterOperator,
+      value: filterValueDraft,
+      endValue: filterEndDraft,
+      selectedValues: filterOptionDraft,
+      setValue: (value) => (filterValueDraft = value),
+      setEndValue: (value) => (filterEndDraft = value),
+      setSelectedValues: (values) => (filterOptionDraft = values),
+    };
   }
   function filterSummary(filter: DataViewFilterRule) {
     const property = propertyFor(filter.property);
     const values = Array.isArray(filter.value) ? filter.value : [filter.value];
-    return `${property?.label ?? filter.property} ${operatorLabels[filter.operator]} ${values.map((value) => optionLabel(property, value)).join(', ')}`;
+    return `${property?.label ?? filter.property} ${copy.operators[filter.operator]} ${values.map((value) => optionLabel(property, value)).join(', ')}`;
   }
 
   function resetSortEditor() {
@@ -211,10 +377,13 @@
   }
   function directionLabels(property: DataViewProperty | undefined) {
     if (property?.type === 'date')
-      return { asc: 'Oldest first', desc: 'Newest first' };
+      return { asc: copy.oldestFirst, desc: copy.newestFirst };
     if (property?.type === 'number')
-      return { asc: 'Lowest first', desc: 'Highest first' };
-    return { asc: 'A–Z', desc: 'Z–A' };
+      return { asc: copy.lowestFirst, desc: copy.highestFirst };
+    return {
+      asc: copy.ascendingAlphabetical,
+      desc: copy.descendingAlphabetical,
+    };
   }
   function addSort(direction: DataViewSortRule['direction']) {
     if (!sortProperty) return;
@@ -246,7 +415,7 @@
   <div class="grid gap-2" aria-label="Filter editor">
     {#if !filterProperty}
       <p class="px-2 pt-1 text-xs font-medium text-muted-foreground">
-        Filter by
+        {copy.filterBy}
       </p>
       {#each filterableProperties as property (property.key)}
         <Button
@@ -266,30 +435,66 @@
         <Button
           variant="ghost"
           class="justify-start"
-          onclick={() => (filterOperator = operator)}
-          >{operatorLabels[operator]}</Button
+          onclick={() => selectFilterOperator(operator)}
+          >{copy.operators[operator]}</Button
         >
       {/each}
-    {:else if filterProperty.options?.length}
+    {:else if isChoiceProperty(filterProperty)}
       <p class="px-2 pt-1 text-xs text-muted-foreground">
         {filterProperty.label}
-        {operatorLabels[filterOperator]}
+        {copy.operators[filterOperator]}
       </p>
-      {#each filterProperty.options as option (option.value)}
-        <Button
-          variant={selectedFilterValues().includes(option.value)
-            ? 'secondary'
-            : 'ghost'}
-          class="justify-start"
-          aria-pressed={selectedFilterValues().includes(option.value)}
-          onclick={() => toggleFilterOption(option.value)}
-          >{option.label}</Button
-        >
-      {/each}
+      {#if filterProperty.type !== 'boolean'}
+        <Input
+          type="search"
+          aria-label={`Search ${filterProperty.label} options`}
+          placeholder={copy.searchOptionsPlaceholder}
+          bind:value={filterOptionSearch}
+          oninput={handleFilterOptionSearch}
+        />
+      {/if}
+      <div
+        class="grid max-h-64 gap-1 overflow-y-auto"
+        aria-label={`${filterProperty.label} options`}
+        onscroll={handleFilterOptionScroll}
+      >
+        {#each visibleFilterOptions() as option (option.value)}
+          <Button
+            variant={filterOptionDraft.includes(option.value)
+              ? 'secondary'
+              : 'ghost'}
+            class="justify-start"
+            aria-pressed={filterOptionDraft.includes(option.value)}
+            onclick={() => toggleFilterOption(option.value)}
+            >{option.label}</Button
+          >
+        {/each}
+        {#if filterOptionLoading}
+          <p class="px-2 py-3 text-sm text-muted-foreground" role="status">
+            {copy.loadingOptions}
+          </p>
+        {:else if filterOptionError}
+          <div class="grid gap-2 px-2 py-3" role="alert">
+            <p class="text-sm text-destructive">{filterOptionError}</p>
+            <Button variant="outline" size="sm" onclick={() => loadFilterOptions(true)}
+              >{copy.retry}</Button
+            >
+          </div>
+        {:else if !visibleFilterOptions().length}
+          <p class="px-2 py-3 text-sm text-muted-foreground">{copy.noOptions}</p>
+        {/if}
+      </div>
+    {:else if filterEditors[filterProperty.type]}
+      {@const editor = filterEditors[filterProperty.type]}
+      <p class="px-2 pt-1 text-xs text-muted-foreground">
+        {filterProperty.label}
+        {copy.operators[filterOperator]}
+      </p>
+      {@render editor(filterEditorContext())}
     {:else}
       <p class="px-2 pt-1 text-xs text-muted-foreground">
         {filterProperty.label}
-        {operatorLabels[filterOperator]}
+        {copy.operators[filterOperator]}
       </p>
       <Input
         type={filterProperty.type === 'date'
@@ -307,12 +512,15 @@
           bind:value={filterEndDraft}
         />
       {/if}
-      <Button
-        onclick={applyDraftFilter}
-        disabled={!filterValueDraft.trim() ||
-          (filterOperator === 'between' && !filterEndDraft.trim())}
-        >Apply filter</Button
+    {/if}
+    {#if filterProperty && filterOperator}
+      <div
+        class="sticky bottom-0 flex items-center justify-end gap-2 border-t bg-background pt-2"
       >
+        <Button onclick={confirmFilter} disabled={!canConfirmFilter()}
+          >{copy.confirmFilter}</Button
+        >
+      </div>
     {/if}
   </div>
 {/snippet}
@@ -320,7 +528,7 @@
 {#snippet sortEditor()}
   <div class="grid gap-2" aria-label="Sort editor">
     {#if sortStep === 'property'}
-      <p class="px-2 pt-1 text-xs font-medium text-muted-foreground">Sort by</p>
+      <p class="px-2 pt-1 text-xs font-medium text-muted-foreground">{copy.sortBy}</p>
       {#each sortableProperties as property (property.key)}
         <Button
           variant="ghost"
@@ -384,39 +592,41 @@
           variant="ghost"
           class="justify-start"
           onclick={() => (sortStep = 'property')}
-          ><PlusIcon data-icon="inline-start" />Add sort</Button
+          ><PlusIcon data-icon="inline-start" />{copy.addSort}</Button
         >
       {/if}
     {/if}
   </div>
 {/snippet}
 
-<div data-slot="data-view-toolbar" class="flex w-full flex-col gap-2">
+<div
+  data-slot="data-view-toolbar"
+  role="search"
+  aria-label={ariaLabel}
+  class="flex w-full flex-col gap-2"
+>
   <div class="flex min-h-9 flex-wrap items-center justify-end gap-1">
     {#if isMobile.current}
-      <Sheet.Root bind:open={filterOpen}>
-        <Sheet.Trigger
+      <Drawer.Root bind:open={filterOpen}>
+        <Drawer.Trigger
           >{#snippet child({ props })}<Button
               {...props}
               variant="ghost"
               size="sm"
-              aria-label={query.filters.length
-                ? `Filter · ${query.filters.length}`
-                : 'Filter'}
-              ><ListFilterIcon data-icon="inline-start" />{query.filters.length
-                ? `Filter · ${query.filters.length}`
-                : 'Filter'}</Button
-            >{/snippet}</Sheet.Trigger
+              class="order-2"
+              aria-label={copy.addFilter}
+              ><PlusIcon data-icon="inline-start" />{copy.addFilter}</Button
+            >{/snippet}</Drawer.Trigger
         >
-        <Sheet.Content side="bottom" class="max-h-[85vh] overflow-y-auto">
-          <Sheet.Header
-            ><Sheet.Title>Filter</Sheet.Title><Sheet.Description
-              >Show items that match all selected rules.</Sheet.Description
-            ></Sheet.Header
+        <Drawer.Content class="max-h-[85dvh]">
+          <Drawer.Header
+            ><Drawer.Title>{copy.filter}</Drawer.Title><Drawer.Description
+              >{copy.filterDescription}</Drawer.Description
+            ></Drawer.Header
           >
-          {@render filterEditor()}
-        </Sheet.Content>
-      </Sheet.Root>
+          <div class="overflow-y-auto px-4 pb-4">{@render filterEditor()}</div>
+        </Drawer.Content>
+      </Drawer.Root>
     {:else}
       <Popover.Root bind:open={filterOpen}>
         <Popover.Trigger
@@ -424,42 +634,41 @@
               {...props}
               variant="ghost"
               size="sm"
-              aria-label={query.filters.length
-                ? `Filter · ${query.filters.length}`
-                : 'Filter'}
-              ><ListFilterIcon data-icon="inline-start" />{query.filters.length
-                ? `Filter · ${query.filters.length}`
-                : 'Filter'}</Button
+              class="order-2"
+              aria-label={copy.addFilter}
+              ><PlusIcon data-icon="inline-start" />{copy.addFilter}</Button
             >{/snippet}</Popover.Trigger
         >
         <Popover.Content align="end">{@render filterEditor()}</Popover.Content>
       </Popover.Root>
     {/if}
 
-    {#if isMobile.current}
-      <Sheet.Root bind:open={sortOpen}>
-        <Sheet.Trigger
+    {#if hasSortableProperties}
+      {#if isMobile.current}
+      <Drawer.Root bind:open={sortOpen}>
+        <Drawer.Trigger
           >{#snippet child({ props })}<Button
               {...props}
               variant="ghost"
               size="sm"
+              class="order-3"
               aria-label={query.sorts.length
-                ? `Sort · ${query.sorts.length}`
-                : 'Sort'}
+                ? `${copy.sort} · ${query.sorts.length}`
+                : copy.sort}
               ><ArrowUpDownIcon data-icon="inline-start" />{query.sorts.length
-                ? `Sort · ${query.sorts.length}`
-                : 'Sort'}</Button
-            >{/snippet}</Sheet.Trigger
+                ? `${copy.sort} · ${query.sorts.length}`
+                : copy.sort}</Button
+            >{/snippet}</Drawer.Trigger
         >
-        <Sheet.Content side="bottom" class="max-h-[85vh] overflow-y-auto">
-          <Sheet.Header
-            ><Sheet.Title>Sort</Sheet.Title><Sheet.Description
-              >Earlier rules have higher priority.</Sheet.Description
-            ></Sheet.Header
+        <Drawer.Content class="max-h-[85dvh]">
+          <Drawer.Header
+            ><Drawer.Title>{copy.sort}</Drawer.Title><Drawer.Description
+              >{copy.sortDescription}</Drawer.Description
+            ></Drawer.Header
           >
-          {@render sortEditor()}
-        </Sheet.Content>
-      </Sheet.Root>
+          <div class="overflow-y-auto px-4 pb-4">{@render sortEditor()}</div>
+        </Drawer.Content>
+      </Drawer.Root>
     {:else}
       <Popover.Root bind:open={sortOpen}>
         <Popover.Trigger
@@ -467,25 +676,27 @@
               {...props}
               variant="ghost"
               size="sm"
+              class="order-3"
               aria-label={query.sorts.length
-                ? `Sort · ${query.sorts.length}`
-                : 'Sort'}
+                ? `${copy.sort} · ${query.sorts.length}`
+                : copy.sort}
               ><ArrowUpDownIcon data-icon="inline-start" />{query.sorts.length
-                ? `Sort · ${query.sorts.length}`
-                : 'Sort'}</Button
+                ? `${copy.sort} · ${query.sorts.length}`
+                : copy.sort}</Button
             >{/snippet}</Popover.Trigger
         >
         <Popover.Content align="end">{@render sortEditor()}</Popover.Content>
       </Popover.Root>
+      {/if}
     {/if}
 
-    {#if searchExpanded}
-      <div class="flex min-w-52 flex-1 items-center gap-1 sm:max-w-80">
+    {#if searchMode === 'persistent' || searchExpanded}
+      <div class="order-1 flex min-w-52 flex-1 items-center gap-1">
         <Input
           bind:ref={searchInput}
           type="search"
-          aria-label={searchLabel}
-          placeholder={searchPlaceholder}
+          aria-label={effectiveSearchLabel}
+          placeholder={effectiveSearchPlaceholder}
           bind:value={searchDraft}
           oninput={scheduleSearch}
           onkeydown={handleSearchKeydown}
@@ -494,7 +705,7 @@
             variant="ghost"
             size="icon-sm"
             class="max-md:size-11"
-            aria-label="Clear search"
+            aria-label={copy.clearSearch}
             onclick={clearSearch}><XIcon /></Button
           >{/if}
       </div>
@@ -503,20 +714,28 @@
         bind:ref={searchTrigger}
         variant="ghost"
         size="sm"
-        aria-label={searchLabel}
+        class="order-1"
+        aria-label={effectiveSearchLabel}
         onclick={openSearch}
-        ><SearchIcon data-icon="inline-start" />Search</Button
+        ><SearchIcon data-icon="inline-start" />{copy.search}</Button
       >
+    {/if}
+    {#if actions}
+      <div class="order-4">{@render actions()}</div>
     {/if}
   </div>
 
   {#if query.filters.length}
     <div class="flex flex-wrap items-center gap-1" aria-label="Active filters">
       {#each query.filters as filter (filter.property)}
-        <div
-          class="inline-flex h-8 items-center rounded-md bg-secondary pl-2 text-xs text-secondary-foreground"
-        >
-          <span>{filterSummary(filter)}</span>
+        <div class="inline-flex items-center gap-1">
+          <Button
+            variant="secondary"
+            size="sm"
+            aria-label={`Edit filter: ${filterSummary(filter)}`}
+            onclick={() => editFilter(filter)}
+            >{filterSummary(filter)}</Button
+          >
           <Button
             variant="ghost"
             size="icon-sm"
@@ -525,6 +744,12 @@
           >
         </div>
       {/each}
+      <Button
+        variant="ghost"
+        size="sm"
+        aria-label={`${copy.clearAll} filters`}
+        onclick={clearFilters}>{copy.clearAll}</Button
+      >
     </div>
   {/if}
 </div>

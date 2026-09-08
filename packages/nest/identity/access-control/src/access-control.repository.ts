@@ -74,7 +74,11 @@ export class AccessControlRepository extends BaseRepository<typeof repositorySch
     }
 
     async deleteRole(id: string) {
-        return this.db.delete(roles).where(eq(roles.id, id)).returning();
+        return this.db.transaction(async (transaction) => {
+            await transaction.delete(userRoles).where(eq(userRoles.roleId, id));
+            await transaction.delete(rolePermissions).where(eq(rolePermissions.roleId, id));
+            return transaction.delete(roles).where(eq(roles.id, id)).returning();
+        });
     }
 
     // Permissions

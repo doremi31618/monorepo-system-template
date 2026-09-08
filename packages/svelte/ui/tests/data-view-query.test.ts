@@ -116,4 +116,53 @@ describe('data view query URL contract', () => {
       { property: 'updatedAt', direction: 'desc' },
     ]);
   });
+
+  test('keeps one rule per property when parsing external query state', () => {
+    const params = new URLSearchParams();
+    params.append(
+      'filter',
+      JSON.stringify({ property: 'status', operator: 'is', value: 'draft' }),
+    );
+    params.append(
+      'filter',
+      JSON.stringify({
+        property: 'status',
+        operator: 'is',
+        value: 'published',
+      }),
+    );
+
+    expect(parseDataViewQuery(params, properties).filters).toEqual([
+      { property: 'status', operator: 'is', value: 'draft' },
+    ]);
+  });
+
+  test('accepts relation values owned by an async option provider', () => {
+    const asyncProperties: DataViewProperty[] = [
+      {
+        key: 'provider',
+        label: 'Provider',
+        type: 'relation',
+        operators: ['is', 'isAnyOf'],
+        loadOptions: async () => ({ items: [] }),
+      },
+    ];
+    const params = new URLSearchParams();
+    params.append(
+      'filter',
+      JSON.stringify({
+        property: 'provider',
+        operator: 'isAnyOf',
+        value: ['provider-42'],
+      }),
+    );
+
+    expect(parseDataViewQuery(params, asyncProperties).filters).toEqual([
+      {
+        property: 'provider',
+        operator: 'isAnyOf',
+        value: ['provider-42'],
+      },
+    ]);
+  });
 });

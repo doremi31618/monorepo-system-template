@@ -65,6 +65,24 @@ function colorIsLight(color) {
 }
 
 let browser;
+let roles = [
+  {
+    id: 'admin',
+    name: 'Administrator',
+    description: 'System administrators',
+    isSystem: true,
+    createdAt: '2026-09-02T00:00:00.000Z',
+    rolePermissions: [],
+  },
+  {
+    id: 'editor',
+    name: 'Custom Editor',
+    description: 'A deletable custom role',
+    isSystem: false,
+    createdAt: '2026-09-02T00:00:00.000Z',
+    rolePermissions: [],
+  },
+];
 
 try {
   await waitForServer();
@@ -112,19 +130,18 @@ try {
       return;
     }
 
-    if (pathname === '/v1/admin/roles') {
+    if (pathname === '/v1/admin/roles' && route.request().method() === 'GET') {
       await route.fulfill({
         status: 200,
         headers,
-        body: apiResponse([{
-          id: 'admin',
-          name: 'Administrator',
-          description: 'System administrators',
-          isSystem: true,
-          createdAt: '2026-09-02T00:00:00.000Z',
-          rolePermissions: [],
-        }]),
+        body: apiResponse(roles),
       });
+      return;
+    }
+
+    if (pathname === '/v1/admin/roles/editor' && route.request().method() === 'DELETE') {
+      roles = roles.filter((role) => role.id !== 'editor');
+      await route.fulfill({ status: 200, headers, body: apiResponse({ deleted: true }) });
       return;
     }
 
@@ -335,6 +352,17 @@ try {
         `${collection.name} kept a light surface in dark mode: ${lightCollectionSurface.element} (${lightCollectionSurface.color})`
       );
     }
+  }
+
+  const customRoleCard = page
+    .getByRole('heading', { name: 'Custom Editor', exact: true })
+    .locator('xpath=ancestor::div[contains(@class, "group")][1]');
+  await customRoleCard.getByRole('button', { name: 'Open menu' }).click();
+  await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Delete', exact: true }).click();
+  await page.getByText('Role deleted successfully', { exact: true }).waitFor();
+  if ((await page.getByRole('heading', { name: 'Custom Editor', exact: true }).count()) !== 0) {
+    throw new Error('Deleted role remains visible when the success toast appears.');
   }
 
   await page.goto(`${baseUrl}/admin/cms/post-1`);
