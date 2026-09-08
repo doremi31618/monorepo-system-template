@@ -1,7 +1,7 @@
 # Notion-like Data View Filter Builder Project Task
 
 > **Work Item ID**: SUI-001
-> **Status**: In Review
+> **Status**: Dev
 > **Actor**: Codex
 > **Role**: Owner
 > **Branch**: `feat/SUI-001-notion-filter-builder`
@@ -9,7 +9,7 @@
 > **Worktree**: `/Users/ericzhan/Documents/SIRAYA-project/monorepo-system-template-worktrees/SUI-001-notion-filter-builder`
 > **PR**: https://github.com/doremi31618/monorepo-system-template/pull/21
 > **Related Spec**: `doc/system-spec/architecture/data-view-toolbar.md`
-> **Release**: pending
+> **Release**: `0.2.1`; `doc/release-notes/0.2.1.md`; approved for main integration
 > **Last updated**: 2026-09-08
 
 ## Objective
@@ -99,7 +99,7 @@ option source, and a bottom Drawer on narrow screens.
 
 ## Handoff
 
-- **Commit/PR**: `d096bb8`; https://github.com/doremi31618/monorepo-system-template/pull/21
+- **Commit/PR**: reviewed source `8f29416`; https://github.com/doremi31618/monorepo-system-template/pull/21
 - **Branch/Worktree**: recorded above
 - **Validation**: package unit 6/6; component 6/6; full repository check and test passed; Svelte UI
   check 0 errors/warnings; package and Storybook builds passed; dependency checks passed
