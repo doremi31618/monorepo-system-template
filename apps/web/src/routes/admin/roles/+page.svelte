@@ -14,6 +14,7 @@
   import { Textarea } from '@platform/svelte-ui/textarea';
   import type { Role, Permission } from '@platform/types-identity';
   import { Plus } from 'lucide-svelte';
+  import { toast } from 'svelte-sonner';
   import {
     DataViewToolbar,
     parseDataViewQuery,
@@ -154,6 +155,7 @@
           try {
               await api.deleteRole(roleToDelete.id);
               await loadRoles();
+              toast.success('Role deleted successfully');
           } catch {
               alert('Failed to delete role');
           } finally {

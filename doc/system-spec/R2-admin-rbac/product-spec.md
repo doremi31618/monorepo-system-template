@@ -8,6 +8,8 @@
 | **狀態** | Pending Approval |
 | **負責人** | PjM / UIUX Designer |
 
+> **Traceability**: `RBAC-001` updates role-deletion behavior and success feedback.
+
 ## 1. 產品概述 (Overview)
 本系統旨在提供一個安全、靈活的後台管理介面，允許管理員管理內部使用者帳號，並透過基於角色的存取控制 (RBAC) 來細分不同模組的操作權限。核心目標是確保「對的人只能做對的事」。
 
@@ -72,8 +74,10 @@
     *   點擊「新增角色」跳出 Modal。
     *   包含基本資料輸入與「初始權限設定」(避免建立空權限角色)。
 *   **[REQ-R-04] 刪除角色**:
-    *   **防呆機制**: 若該角色下仍有使用者 (Count > 0)，禁止刪除並跳出阻擋提示 (Alert)。
-    *   若無成員，跳出 Confirm Modal 確認刪除。
+    *   系統角色不可刪除；自訂角色需先顯示 Confirm Modal 二次確認。
+    *   刪除自訂角色時，系統需在同一交易中解除使用者與權限關聯後刪除角色；使用者帳號必須保留。
+    *   刪除請求與角色清單刷新皆成功後，顯示 `Role deleted successfully` 成功提示。
+    *   刪除或清單刷新失敗時，不得顯示成功提示，並保留錯誤回饋。
 
 ## 4. UI/UX Mockup 設計說明 (Implementation Guide)
 本節對應目前的 `AdminPanel.tsx` 程式碼，請開發者參照以下視覺定義：

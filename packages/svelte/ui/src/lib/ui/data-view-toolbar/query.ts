@@ -1,5 +1,7 @@
-export type DataViewPropertyType =
+export type DataViewBuiltInPropertyType =
   'text' | 'enum' | 'date' | 'number' | 'relation' | 'boolean';
+export type DataViewPropertyType =
+  DataViewBuiltInPropertyType | (string & Record<never, never>);
 
 export type DataViewFilterOperator =
   'is' | 'isNot' | 'isAnyOf' | 'before' | 'after' | 'between';
@@ -9,12 +11,39 @@ export interface DataViewOption {
   label: string;
 }
 
+export interface DataViewOptionRequest {
+  search: string;
+  cursor?: string;
+  signal: AbortSignal;
+}
+
+export interface DataViewOptionPage {
+  items: DataViewOption[];
+  nextCursor?: string;
+}
+
+export type DataViewOptionLoader = (
+  request: DataViewOptionRequest,
+) => Promise<DataViewOptionPage>;
+
+export interface DataViewFilterEditorContext {
+  property: DataViewProperty;
+  operator: DataViewFilterOperator;
+  value: string;
+  endValue: string;
+  selectedValues: string[];
+  setValue: (value: string) => void;
+  setEndValue: (value: string) => void;
+  setSelectedValues: (values: string[]) => void;
+}
+
 export interface DataViewProperty {
   key: string;
   label: string;
   type: DataViewPropertyType;
   operators: DataViewFilterOperator[];
   options?: DataViewOption[];
+  loadOptions?: DataViewOptionLoader;
   sortable?: boolean;
 }
 
@@ -101,7 +130,8 @@ export function parseDataViewQuery(
         !candidate.operator ||
         !property.operators.includes(candidate.operator) ||
         !hasValue(candidate.value) ||
-        !isAllowedValue(property, candidate.value)
+        !isAllowedValue(property, candidate.value) ||
+        filters.some((filter) => filter.property === property.key)
       ) {
         continue;
       }
