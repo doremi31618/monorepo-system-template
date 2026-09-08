@@ -163,9 +163,15 @@
   play={async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
-    await expect(canvas.getByRole('searchbox', { name: '搜尋資料' })).toBeVisible();
+    const searchbox = canvas.getByRole('searchbox', { name: '搜尋資料' });
+    await expect(searchbox).toBeVisible();
     await expect(canvas.getByRole('button', { name: '新增篩選' })).toBeVisible();
     await expect(canvas.getByRole('button', { name: 'View mode' })).toBeVisible();
+    const toolbar = canvasElement.querySelector<HTMLElement>('[data-slot="data-view-toolbar"]');
+    await expect(toolbar).not.toBeNull();
+    await expect(searchbox.getBoundingClientRect().width).toBeGreaterThan(
+      toolbar!.getBoundingClientRect().width * 0.5,
+    );
     await userEvent.click(canvas.getByRole('button', { name: '排序' }));
     await userEvent.click(body.getByRole('button', { name: 'Updated' }));
     await expect(body.getByRole('button', { name: '最新優先' })).toBeVisible();

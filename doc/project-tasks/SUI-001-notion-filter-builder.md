@@ -10,7 +10,7 @@
 > **PR**: https://github.com/doremi31618/monorepo-system-template/pull/21
 > **Related Spec**: `doc/system-spec/architecture/data-view-toolbar.md`
 > **Release**: pending
-> **Last updated**: 2026-09-07
+> **Last updated**: 2026-09-08
 
 ## Objective
 
@@ -47,7 +47,7 @@ option source, and a bottom Drawer on narrow screens.
 - [x] Enum/relation accept static options or an abortable paginated async option provider.
 - [x] Desktop uses Popover and mobile uses an accessible bottom Drawer.
 - [x] Sort remains a separate ordered control and does not contribute to filter count.
-- [ ] Storybook, package tests/check/build, Web checks, and repository regression checks pass.
+- [x] Storybook, package tests/check/build, Web checks, and repository regression checks pass.
 
 ## Scope
 
@@ -92,6 +92,10 @@ option source, and a bottom Drawer on narrow screens.
   dependency because the published Drawer source imports it.
 - 2026-09-07: Full repository `bun run check` passed with only 15 pre-existing Web warnings; full
   `bun run test` passed (API 56, runtime 4, service UI 2, browser SDK 1, Storybook 41, Web regression).
+- 2026-09-08: Reviewer feedback identified the persistent search input's `320px` desktop cap. A
+  browser interaction assertion first reproduced `320px` inside a `1200px` toolbar; removing only the
+  search-region max-width lets it consume the available toolbar width while Filter, Sort, and consumer
+  actions remain content-sized. The focused seven-story suite and package check/build passed.
 
 ## Handoff
 

@@ -691,7 +691,7 @@
     {/if}
 
     {#if searchMode === 'persistent' || searchExpanded}
-      <div class="order-1 flex min-w-52 flex-1 items-center gap-1 sm:max-w-80">
+      <div class="order-1 flex min-w-52 flex-1 items-center gap-1">
         <Input
           bind:ref={searchInput}
           type="search"
