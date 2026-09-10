@@ -91,7 +91,7 @@
     retryCursor = null;
     error = '';
     loading = false;
-    const timer = setTimeout(() => void load(true, query), 180);
+    const timer = setTimeout(() => void load(true, query), query ? 180 : 0);
     return () => clearTimeout(timer);
   });
   $effect(() => {
