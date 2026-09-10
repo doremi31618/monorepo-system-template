@@ -272,6 +272,7 @@
             props,
           )}{/snippet}</Drawer.Trigger
       ><Drawer.Content
+          class="inset-x-0 bottom-0 max-h-[90dvh] min-h-0 overflow-hidden pb-[env(safe-area-inset-bottom)]"
         ><Drawer.Header
           ><Drawer.Title>選擇{label}</Drawer.Title><Drawer.Description
             >可搜尋並選擇多個項目。</Drawer.Description

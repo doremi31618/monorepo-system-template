@@ -117,6 +117,15 @@
     await userEvent.click(trigger);
     await expect(body.getByRole('dialog')).toHaveAttribute('data-vaul-drawer');
     await expect(body.getByRole('checkbox', { name: 'Globex' })).toBeVisible();
+    const search = body.getByRole('searchbox', { name: '搜尋Provider' });
+    await waitFor(() => {
+      const bounds = search.getBoundingClientRect();
+      expect(bounds.top).toBeGreaterThanOrEqual(0);
+      expect(bounds.bottom).toBeLessThanOrEqual(
+        canvasElement.ownerDocument.defaultView!.innerHeight + 2,
+      );
+    });
+    await userEvent.click(search);
     await userEvent.keyboard('{Escape}');
     await expect(trigger).toHaveFocus();
   }}><div class="w-full"><SearchableMultiSelect label="Provider" {options} /></div></Story
