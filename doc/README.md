@@ -69,3 +69,5 @@
 3. **UI/UX** 在 `system-spec/` 補充 Product Spec 與 Mockup。
 4. **System Designer** 在 `system-spec/` 設計架構，並於各 feature 的 `implementation-guide/` 或 `implementation-guide.md` 撰寫實作指南。
 5. **Developer** 閱讀對應 implementation guide 開始 Coding。
+
+- [SUI-002：共用分頁多選元件](project-tasks/SUI-002-paged-selection.md) · [規格](system-spec/architecture/paged-selection.md)
