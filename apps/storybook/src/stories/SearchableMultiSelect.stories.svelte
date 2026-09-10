@@ -99,10 +99,12 @@
   play={async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(canvas.getByRole('button', { name: '選擇Provider' }));
+    const trigger = canvas.getByRole('button', { name: '選擇Provider' });
+    await userEvent.click(trigger);
     await expect(body.getByRole('dialog')).toHaveAttribute('data-vaul-drawer');
     await expect(body.getByRole('checkbox', { name: 'Globex' })).toBeVisible();
     await userEvent.keyboard('{Escape}');
+    await expect(trigger).toHaveFocus();
   }}><div class="w-full"><SearchableMultiSelect label="Provider" {options} /></div></Story
 >
 <Story
