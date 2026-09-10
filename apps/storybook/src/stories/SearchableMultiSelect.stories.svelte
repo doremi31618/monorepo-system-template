@@ -23,6 +23,7 @@
   let remoteValue = $state<string[]>([]);
   let failedPageTwo = $state(false);
   let remoteRequests = $state<string[]>([]);
+  let stalledRequests = $state(0);
   let sentinelRoot = $state<HTMLElement | null>(null);
   let sentinelCalls = $state(0);
   let sentinelError = $state('');
@@ -65,6 +66,18 @@
     return {
       items: source.slice(offset, offset + 10),
       nextCursor: offset + 10 < source.length ? String(offset + 10) : null,
+    };
+  };
+  const stalledLoader = async ({ cursor }: { cursor?: string }) => {
+    stalledRequests += 1;
+    if (!cursor)
+      return {
+        items: [{ value: 'first', label: 'First page' }],
+        nextCursor: 'stuck',
+      };
+    return {
+      items: [{ value: 'stuck', label: 'Stuck page' }],
+      nextCursor: stalledRequests === 2 ? 'stuck' : null,
     };
   };
 </script>
@@ -147,6 +160,34 @@
       ariaLabel="選擇 Remote"
       bind:value={remoteValue}
       loadOptions={remoteLoader}
+    />
+  </div></Story
+>
+<Story
+  name="Remote pagination stops a repeated cursor and retries it manually"
+  asChild
+  play={async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(canvas.getByRole('button', { name: '選擇 Stalled' }));
+    const first = await body.findByRole('checkbox', { name: 'First page' });
+    const results = first.closest<HTMLElement>('[aria-label="Stalled results"]');
+    if (!results) throw new Error('Stalled results pane was not rendered');
+    results.scrollTop = results.scrollHeight;
+    results.dispatchEvent(new Event('scroll'));
+    await expect(await body.findByRole('alert')).toHaveTextContent('無法載入更多Stalled');
+    await waitFor(() => expect(stalledRequests).toBe(2));
+    await userEvent.click(body.getByRole('button', { name: '重試' }));
+    await expect(await body.findByRole('checkbox', { name: 'Stuck page' })).toBeVisible();
+    await expect(body.queryByRole('alert')).not.toBeInTheDocument();
+    await expect(stalledRequests).toBe(3);
+    await userEvent.keyboard('{Escape}');
+  }}
+  ><div class="w-96">
+    <SearchableMultiSelect
+      label="Stalled"
+      ariaLabel="選擇 Stalled"
+      loadOptions={stalledLoader}
     />
   </div></Story
 >

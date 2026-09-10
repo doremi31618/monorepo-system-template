@@ -104,13 +104,17 @@
     }
   });
   $effect(() => () => controller?.abort());
-  async function load(reset: boolean, query = search) {
-    if (!loadOptions || (!reset && (!nextCursor || loading))) return;
+  async function load(
+    reset: boolean,
+    query = search,
+    cursorOverride?: string | null,
+  ) {
+    const cursor = cursorOverride ?? (reset ? null : nextCursor);
+    if (!loadOptions || (!reset && (!cursor || loading))) return;
     controller?.abort();
     const active = new AbortController();
     controller = active;
     const token = ++request;
-    const cursor = reset ? null : nextCursor;
     retryCursor = cursor;
     loading = true;
     error = '';
@@ -122,6 +126,11 @@
       });
       if (token !== request || !open || query !== search) return;
       items = reset ? page.items : merge(items, page.items);
+      if (!reset && page.nextCursor === cursor) {
+        nextCursor = null;
+        error = `無法載入更多${label}`;
+        return;
+      }
       nextCursor = page.nextCursor;
       retryCursor = null;
     } catch (cause) {
@@ -241,7 +250,8 @@
             class="mt-2"
             size="sm"
             variant="outline"
-            onclick={() => void load(retryCursor === null, search)}>重試</Button
+            onclick={() =>
+              void load(retryCursor === null, search, retryCursor)}>重試</Button
           >
         </div>{/if}{#if loadOptions && !error}<AutoLoadSentinel
           onloadmore={() => load(false)}
