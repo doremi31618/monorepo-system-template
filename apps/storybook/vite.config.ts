@@ -10,6 +10,7 @@ export default defineConfig({
   optimizeDeps: {
     include: [
       '@testing-library/dom > aria-query',
+      '@testing-library/dom > pretty-format',
       '@lucide/svelte/icons/arrow-up-down',
       '@lucide/svelte/icons/list-filter',
       '@lucide/svelte/icons/plus',
