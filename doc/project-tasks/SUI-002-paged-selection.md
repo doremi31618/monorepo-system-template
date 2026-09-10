@@ -3,7 +3,7 @@
 - Status: Review
 - Owner: Codex 5.6 Terra; coordinator/reviewer: Codex
 - Branch: `feat/SUI-002-paged-selection`; base: `origin/dev` (`16b084b`)
-- Source commit: `530cf66a6c3a90a4b0ffbcc6b92de962b58b10fa`; [PR #23](https://github.com/doremi31618/monorepo-system-template/pull/23); unreleased
+- Source commit: `a1c4e1363317247786ba74619e25d48568380aeb`; [PR #23](https://github.com/doremi31618/monorepo-system-template/pull/23); unreleased
 - Spec: [Paged selection](../system-spec/architecture/paged-selection.md)
 - Consumer: Databricks Pipeline DBX-CS-APP-076
 
@@ -37,6 +37,11 @@ Verification on 2026-09-10:
 - UI package check/build and Storybook browser tests: 47 passed, including desktop/mobile focus, remote alias matches, stale search, retained selections, offscreen loading, failed-page retry and repeated-cursor protection.
 - `bun run check`, `bun run test`, `bun run build`: passed. Web check reports 0 errors and 15 existing accessibility warnings in unrelated admin/CMS files; Storybook build reports the existing chunk-size advisory.
 - App consumer typecheck, snapshot integrity and real desktop/mobile selection flows verified in DBX-CS-APP-076.
-- Independent reviewer inspected library behavior; corrections included request lifecycle, keyboard/focus, disabled state and explicit retry behavior. Independent reviewer approved source `530cf66` and the consumer snapshot.
+- Independent reviewer inspected library behavior; corrections included request lifecycle, keyboard/focus, disabled state and explicit retry behavior. Independent reviewer approved source `a1c4e13` and the consumer snapshot.
 
 Release status: review only; no main merge or production deployment performed.
+
+
+Final mobile verification additionally asserts Drawer/search bounds are inside the actual viewport and clicks the search input; the canonical component now positions its Drawer explicitly. Package check/build and 47 stories pass. App production desktop/mobile flows pass and independent review approved this follow-up.
+
+Remote CI limitation: PR #23 `verify` stops at `bun run deps:audit` with 9 high-severity advisories in existing nodemailer, fast-uri, multer and js-yaml dependencies. Package manifests and bun.lock are unchanged from dev in this work item. Local functional checks remain passing; PR stays Draft pending resolution of the independent dependency audit gate.
