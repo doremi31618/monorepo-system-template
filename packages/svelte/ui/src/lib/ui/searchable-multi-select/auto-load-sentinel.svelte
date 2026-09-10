@@ -23,8 +23,8 @@
   let locked = false;
   function requestLoad(retry = false) {
     if (
-      !intersecting ||
-      !hasMore ||
+      (!retry && !intersecting) ||
+      (!retry && !hasMore) ||
       loading ||
       disabled ||
       locked ||

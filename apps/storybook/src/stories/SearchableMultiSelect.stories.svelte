@@ -27,13 +27,14 @@
   let sentinelCalls = $state(0);
   let sentinelError = $state('');
 
-  function loadSentinelDemo() {
+  function loadSentinelDemo(): Promise<void> {
     sentinelCalls += 1;
     if (sentinelCalls === 1) {
       sentinelError = 'The first page failed';
-      throw new Error(sentinelError);
+      return Promise.reject(new Error(sentinelError));
     }
     sentinelError = '';
+    return Promise.resolve();
   }
   const remoteLoader = async ({
     search,
@@ -170,7 +171,7 @@
     <div class="h-96">The sentinel begins outside this viewport.</div>
     <AutoLoadSentinel
       root={sentinelRoot}
-      hasMore={sentinelCalls < 2}
+      hasMore={sentinelCalls === 0}
       error={sentinelError}
       onloadmore={loadSentinelDemo}
       ariaLabel="Load more demo results"

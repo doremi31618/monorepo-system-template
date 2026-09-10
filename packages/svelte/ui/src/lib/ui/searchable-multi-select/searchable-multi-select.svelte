@@ -142,13 +142,13 @@
     ];
   }
   function toggle(option: SearchableMultiSelectOption) {
-    if (option.disabled || option.locked) return;
+    if (disabled || option.disabled || option.locked) return;
     value = value.includes(option.value)
       ? value.filter((id) => id !== option.value)
       : [...value, option.value];
   }
   function remove(option: SearchableMultiSelectOption) {
-    if (!option.locked && !option.disabled)
+    if (!disabled && !option.locked && !option.disabled)
       value = value.filter((id) => id !== option.value);
   }
   async function changeOpen(next: boolean) {
@@ -179,7 +179,7 @@
     {#each selected as option (option.value)}<span
         class="inline-flex max-w-full items-center gap-1 rounded-md bg-secondary px-2 py-0.5 text-xs"
         ><span class="truncate">{option.label}</span
-        >{#if !option.locked && !option.disabled}<button
+        >{#if !disabled && !option.locked && !option.disabled}<button
             type="button"
             class="rounded focus-visible:outline-2"
             aria-label={`移除 ${option.label}`}
@@ -213,13 +213,13 @@
     >
       {#each visible as option (option.value)}<label
           class="flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
-          class:cursor-not-allowed={option.disabled || option.locked}
-          class:opacity-60={option.disabled || option.locked}
+          class:cursor-not-allowed={disabled || option.disabled || option.locked}
+          class:opacity-60={disabled || option.disabled || option.locked}
           ><input
             type="checkbox"
             class="size-4 shrink-0 accent-primary"
             checked={value.includes(option.value)}
-            disabled={option.disabled || option.locked}
+            disabled={disabled || option.disabled || option.locked}
             aria-label={option.label}
             onchange={() => toggle(option)}
           /><span class="min-w-0 flex-1"
@@ -254,7 +254,7 @@
   </div>{/snippet}
 
 <div class="grid gap-2">
-  {@render chips()}{#if isMobile.current}<Drawer.Root
+  {#if isMobile.current}<Drawer.Root
       bind:open
       onOpenChange={changeOpen}
       ><Drawer.Trigger
@@ -280,5 +280,5 @@
           ></Popover.Header
         >{@render content()}</Popover.Content
       ></Popover.Root
-    >{/if}
+    >{/if}{#if selected.length}{@render chips()}{/if}
 </div>
