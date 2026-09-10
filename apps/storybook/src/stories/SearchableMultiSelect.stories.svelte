@@ -25,6 +25,16 @@
   let remoteRequests = $state<string[]>([]);
   let sentinelRoot = $state<HTMLElement | null>(null);
   let sentinelCalls = $state(0);
+  let sentinelError = $state('');
+
+  function loadSentinelDemo() {
+    sentinelCalls += 1;
+    if (sentinelCalls === 1) {
+      sentinelError = 'The first page failed';
+      throw new Error(sentinelError);
+    }
+    sentinelError = '';
+  }
   const remoteLoader = async ({
     search,
     cursor,
@@ -48,7 +58,7 @@
     }
     const source = Array.from({ length: 30 }, (_, index) => ({
       value: `remote-${index}`,
-      label: `${search || 'all'} option ${index}`,
+      label: search === 'acct-1' ? `Acme account ${index}` : `${search || 'all'} option ${index}`,
     }));
     const offset = Number(cursor ?? 0);
     return {
@@ -123,6 +133,9 @@
       expect(remoteRequests.filter((request) => request === 'new:10')).toHaveLength(2),
     );
     await expect(canvas.getByText('new option 0')).toBeVisible();
+    await userEvent.clear(input);
+    await userEvent.type(input, 'acct-1');
+    await expect(await body.findByRole('checkbox', { name: 'Acme account 0' })).toBeVisible();
     await userEvent.keyboard('{Escape}');
   }}
   ><div class="w-96">
@@ -135,7 +148,7 @@
   </div></Story
 >
 <Story
-  name="Auto load waits until the sentinel enters its scroller"
+  name="Auto load waits offscreen and retries an error"
   asChild
   play={async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -143,7 +156,9 @@
     await expect(canvas.getByText('Requested 0 pages')).toBeVisible();
     scroller.scrollTop = scroller.scrollHeight;
     scroller.dispatchEvent(new Event('scroll'));
-    await waitFor(() => expect(canvas.getByText('Requested 1 pages')).toBeVisible());
+    await expect(await canvas.findByRole('alert')).toHaveTextContent('The first page failed');
+    await userEvent.click(canvas.getByRole('button', { name: '重試' }));
+    await waitFor(() => expect(canvas.getByText('Requested 2 pages')).toBeVisible());
   }}
   ><div
     bind:this={sentinelRoot}
@@ -153,8 +168,9 @@
     <div class="h-96">The sentinel begins outside this viewport.</div>
     <AutoLoadSentinel
       root={sentinelRoot}
-      hasMore={sentinelCalls === 0}
-      onloadmore={() => (sentinelCalls += 1)}
+      hasMore={sentinelCalls < 2}
+      error={sentinelError}
+      onloadmore={loadSentinelDemo}
       ariaLabel="Load more demo results"
     />
     <p>Requested {sentinelCalls} pages</p>

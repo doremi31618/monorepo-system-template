@@ -32,9 +32,14 @@
     )
       return;
     locked = true;
-    Promise.resolve(onloadmore()).finally(() => {
-      locked = false;
-    });
+    Promise.resolve()
+      .then(() => onloadmore())
+      // The owner exposes a failed request through `error`; this prevents a rejected
+      // callback from leaking an unhandled promise while the sentinel is re-armed.
+      .catch(() => undefined)
+      .finally(() => {
+        locked = false;
+      });
   }
   function observe() {
     observer?.disconnect();

@@ -73,8 +73,9 @@
     ),
   );
   const visible = $derived.by(() => {
+    if (loadOptions) return items;
     const needle = search.trim().toLocaleLowerCase();
-    return (loadOptions ? items : options).filter(
+    return options.filter(
       (item) =>
         !needle ||
         `${item.label} ${item.description ?? ''}`
