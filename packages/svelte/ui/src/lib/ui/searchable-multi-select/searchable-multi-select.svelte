@@ -189,7 +189,7 @@
   </div>{/snippet}
 {#snippet content()}<div
     class="flex min-h-0 flex-col gap-3 p-3"
-    aria-label={`${label} 選項`}
+    aria-label={`選擇 ${label}`}
   >
     <label class="relative"
       ><span class="sr-only">搜尋{label}</span><SearchIcon

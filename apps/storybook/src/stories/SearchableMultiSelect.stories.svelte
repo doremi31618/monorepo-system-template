@@ -60,12 +60,13 @@
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
     await expect(canvas.getByText('System source')).toBeVisible();
-    await userEvent.click(canvas.getByRole('button', { name: '選擇 Provider' }));
+    await userEvent.click(canvas.getByRole('button', { name: '選擇Provider' }));
     await userEvent.click(body.getByRole('checkbox', { name: 'Acme' }));
     await expect(canvas.getByText('Acme')).toBeVisible();
     await expect(
       canvas.queryByRole('button', { name: '移除 System source' }),
     ).not.toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
   }}
   ><div class="w-96">
     <SearchableMultiSelect
@@ -83,9 +84,10 @@
   play={async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(canvas.getByRole('button', { name: '選擇 Provider' }));
+    await userEvent.click(canvas.getByRole('button', { name: '選擇Provider' }));
     await expect(body.getByRole('dialog')).toHaveAttribute('data-vaul-drawer');
     await expect(body.getByRole('checkbox', { name: 'Globex' })).toBeVisible();
+    await userEvent.keyboard('{Escape}');
   }}><div class="w-full"><SearchableMultiSelect label="Provider" {options} /></div></Story
 >
 <Story
@@ -103,6 +105,7 @@
     await expect(body.queryByRole('checkbox', { name: 'old option 0' })).not.toBeInTheDocument();
     await userEvent.click(body.getByRole('checkbox', { name: 'new option 0' }));
     await expect(canvas.getByText('new option 0')).toBeVisible();
+    await userEvent.keyboard('{Escape}');
   }}
   ><div class="w-96">
     <SearchableMultiSelect
