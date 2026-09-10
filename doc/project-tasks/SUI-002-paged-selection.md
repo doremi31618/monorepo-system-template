@@ -3,7 +3,7 @@
 - Status: Review
 - Owner: Codex 5.6 Terra; coordinator/reviewer: Codex
 - Branch: `feat/SUI-002-paged-selection`; base: `origin/dev` (`16b084b`)
-- Source commit: `530cf66a6c3a90a4b0ffbcc6b92de962b58b10fa`; PR pending; unreleased
+- Source commit: `530cf66a6c3a90a4b0ffbcc6b92de962b58b10fa`; [PR #23](https://github.com/doremi31618/monorepo-system-template/pull/23); unreleased
 - Spec: [Paged selection](../system-spec/architecture/paged-selection.md)
 - Consumer: Databricks Pipeline DBX-CS-APP-076
 
@@ -37,6 +37,6 @@ Verification on 2026-09-10:
 - UI package check/build and Storybook browser tests: 47 passed, including desktop/mobile focus, remote alias matches, stale search, retained selections, offscreen loading, failed-page retry and repeated-cursor protection.
 - `bun run check`, `bun run test`, `bun run build`: passed. Web check reports 0 errors and 15 existing accessibility warnings in unrelated admin/CMS files; Storybook build reports the existing chunk-size advisory.
 - App consumer typecheck, snapshot integrity and real desktop/mobile selection flows verified in DBX-CS-APP-076.
-- Independent reviewer inspected library behavior; corrections included request lifecycle, keyboard/focus, disabled state and explicit retry behavior. Review/PR links are recorded below when created.
+- Independent reviewer inspected library behavior; corrections included request lifecycle, keyboard/focus, disabled state and explicit retry behavior. Independent reviewer approved source `530cf66` and the consumer snapshot.
 
 Release status: review only; no main merge or production deployment performed.
