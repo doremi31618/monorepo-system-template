@@ -1,10 +1,11 @@
 <script module lang="ts">
   import { defineMeta } from '@storybook/addon-svelte-csf';
   import {
+    AutoLoadSentinel,
     SearchableMultiSelect,
     type SearchableMultiSelectOption,
   } from '@platform/svelte-ui/searchable-multi-select';
-  import { expect, userEvent, within } from 'storybook/test';
+  import { expect, userEvent, waitFor, within } from 'storybook/test';
   const { Story } = defineMeta({
     title: 'UI Library/Searchable Multi Select',
     component: SearchableMultiSelect,
@@ -21,6 +22,9 @@
   let value = $state(['system']);
   let remoteValue = $state<string[]>([]);
   let failedPageTwo = $state(false);
+  let remoteRequests = $state<string[]>([]);
+  let sentinelRoot = $state<HTMLElement | null>(null);
+  let sentinelCalls = $state(0);
   const remoteLoader = async ({
     search,
     cursor,
@@ -30,6 +34,7 @@
     cursor?: string;
     signal: AbortSignal;
   }) => {
+    remoteRequests = [...remoteRequests, `${search || 'all'}:${cursor ?? '0'}`];
     await new Promise((resolve, reject) => {
       const timer = setTimeout(resolve, search === 'old' ? 80 : 10);
       signal.addEventListener('abort', () => {
@@ -91,7 +96,7 @@
   }}><div class="w-full"><SearchableMultiSelect label="Provider" {options} /></div></Story
 >
 <Story
-  name="Remote stale search and retry"
+  name="Remote stale search, retained selection, and page retry"
   asChild
   play={async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -105,6 +110,19 @@
     await expect(body.queryByRole('checkbox', { name: 'old option 0' })).not.toBeInTheDocument();
     await userEvent.click(body.getByRole('checkbox', { name: 'new option 0' }));
     await expect(canvas.getByText('new option 0')).toBeVisible();
+    const results = body
+      .getByRole('checkbox', { name: 'new option 0' })
+      .closest<HTMLElement>('[aria-label="Remote results"]');
+    if (!results) throw new Error('Remote results pane was not rendered');
+    results.scrollTop = results.scrollHeight;
+    results.dispatchEvent(new Event('scroll'));
+    await expect(await body.findByRole('alert')).toHaveTextContent('Page two failed');
+    await userEvent.click(body.getByRole('button', { name: '重試' }));
+    await expect(await body.findByRole('checkbox', { name: 'new option 10' })).toBeVisible();
+    await waitFor(() =>
+      expect(remoteRequests.filter((request) => request === 'new:10')).toHaveLength(2),
+    );
+    await expect(canvas.getByText('new option 0')).toBeVisible();
     await userEvent.keyboard('{Escape}');
   }}
   ><div class="w-96">
@@ -114,5 +132,31 @@
       bind:value={remoteValue}
       loadOptions={remoteLoader}
     />
+  </div></Story
+>
+<Story
+  name="Auto load waits until the sentinel enters its scroller"
+  asChild
+  play={async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const scroller = canvas.getByLabelText('Sentinel scroller');
+    await expect(canvas.getByText('Requested 0 pages')).toBeVisible();
+    scroller.scrollTop = scroller.scrollHeight;
+    scroller.dispatchEvent(new Event('scroll'));
+    await waitFor(() => expect(canvas.getByText('Requested 1 pages')).toBeVisible());
+  }}
+  ><div
+    bind:this={sentinelRoot}
+    class="h-32 overflow-y-auto rounded border p-2"
+    aria-label="Sentinel scroller"
+  >
+    <div class="h-96">The sentinel begins outside this viewport.</div>
+    <AutoLoadSentinel
+      root={sentinelRoot}
+      hasMore={sentinelCalls === 0}
+      onloadmore={() => (sentinelCalls += 1)}
+      ariaLabel="Load more demo results"
+    />
+    <p>Requested {sentinelCalls} pages</p>
   </div></Story
 >

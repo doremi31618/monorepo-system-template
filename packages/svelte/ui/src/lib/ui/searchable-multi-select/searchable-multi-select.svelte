@@ -58,6 +58,7 @@
   let controller: AbortController | undefined;
   let request = 0;
   let searchInput = $state<HTMLInputElement | null>(null);
+  let resultsPane = $state<HTMLElement | null>(null);
   let retryCursor = $state<string | null>(null);
   const cache = new SvelteMap<string, SearchableMultiSelectOption>();
   $effect(() => {
@@ -203,7 +204,12 @@
         aria-label={`搜尋${label}`}
       /></label
     >
-    <div class="max-h-[min(50dvh,20rem)] overflow-y-auto" aria-live="polite">
+    <div
+      bind:this={resultsPane}
+      class="max-h-[min(50dvh,20rem)] overflow-y-auto"
+      aria-label={`${label} results`}
+      aria-live="polite"
+    >
       {#each visible as option (option.value)}<label
           class="flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
           class:cursor-not-allowed={option.disabled || option.locked}
@@ -240,6 +246,7 @@
           onloadmore={() => load(false)}
           hasMore={Boolean(nextCursor)}
           {loading}
+          root={resultsPane}
           ariaLabel={`載入更多${label}`}
         />{/if}
     </div>
@@ -249,13 +256,10 @@
   {@render chips()}{#if isMobile.current}<Drawer.Root
       bind:open
       onOpenChange={changeOpen}
-      ><button
-        type="button"
-        class="flex min-h-11 w-full items-center justify-between rounded-md border border-input bg-background px-3 text-left text-sm shadow-xs disabled:cursor-not-allowed disabled:opacity-50"
-        onclick={() => changeOpen(true)}
-        {disabled}
-        aria-label={ariaLabel ?? `選擇${label}`}
-        >{@render triggerContent()}</button
+      ><Drawer.Trigger
+        >{#snippet child({ props })}{@render trigger(
+            props,
+          )}{/snippet}</Drawer.Trigger
       ><Drawer.Content
         ><Drawer.Header
           ><Drawer.Title>選擇{label}</Drawer.Title><Drawer.Description
