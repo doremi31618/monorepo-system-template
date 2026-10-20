@@ -1,6 +1,6 @@
 # M4-04 — Data view toolbar: opt-in operators and repeated rules
 
-- Status: Review — independent code review approved; Dev PR blocked by dependency security audit
+- Status: Review — independent code review approved; one-time audit exception authorized, remaining checks pending
 - Actor/roles: Codex coordinator (Owner/Integrator); Claude Code CLI Sonnet implementation,
   Opus correction and separate read-only Opus Reviewer; no direct dev/main edits
 - Branch/worktree: `codex/M4-04-filter-operators` at
@@ -192,3 +192,14 @@ consumer import has been performed. The user explicitly chose **not** to upgrade
 and to preserve progress / defer integration on2026-10-20. No dependency-remediation work
 is authorized. Local feature verification does not replace
 the required CI gate, and main/Production remain untouched.
+
+### Resumption / one-time exception
+
+On2026-10-20, after clarifying this is the shared UI upstream repository rather than the
+App repository, the user explicitly said「好，那忽略這次結果繼續推進」. This revokes the
+integration hold and accepts only the dependency-audit result for PR#24 as a one-time
+exception. It does not authorize dependency upgrades, permanent workflow/audit changes,
+false green check statuses, or bypassing typecheck/tests/build/review. The original failed
+audit remains visible. Verify the remaining workflow commands on the frozen branch before
+any Dev merge; retain branch/worktree until integrated App Dev acceptance. Main/Prod
+remain gated by the existing release workflow and explicit Dev acceptance.
