@@ -188,6 +188,7 @@ The audit reports 23 high/critical advisories (3 critical, 20 high), covering ex
 mail/API/editor/build dependencies. This Work Item changes no dependency manifest or
 lockfile; comparison with base `b611268` confirms only the listed UI, tests and documentation
 files changed. No security exception, audit suppression, dependency upgrade, Dev merge or
-consumer import has been performed. A separate dependency-remediation scope has been
-proposed to the user; authorization is pending. Local feature verification does not replace
+consumer import has been performed. The user explicitly chose **not** to upgrade dependencies
+and to preserve progress / defer integration on2026-10-20. No dependency-remediation work
+is authorized. Local feature verification does not replace
 the required CI gate, and main/Production remain untouched.
