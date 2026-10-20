@@ -218,3 +218,172 @@ workflow allows; manual Storybook typecheck was not rerun (its two baseline erro
 remain disclosed). The GitHub job itself still fails at the accepted audit and skips
 later steps: **do not label the GitHub run green**. No dependencies or workflow changed.
 This documentation-only update does not alter the verified package tree.
+
+## Follow-up bugfix (2026-10-20): long option labels overlap in the default choice editor
+
+Report (coordinator, real in-app WebKit at 667×375): a consumer `enum` property with a `multi`
+operator and 100 options with 100-character Chinese labels, default choice editor (no custom
+`filterEditors`). After choosing Contains any, all 10 visible option buttons were 32 px tall
+with the text spilling over the other options; the options grid had 10 rows × 32 px under
+`max-h-64` (256 px); page `scrollWidth` 1705 > 667. The Drawer rect and footer were correct.
+The generic field picker (50 long names) passed. Branch fast-forwarded to reviewed Dev `95b2b75`
+after the PR #24 merge. All edits and the mutation reverts/restores in this round used absolute-path
+`apply_patch` only.
+
+Root cause (local CSS, reproduced in headless Chromium too, so not WebKit-only):
+
+1. The options list is `grid max-h-64 overflow-y-auto` with implicit `auto` rows. Each option
+   button has an explicit `min-h-8`, so each row's base size is 32 px. Grid track sizing
+   (CSS Grid §12.6, Maximize Tracks) does not grow rows past the container's `max-height`. Ten
+   rows (10 × 32 + 9 × 4 gap = 356 px) already exceed 256 px, so every row stays at 32 px. The
+   stretched button is 32 px, and its wrapped label overflows into the next options. The field
+   picker has no `max-height` on its grid, which is why it passed.
+2. `break-words` (`overflow-wrap: break-word`) does not lower the min-content width. An unbroken
+   Latin label therefore sets the grid column wider than the list (Chromium: button 795 px in a
+   343 px list).
+
+Fix (options list only; labels are not truncated and the caps, paging and UX are unchanged): the
+options grid gets `auto-rows-max`, so rows are sized by content. The option button replaces
+`break-words` with `[overflow-wrap:anywhere]`. The property picker, operator list, Drawer,
+Popover and consumer are unchanged.
+
+New stories in `DataViewToolbarCapacity.stories.svelte` (Vitest `page.viewport`). Each uses a
+`multi` enum with 100 options whose labels are 100 characters:
+
+| Story id (`ui-library-data-view-toolbar-property-capacity--…`) | Labels | Viewport |
+|---|---|---|
+| `phone-portrait-drawer-lays-out-100-long-cjk-options` | CJK | 375×812 |
+| `phone-landscape-drawer-lays-out-100-long-cjk-options` | CJK | 667×375 |
+| `phone-portrait-drawer-lays-out-100-unbroken-latin-options` | unbroken Latin | 375×812 |
+| `phone-landscape-drawer-lays-out-100-unbroken-latin-options` | unbroken Latin | 667×375 |
+
+Each story checks that every rendered option's text range sits inside its own button, that no
+option overlaps the one above, and that options stay within the list width with no horizontal
+scroll. It also checks that the Drawer is inside the viewport and the page has no horizontal
+overflow. It Tabs (with lazy reveal) to the 100th option, checks that option is inside the list
+and the viewport, and selects it with Enter. It then checks that Confirm is inside the Drawer and
+viewport and is the element hit at its center (not masked), Tabs to Confirm, and commits
+`["o100"]`.
+
+| Step | Result (headless Chromium) |
+|---|---|
+| RED before fix | CJK portrait: text 454–551 in a 487–519 button. CJK landscape: text 188–245 in a 201–233 button. Latin portrait/landscape: button right edge 811 past the list edge (359 / 651). One isolated Latin landscape run first failed on Drawer lookup (`expected null not to be null`); two reruns gave the layout RED above |
+| GREEN | capacity file 7/7 |
+| Mutation: drop `auto-rows-max` only | all 4 new stories fail (text spills out of a 32 px button); restored |
+| Mutation: restore `break-words` only | CJK 2 pass, Latin 2 fail (column too wide); restored |
+
+Results (this worktree, no install):
+
+- `bun test ./packages/svelte/ui/tests`: 23 pass, 0 fail.
+- `cd packages/svelte/ui && bun run check`: 0 errors, 0 warnings. A fresh `bun run build` succeeds (dist contains the fix).
+- `cd apps/storybook && bun run test` equivalent (`npx vitest --run`): 73 tests (the earlier 69 + 4 new) in 10 files. Five consecutive runs: four had 73/73. One had 72/73, with a single intermittent failure in the unchanged `Mobile sort drawer returns focus to the sort button` (7 ms). It did not recur, and its message was not captured.
+- `svelte-check` on `apps/storybook`: the same 2 pre-existing errors in untouched `UiLibrary.stories.svelte`.
+- Not run: WebKit/Safari/iOS (coordinator verifies with real in-app WebKit through CUA), consumer suites, root CI.
+- Out of scope, not changed: the property picker and active-filter chips still use `break-words`, so a long unbroken Latin field name could widen them the same way. The CJK and spaced-label cases pass. Not assigned: the initial mobile chip does not autofocus its input until Tab. (Superseded by follow-up 2 below, which covers the picker, the selected-field header and chips.)
+
+## Follow-up bugfix 2 (2026-10-20): 100-character field names in picker, operator step and chips
+
+Report (coordinator, real in-app WebKit at 667×375, measured before any upstream follow-up import):
+after choosing a field with a 100-character CJK name, the operator picker's selected-field
+(back) Button kept the Button base `whitespace-nowrap` (its class was only
+`justify-start text-muted-foreground`). It widened the implicit grid column, so every operator
+button was 1398.59 px wide; page `scrollWidth` was 1816. Ownership was extended to the field
+picker, the selected-field header and the filter chips, for 100-character CJK and unbroken Latin
+labels. All authored edits and mutation reverts/restores used absolute-path `apply_patch`.
+
+Root cause (local CSS, reproduced in headless Chromium):
+
+1. The filter editor is a `grid` with one implicit `auto` column. An `auto` track's minimum is
+   the largest item min-content contribution. The nowrap back button's min-content is its whole
+   one-line label, so the column, and with it every stretched operator button, grows past the
+   Drawer or Popover.
+2. `break-words` on picker buttons, and the header `<p>`s with no wrap rule, keep a long
+   unbroken Latin word's full width as min-content. That widens the same column at the picker
+   step and at later steps.
+3. Chips: the Button base `shrink-0` keeps the chip at its one-line max-content width inside
+   `inline-flex max-w-full`, so even CJK chips did not wrap (right edge x=1513 at every
+   viewport). `break-words` also kept unbroken Latin chips wide.
+
+Fix (`data-view-toolbar.svelte` only; no truncation, caps or UX change):
+
+- The filter editor root gets `[overflow-wrap:anywhere]`. It is inherited, so the picker
+  buttons, the step header `<p>`s, the back button and options all lower their min-content
+  width. The explicit `break-words` on picker and option buttons is removed, because it would
+  override the inherited value. The option button's own `[overflow-wrap:anywhere]` from
+  follow-up 1 moved to the root. The options grid's `auto-rows-max` is unchanged.
+- The selected-field back button: `h-auto min-h-9 whitespace-normal text-left` (min height
+  equals the default Button height).
+- The chip edit button: `shrink` plus `[overflow-wrap:anywhere]` instead of `break-words`.
+
+New stories in `DataViewToolbarCapacity.stories.svelte`. Each story has the built-in `Name` and
+one 100-character `text` field (operators `contains` and unary `isEmpty`). It checks the field
+picker, the operator step (back button and operators), the value step, the chip, and chip
+re-edit. At each step every editor child keeps its text inside its own box, does not overlap
+the one above, and stays within the editor width. The editor stays inside the overlay with no
+horizontal scroll and no page overflow. The input, Cancel and Confirm stay on screen. The chip
+text stays inside the chip, the chip stays inside Active filters, and the remove button stays on
+screen. Cancel from a chip edit returns focus to the chip.
+
+| Story id (`ui-library-data-view-toolbar-property-capacity--…`) | Field name | Viewport | RED before fix |
+|---|---|---|---|
+| `phone-landscape-drawer-fits-a-100-character-cjk-field-name` | CJK | 667×375 | operator step: back button to x=1448 in a 651 px editor |
+| `phone-portrait-drawer-fits-a-100-character-cjk-field-name` | CJK | 375×812 | operator step: back button to x=1448 (editor 359) |
+| `desktop-popover-fits-a-100-character-cjk-field-name` | CJK | 1024×768 | operator step: back button to x=2120 (editor 1014) |
+| `phone-landscape-drawer-fits-a-100-character-unbroken-latin-field-name` | unbroken Latin | 667×375 | picker step: column to x=813 |
+| `phone-portrait-drawer-fits-a-100-character-unbroken-latin-field-name` | unbroken Latin | 375×812 | picker step: column to x=813 |
+| `desktop-popover-fits-a-100-character-unbroken-latin-field-name` | unbroken Latin | 1024×768 | picker step: column to x=1530 |
+
+After the editor fix, a second RED appeared at the chip (CJK right edge x=1513 at all three
+viewports; Latin x=878 at both phone sizes) before the chip change. Test corrections during
+RED, not product behavior: the first draft listed both long fields in one toolbar, so the Latin
+field masked the CJK result (each story now has its own field), and the text-range check skips
+empty elements (the `<input>`).
+
+GREEN: capacity file 13/13 (3 earlier + 4 options + 6 field names).
+
+Mutation checks (one change at a time, each restored with `apply_patch`, package rebuilt):
+
+| Mutation | Failing stories |
+|---|---|
+| Drop editor-root `[overflow-wrap:anywhere]` | 5: both Latin option stories + 3 Latin field-name stories |
+| Back button back to `justify-start text-muted-foreground` | all 6 field-name stories |
+| Chip without `shrink` | 5 field-name stories (desktop Latin passes: 878 px fits at 1024) |
+| Chip `break-words` instead of `anywhere` | 2 phone Latin field-name stories |
+| Options grid without `auto-rows-max` | all 4 option stories |
+
+### Intermittent sort story failure: root cause evidence
+
+`Mobile sort drawer returns focus to the sort button` (unchanged) failed once in 10 full-suite
+runs on the fixed code (run 6, 78/79), after 6 ms, at its first step:
+
+```
+Unable to perform pointer interaction as the element has `pointer-events: none`:
+BUTTON(label=Sort)
+```
+
+The story before it in file order, `Open chip draft survives desktop and mobile breakpoint
+changes`, ends by cancelling a mobile Drawer. It waited for unmount and chip focus, but not for
+the overlay's `body { pointer-events: none }` lock to clear, so the next story's first click
+could hit the lock. This is the same hygiene issue described in the review corrections. The
+operator file alone passed 30/30 runs, so the race only showed under full-suite timing. Test-only
+fix: that story now ends with the same unlock `waitFor` it already uses mid-story. Its assertions
+are unchanged. No deterministic RED exists for this race; evidence after the fix is below.
+
+Results (this worktree, no install, package rebuilt from the final source):
+
+- `bun test ./packages/svelte/ui/tests`: 23 pass, 0 fail.
+- `cd packages/svelte/ui && bun run check`: 0 errors, 0 warnings. `bun run build` succeeds.
+- `svelte-check` on `apps/storybook`: the same 2 pre-existing errors in untouched `UiLibrary.stories.svelte`; none in the toolbar stories.
+- Full Storybook (`npx vitest --run`, 79 tests in 10 files = 69 earlier + 10 new): before the hygiene fix 9/10 runs green (run 6 as above). After it: 15/15 consecutive runs 79/79. That lowers the observed rate but does not prove the race is gone.
+- Not run: WebKit/Safari/iOS (coordinator verifies through CUA), consumer suites, root CI, timed backend matrix.
+- Review closure: independent reviewer approved the source/capacity stories with unchanged source hashes;
+  coordinator checked the completed report and the additional5-line test cleanup (it waits for body unlock,
+  not bypassing a pointer failure).15 post-cleanup full runs passed, but this is not proof of zero flakiness.
+  The inherited `overflow-wrap:anywhere` also reaches consumer-supplied custom `filterEditors`, so their
+  text can break mid-word when constrained. Desktop100-long-option coverage is still pending: the new
+  option stories cover both phone sizes; the desktop stories cover long field names, not100 options.
+  No follow-up PR/merge/import or App deployment is claimed by this checkpoint.
+- Remaining, not changed: the sort editor's property and direction buttons are still nowrap
+  `justify-start` buttons, so a long sortable field name could widen the sort Popover or Drawer
+  the same way. They are not covered by the stories. Not assigned: the initial mobile chip does
+  not autofocus its input until Tab.

@@ -462,6 +462,11 @@
     await waitFor(() => expect(drawer()).toBeNull());
     await waitFor(() => expect(chip).toHaveFocus());
     await expect(canvas.getByTestId('state')).toHaveTextContent('note:contains:"draft"');
+    // The closed drawer's body lock must not leak into the next story's first click.
+    await waitFor(
+      () => expect(canvasElement.ownerDocument.body.style.pointerEvents).not.toBe('none'),
+      { timeout: 3000 },
+    );
   }}
 >
   <div class="flex w-full flex-col gap-4">
