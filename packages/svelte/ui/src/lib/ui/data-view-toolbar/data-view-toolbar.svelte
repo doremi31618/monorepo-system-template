@@ -2,6 +2,7 @@
   import ArrowUpDownIcon from '@lucide/svelte/icons/arrow-up-down';
   import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
   import ChevronUpIcon from '@lucide/svelte/icons/chevron-up';
+  import ListFilterIcon from '@lucide/svelte/icons/list-filter';
   import PlusIcon from '@lucide/svelte/icons/plus';
   import SearchIcon from '@lucide/svelte/icons/search';
   import XIcon from '@lucide/svelte/icons/x';
@@ -24,6 +25,14 @@
     DataViewQuery,
     DataViewSortRule,
   } from './query.js';
+  import {
+    canAddDataViewFilter,
+    createDataViewRuleId,
+    removeDataViewFilter,
+    resolveOperandKind,
+    resolveOperatorLabel,
+    upsertDataViewFilter,
+  } from './query.js';
 
   let {
     properties,
@@ -41,7 +50,7 @@
     query: DataViewQuery;
     searchLabel?: string;
     searchPlaceholder?: string;
-    searchMode?: 'toggle' | 'persistent';
+    searchMode?: 'toggle' | 'persistent' | 'hidden';
     ariaLabel?: string;
     labels?: DataViewToolbarLabelOverrides;
     filterEditors?: Record<
@@ -71,10 +80,13 @@
   let searchDirty = $state(false);
   let searchInput: HTMLInputElement | null = $state(null);
   let searchTrigger: HTMLButtonElement | null = $state(null);
+  let toolbarRoot: HTMLElement | null = null;
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
   let filterOpen = $state(false);
   let filterProperty = $state<DataViewProperty | undefined>();
   let filterOperator = $state<DataViewFilterOperator | undefined>();
+  let filterEditing = $state<DataViewFilterRule | undefined>();
+  let filterRestoreTarget: HTMLElement | undefined;
   let filterValueDraft = $state('');
   let filterEndDraft = $state('');
   let filterOptionDraft = $state<string[]>([]);
@@ -103,6 +115,18 @@
   const hasSortableProperties = $derived(
     properties.some((property) => property.sortable),
   );
+  // Collision-safe chip keys, even for controlled rules that repeat an id.
+  // Id-less rules key by their occurrence within the property, so a
+  // non-repeat edit that moves the rule to the end keeps its chip.
+  const filterKeys = $derived.by(() => {
+    const occurrences = new Map<string, number>();
+    return query.filters.map((filter) => {
+      const group = JSON.stringify([filter.property, filter.id ?? null]);
+      const occurrence = occurrences.get(group) ?? 0;
+      occurrences.set(group, occurrence + 1);
+      return JSON.stringify([filter.property, filter.id ?? null, occurrence]);
+    });
+  });
 
   $effect(() => {
     if (searchDirty) return;
@@ -156,13 +180,15 @@
     if (event.key !== 'Escape') return;
     event.preventDefault();
     if (searchDraft) clearSearch();
-    else if (searchMode !== 'persistent') void closeSearch();
+    // Persistent search only stays open on desktop; mobile renders it as a toggle.
+    else if (searchMode !== 'persistent' || isMobile.current) void closeSearch();
   }
 
   function resetFilterEditor() {
     filterOptionController?.abort();
     filterProperty = undefined;
     filterOperator = undefined;
+    filterEditing = undefined;
     filterValueDraft = '';
     filterEndDraft = '';
     filterOptionDraft = [];
@@ -179,38 +205,56 @@
   }
   function selectFilterOperator(operator: DataViewFilterOperator) {
     filterOperator = operator;
-    const existing = query.filters.find(
-      (filter) => filter.property === filterProperty?.key,
-    );
-    if (existing && existing.operator === operator) {
-      const values = Array.isArray(existing.value)
-        ? existing.value
-        : [existing.value];
-      if (isChoiceProperty(filterProperty)) filterOptionDraft = values;
-      else {
-        filterValueDraft = values[0] ?? '';
-        filterEndDraft = values[1] ?? '';
-      }
+    const existing = filterProperty?.allowRepeat
+      ? filterEditing
+      : query.filters.find((filter) => filter.property === filterProperty?.key);
+    if (existing && existing.operator === operator) loadFilterDraft(existing);
+    loadChoicesIfNeeded();
+  }
+  function loadFilterDraft(rule: DataViewFilterRule) {
+    const values = Array.isArray(rule.value) ? rule.value : [rule.value];
+    if (operandKind() === 'multi' || isChoiceProperty(filterProperty))
+      filterOptionDraft = values;
+    else {
+      filterValueDraft = values[0] ?? '';
+      filterEndDraft = values[1] ?? '';
     }
-    if (isChoiceProperty(filterProperty)) void loadFilterOptions(true);
+  }
+  function loadChoicesIfNeeded() {
+    // Unary operators show no options, so they never trigger a load.
+    if (operandKind() !== 'none' && isChoiceProperty(filterProperty))
+      void loadFilterOptions(true);
   }
   function commitFilter(value: string | string[]) {
     if (!filterProperty || !filterOperator) return;
+    // An edited rule keeps its id; only new repeated rules get one.
+    const id =
+      filterEditing?.id ??
+      (filterProperty.allowRepeat
+        ? createDataViewRuleId(query.filters, filterProperty.key)
+        : undefined);
     const rule: DataViewFilterRule = {
+      ...(id !== undefined ? { id } : {}),
       property: filterProperty.key,
       operator: filterOperator,
       value,
     };
-    emit({
-      ...query,
-      filters: [
-        ...query.filters.filter((filter) => filter.property !== rule.property),
-        rule,
-      ],
-    });
+    const filters = upsertDataViewFilter(
+      query.filters,
+      rule,
+      filterProperty,
+      filterEditing,
+    );
+    // An edited rule the parent no longer holds is dropped, never appended.
+    if (filters !== query.filters) emit({ ...query, filters });
+  }
+  function operandKind() {
+    return filterProperty && filterOperator
+      ? resolveOperandKind(filterProperty, filterOperator)
+      : 'single';
   }
   function toggleFilterOption(value: string) {
-    if (filterOperator !== 'isAnyOf') {
+    if (operandKind() !== 'multi') {
       filterOptionDraft = [value];
       return;
     }
@@ -218,49 +262,83 @@
       ? filterOptionDraft.filter((item) => item !== value)
       : [...filterOptionDraft, value];
   }
+  function normalizedValueDraft() {
+    return filterProperty?.normalizeText
+      ? filterProperty.normalizeText(filterValueDraft)
+      : filterValueDraft.trim();
+  }
   function canConfirmFilter() {
     if (!filterProperty || !filterOperator) return false;
-    if (isChoiceProperty(filterProperty)) return filterOptionDraft.length > 0;
-    if (!filterValueDraft.trim()) return false;
-    return filterOperator !== 'between' || Boolean(filterEndDraft.trim());
+    if (operandKind() === 'none') return true;
+    if (operandKind() === 'multi' || isChoiceProperty(filterProperty))
+      return filterOptionDraft.length > 0;
+    if (filterOperator === 'between')
+      return Boolean(filterValueDraft.trim() && filterEndDraft.trim());
+    return Boolean(normalizedValueDraft());
   }
   function confirmFilter() {
     if (!canConfirmFilter()) return;
-    const value = isChoiceProperty(filterProperty)
-      ? filterOperator === 'isAnyOf'
-        ? filterOptionDraft
-        : filterOptionDraft[0]
-      : filterOperator === 'between'
-        ? [filterValueDraft.trim(), filterEndDraft.trim()]
-        : filterValueDraft.trim();
+    const value =
+      operandKind() === 'none'
+        ? ''
+        : operandKind() === 'multi'
+          ? filterOptionDraft
+          : isChoiceProperty(filterProperty)
+            ? filterOptionDraft[0]
+            : filterOperator === 'between'
+              ? [filterValueDraft.trim(), filterEndDraft.trim()]
+              : normalizedValueDraft();
     commitFilter(value);
     filterOpen = false;
   }
-  function editFilter(filter: DataViewFilterRule) {
+  function cancelFilter() {
+    filterOpen = false;
+  }
+  function toolbarTrigger(name: 'filter' | 'sort') {
+    return toolbarRoot?.querySelector<HTMLElement>(
+      `[data-toolbar-trigger="${name}"]`,
+    );
+  }
+  // Overlays always hand focus back here. A breakpoint swap unmounts the
+  // still-open overlay, so focus (and the chip target) wait for a real close.
+  function handleFilterCloseAutoFocus(event: Event) {
+    event.preventDefault();
+    if (filterOpen) return;
+    const target = filterRestoreTarget?.isConnected
+      ? filterRestoreTarget
+      : toolbarTrigger('filter');
+    filterRestoreTarget = undefined;
+    target?.focus();
+  }
+  function handleSortCloseAutoFocus(event: Event) {
+    event.preventDefault();
+    if (!sortOpen) toolbarTrigger('sort')?.focus();
+  }
+  function editFilter(filter: DataViewFilterRule, origin?: HTMLElement) {
     resetFilterEditor();
     filterProperty = propertyFor(filter.property);
     if (!filterProperty) return;
 
+    filterRestoreTarget = origin;
+    filterEditing = filter;
     filterOperator = filter.operator;
-    const values = Array.isArray(filter.value)
-      ? filter.value
-      : [filter.value];
-    if (isChoiceProperty(filterProperty)) filterOptionDraft = values;
-    else {
-      filterValueDraft = values[0] ?? '';
-      filterEndDraft = values[1] ?? '';
-    }
+    loadFilterDraft(filter);
     filterOpen = true;
-    if (isChoiceProperty(filterProperty)) void loadFilterOptions(true);
+    loadChoicesIfNeeded();
   }
-  function removeFilter(property: string) {
-    emit({
-      ...query,
-      filters: query.filters.filter((filter) => filter.property !== property),
-    });
+  function removeFilter(rule: DataViewFilterRule) {
+    const filters = removeDataViewFilter(query.filters, rule);
+    if (filters !== query.filters) emit({ ...query, filters });
   }
   function clearFilters() {
     emit({ ...query, filters: [] });
+  }
+  function openFilterEditor() {
+    filterRestoreTarget = undefined;
+    filterOpen = true;
+  }
+  function openSortEditor() {
+    sortOpen = true;
   }
   function propertyFor(key: string) {
     return properties.find((property) => property.key === key);
@@ -353,6 +431,7 @@
     return {
       property: filterProperty,
       operator: filterOperator,
+      operand: operandKind(),
       value: filterValueDraft,
       endValue: filterEndDraft,
       selectedValues: filterOptionDraft,
@@ -363,8 +442,15 @@
   }
   function filterSummary(filter: DataViewFilterRule) {
     const property = propertyFor(filter.property);
+    const operator = resolveOperatorLabel(
+      property,
+      filter.operator,
+      copy.operators,
+    );
+    if (property && resolveOperandKind(property, filter.operator) === 'none')
+      return `${property.label} ${operator}`;
     const values = Array.isArray(filter.value) ? filter.value : [filter.value];
-    return `${property?.label ?? filter.property} ${copy.operators[filter.operator]} ${values.map((value) => optionLabel(property, value)).join(', ')}`;
+    return `${property?.label ?? filter.property} ${operator} ${values.map((value) => optionLabel(property, value)).join(', ')}`;
   }
 
   function resetSortEditor() {
@@ -412,7 +498,7 @@
 </script>
 
 {#snippet filterEditor()}
-  <div class="grid gap-2" aria-label="Filter editor">
+  <div class="grid min-w-0 gap-2" aria-label="Filter editor">
     {#if !filterProperty}
       <p class="px-2 pt-1 text-xs font-medium text-muted-foreground">
         {copy.filterBy}
@@ -420,7 +506,8 @@
       {#each filterableProperties as property (property.key)}
         <Button
           variant="ghost"
-          class="justify-start"
+          class="h-auto min-h-8 justify-start whitespace-normal break-words py-1.5 text-left"
+          disabled={!canAddDataViewFilter(query.filters, property)}
           onclick={() => selectFilterProperty(property)}
           >{property.label}</Button
         >
@@ -436,13 +523,18 @@
           variant="ghost"
           class="justify-start"
           onclick={() => selectFilterOperator(operator)}
-          >{copy.operators[operator]}</Button
+          >{resolveOperatorLabel(filterProperty, operator, copy.operators)}</Button
         >
       {/each}
+    {:else if operandKind() === 'none'}
+      <p class="px-2 pt-1 text-xs text-muted-foreground">
+        {filterProperty.label}
+        {resolveOperatorLabel(filterProperty, filterOperator, copy.operators)}
+      </p>
     {:else if isChoiceProperty(filterProperty)}
       <p class="px-2 pt-1 text-xs text-muted-foreground">
         {filterProperty.label}
-        {copy.operators[filterOperator]}
+        {resolveOperatorLabel(filterProperty, filterOperator, copy.operators)}
       </p>
       {#if filterProperty.type !== 'boolean'}
         <Input
@@ -463,7 +555,7 @@
             variant={filterOptionDraft.includes(option.value)
               ? 'secondary'
               : 'ghost'}
-            class="justify-start"
+            class="h-auto min-h-8 justify-start whitespace-normal break-words py-1.5 text-left"
             aria-pressed={filterOptionDraft.includes(option.value)}
             onclick={() => toggleFilterOption(option.value)}
             >{option.label}</Button
@@ -488,13 +580,13 @@
       {@const editor = filterEditors[filterProperty.type]}
       <p class="px-2 pt-1 text-xs text-muted-foreground">
         {filterProperty.label}
-        {copy.operators[filterOperator]}
+        {resolveOperatorLabel(filterProperty, filterOperator, copy.operators)}
       </p>
       {@render editor(filterEditorContext())}
     {:else}
       <p class="px-2 pt-1 text-xs text-muted-foreground">
         {filterProperty.label}
-        {copy.operators[filterOperator]}
+        {resolveOperatorLabel(filterProperty, filterOperator, copy.operators)}
       </p>
       <Input
         type={filterProperty.type === 'date'
@@ -517,6 +609,9 @@
       <div
         class="sticky bottom-0 flex items-center justify-end gap-2 border-t bg-background pt-2"
       >
+        <Button variant="ghost" onclick={cancelFilter}
+          >{copy.cancelFilter}</Button
+        >
         <Button onclick={confirmFilter} disabled={!canConfirmFilter()}
           >{copy.confirmFilter}</Button
         >
@@ -600,25 +695,33 @@
 {/snippet}
 
 <div
+  bind:this={toolbarRoot}
   data-slot="data-view-toolbar"
   role="search"
   aria-label={ariaLabel}
   class="flex w-full flex-col gap-2"
 >
-  <div class="flex min-h-9 flex-wrap items-center justify-end gap-1">
+  <div
+    data-slot="data-view-toolbar-controls"
+    class="flex min-h-9 flex-nowrap items-center justify-end gap-1 sm:flex-wrap"
+  >
     {#if isMobile.current}
+      <Button
+        data-toolbar-trigger="filter"
+        variant="ghost"
+        size="sm"
+        class="order-2 shrink-0"
+        aria-label={copy.addFilter}
+        aria-haspopup="dialog"
+        aria-expanded={filterOpen}
+        onclick={openFilterEditor}
+        ><ListFilterIcon /><span class="hidden sm:inline">{copy.addFilter}</span></Button
+      >
       <Drawer.Root bind:open={filterOpen}>
-        <Drawer.Trigger
-          >{#snippet child({ props })}<Button
-              {...props}
-              variant="ghost"
-              size="sm"
-              class="order-2"
-              aria-label={copy.addFilter}
-              ><PlusIcon data-icon="inline-start" />{copy.addFilter}</Button
-            >{/snippet}</Drawer.Trigger
+        <Drawer.Content
+          class="max-h-[85dvh]"
+          onCloseAutoFocus={handleFilterCloseAutoFocus}
         >
-        <Drawer.Content class="max-h-[85dvh]">
           <Drawer.Header
             ><Drawer.Title>{copy.filter}</Drawer.Title><Drawer.Description
               >{copy.filterDescription}</Drawer.Description
@@ -630,68 +733,82 @@
     {:else}
       <Popover.Root bind:open={filterOpen}>
         <Popover.Trigger
-          >{#snippet child({ props })}<Button
+        >{#snippet child({ props })}<Button
               {...props}
+              data-toolbar-trigger="filter"
               variant="ghost"
               size="sm"
-              class="order-2"
+              class="order-2 shrink-0"
               aria-label={copy.addFilter}
-              ><PlusIcon data-icon="inline-start" />{copy.addFilter}</Button
+              ><ListFilterIcon data-icon="inline-start" />{copy.addFilter}</Button
             >{/snippet}</Popover.Trigger
         >
-        <Popover.Content align="end">{@render filterEditor()}</Popover.Content>
+        <Popover.Content
+          align="end"
+          class="max-h-(--bits-popover-content-available-height) max-w-[calc(100vw-1rem)]"
+          onCloseAutoFocus={handleFilterCloseAutoFocus}
+          ><!-- Many properties scroll inside the popover, which never outgrows the viewport. -->
+          <div class="-m-1 min-h-0 overflow-y-auto p-1">{@render filterEditor()}</div></Popover.Content
+        >
       </Popover.Root>
     {/if}
 
     {#if hasSortableProperties}
       {#if isMobile.current}
-      <Drawer.Root bind:open={sortOpen}>
-        <Drawer.Trigger
-          >{#snippet child({ props })}<Button
-              {...props}
-              variant="ghost"
-              size="sm"
-              class="order-3"
-              aria-label={query.sorts.length
-                ? `${copy.sort} · ${query.sorts.length}`
-                : copy.sort}
-              ><ArrowUpDownIcon data-icon="inline-start" />{query.sorts.length
-                ? `${copy.sort} · ${query.sorts.length}`
-                : copy.sort}</Button
-            >{/snippet}</Drawer.Trigger
-        >
-        <Drawer.Content class="max-h-[85dvh]">
-          <Drawer.Header
-            ><Drawer.Title>{copy.sort}</Drawer.Title><Drawer.Description
-              >{copy.sortDescription}</Drawer.Description
-            ></Drawer.Header
+        <Button
+          data-toolbar-trigger="sort"
+          variant="ghost"
+          size="sm"
+          class="order-3 shrink-0"
+          aria-label={query.sorts.length
+            ? `${copy.sort} · ${query.sorts.length}`
+            : copy.sort}
+          aria-haspopup="dialog"
+          aria-expanded={sortOpen}
+          onclick={openSortEditor}
+          ><ArrowUpDownIcon /><span class="hidden sm:inline">{query.sorts.length
+              ? `${copy.sort} · ${query.sorts.length}`
+              : copy.sort}</span></Button
           >
-          <div class="overflow-y-auto px-4 pb-4">{@render sortEditor()}</div>
-        </Drawer.Content>
-      </Drawer.Root>
-    {:else}
-      <Popover.Root bind:open={sortOpen}>
-        <Popover.Trigger
-          >{#snippet child({ props })}<Button
-              {...props}
-              variant="ghost"
-              size="sm"
-              class="order-3"
-              aria-label={query.sorts.length
-                ? `${copy.sort} · ${query.sorts.length}`
-                : copy.sort}
-              ><ArrowUpDownIcon data-icon="inline-start" />{query.sorts.length
-                ? `${copy.sort} · ${query.sorts.length}`
-                : copy.sort}</Button
-            >{/snippet}</Popover.Trigger
-        >
-        <Popover.Content align="end">{@render sortEditor()}</Popover.Content>
-      </Popover.Root>
+        <Drawer.Root bind:open={sortOpen}>
+          <Drawer.Content
+            class="max-h-[85dvh]"
+            onCloseAutoFocus={handleSortCloseAutoFocus}
+          >
+            <Drawer.Header
+              ><Drawer.Title>{copy.sort}</Drawer.Title><Drawer.Description
+                >{copy.sortDescription}</Drawer.Description
+              ></Drawer.Header
+            >
+            <div class="overflow-y-auto px-4 pb-4">{@render sortEditor()}</div>
+          </Drawer.Content>
+        </Drawer.Root>
+      {:else}
+        <Popover.Root bind:open={sortOpen}>
+          <Popover.Trigger
+            >{#snippet child({ props })}<Button
+                {...props}
+                data-toolbar-trigger="sort"
+                variant="ghost"
+                size="sm"
+                class="order-3 shrink-0"
+                aria-label={query.sorts.length
+                  ? `${copy.sort} · ${query.sorts.length}`
+                  : copy.sort}
+                ><ArrowUpDownIcon data-icon="inline-start" />{query.sorts.length
+                  ? `${copy.sort} · ${query.sorts.length}`
+                  : copy.sort}</Button
+              >{/snippet}</Popover.Trigger
+          >
+          <Popover.Content align="end" onCloseAutoFocus={handleSortCloseAutoFocus}
+            >{@render sortEditor()}</Popover.Content
+          >
+        </Popover.Root>
       {/if}
     {/if}
 
-    {#if searchMode === 'persistent' || searchExpanded}
-      <div class="order-1 flex min-w-52 flex-1 items-center gap-1">
+    {#if searchMode !== 'hidden' && ((searchMode === 'persistent' && !isMobile.current) || searchExpanded)}
+      <div class="order-1 flex min-w-0 flex-1 items-center gap-1 sm:min-w-52">
         <Input
           bind:ref={searchInput}
           type="search"
@@ -709,38 +826,42 @@
             onclick={clearSearch}><XIcon /></Button
           >{/if}
       </div>
-    {:else}
+    {:else if searchMode !== 'hidden'}
       <Button
         bind:ref={searchTrigger}
         variant="ghost"
         size="sm"
-        class="order-1"
+        class="order-1 shrink-0"
         aria-label={effectiveSearchLabel}
         onclick={openSearch}
-        ><SearchIcon data-icon="inline-start" />{copy.search}</Button
+        ><SearchIcon data-icon="inline-start" /><span class="hidden sm:inline">{copy.search}</span></Button
       >
     {/if}
     {#if actions}
-      <div class="order-4">{@render actions()}</div>
+      <div class="order-4 shrink-0">{@render actions()}</div>
     {/if}
   </div>
 
   {#if query.filters.length}
     <div class="flex flex-wrap items-center gap-1" aria-label="Active filters">
-      {#each query.filters as filter (filter.property)}
-        <div class="inline-flex items-center gap-1">
+      {#each query.filters as filter, index (filterKeys[index])}
+        {@const summary = filterSummary(filter)}
+        <div class="inline-flex max-w-full items-center gap-1">
           <Button
             variant="secondary"
             size="sm"
-            aria-label={`Edit filter: ${filterSummary(filter)}`}
-            onclick={() => editFilter(filter)}
-            >{filterSummary(filter)}</Button
+            class="h-auto min-h-7 whitespace-normal break-words py-1 text-left"
+            aria-label={`Edit filter: ${summary}`}
+            onclick={(event) => editFilter(filter, event.currentTarget)}
+            >{summary}</Button
           >
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label={`Remove ${propertyFor(filter.property)?.label ?? filter.property} filter`}
-            onclick={() => removeFilter(filter.property)}><XIcon /></Button
+            aria-label={propertyFor(filter.property)?.allowRepeat
+              ? `Remove filter: ${summary}`
+              : `Remove ${propertyFor(filter.property)?.label ?? filter.property} filter`}
+            onclick={() => removeFilter(filter)}><XIcon /></Button
           >
         </div>
       {/each}

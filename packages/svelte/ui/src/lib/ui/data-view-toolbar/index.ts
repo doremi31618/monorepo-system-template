@@ -5,8 +5,14 @@ export {
   type DataViewToolbarLabels,
 } from './labels.js';
 export {
+  canAddDataViewFilter,
   parseDataViewQuery,
+  removeDataViewFilter,
+  resolveOperandKind,
+  resolveOperatorLabel,
+  upsertDataViewFilter,
   writeDataViewQuery,
+  type DataViewBuiltInFilterOperator,
   type DataViewBuiltInPropertyType,
   type DataViewFilterEditorContext,
   type DataViewFilterOperator,
@@ -15,6 +21,8 @@ export {
   type DataViewOptionLoader,
   type DataViewOptionPage,
   type DataViewOptionRequest,
+  type DataViewOperandKind,
+  type DataViewOperatorMeta,
   type DataViewProperty,
   type DataViewPropertyType,
   type DataViewQuery,
