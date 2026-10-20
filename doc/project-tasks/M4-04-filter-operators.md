@@ -1,6 +1,6 @@
 # M4-04 — Data view toolbar: opt-in operators and repeated rules
 
-- Status: Review — independent code review approved; one-time audit exception authorized, remaining checks pending
+- Status: Review — independent code review approved; non-audit checks passed, one-time audit exception authorized
 - Actor/roles: Codex coordinator (Owner/Integrator); Claude Code CLI Sonnet implementation,
   Opus correction and separate read-only Opus Reviewer; no direct dev/main edits
 - Branch/worktree: `codex/M4-04-filter-operators` at
@@ -203,3 +203,18 @@ false green check statuses, or bypassing typecheck/tests/build/review. The origi
 audit remains visible. Verify the remaining workflow commands on the frozen branch before
 any Dev merge; retain branch/worktree until integrated App Dev acceptance. Main/Prod
 remain gated by the existing release workflow and explicit Dev acceptance.
+
+### Non-audit workflow verification
+
+Separate verification executor ran the remaining workflow commands locally at `776e0e6`
+against PostgreSQL16.14 in an owned container bound only to127.0.0.1:55459 (not the
+protected application DB on5432 or the capacity DB on55458). Frozen install, explicit
+test-DB migration, dependency boundaries/graph, root `check`, `test`, `build` all passed.
+UI package check/build and23 unit tests passed. Root test includes runtime-task4,
+service-ui2, API56 passed/1 skipped (29 suites passed/1 skipped), Web admin regression,
+and69 Chromium Storybook tests in10 files. Web check:0 errors/15 existing warnings.
+Nonblocking `deps:report` exits1 for three existing unused-export entries, as the CI
+workflow allows; manual Storybook typecheck was not rerun (its two baseline errors
+remain disclosed). The GitHub job itself still fails at the accepted audit and skips
+later steps: **do not label the GitHub run green**. No dependencies or workflow changed.
+This documentation-only update does not alter the verified package tree.
