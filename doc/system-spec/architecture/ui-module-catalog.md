@@ -26,3 +26,11 @@ artifact provenance; this catalog does not imply that an external App already im
 The extra manual Storybook typecheck has two errors in untouched `UiLibrary` Accordion/Select
 examples; package check is clean. Do not label that extra check green. Full CI and the App's
 Dev acceptance are separate from package/component evidence.
+
+M4-04 follow-up `4859a0e` / Dev PR#25: capacity stories now also verify100 options with100-character
+CJK and unbroken Latin labels at1024x768,375x812 and667x375 (15 capacity stories;81 total Chromium
+stories). These check text containment, non-overlap, keyboard access to option100 and a reachable
+Confirm action. The two new desktop stories were first-run-green characterization, not RED-first.
+An upstream IAB/WebKit667x375 CJK option check also passed; no physical-device, external App import or
+Dev acceptance is implied. Root check/test/build passed locally; GitHub CI failed at the unchanged
+dependency audit, with its exception extension pending. See the Task for evidence and prior flakes.

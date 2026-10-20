@@ -498,7 +498,8 @@
 </script>
 
 {#snippet filterEditor()}
-  <div class="grid min-w-0 gap-2" aria-label="Filter editor">
+  <!-- overflow-wrap is inherited: long unbroken labels must not widen the column past the overlay. -->
+  <div class="grid min-w-0 gap-2 [overflow-wrap:anywhere]" aria-label="Filter editor">
     {#if !filterProperty}
       <p class="px-2 pt-1 text-xs font-medium text-muted-foreground">
         {copy.filterBy}
@@ -506,7 +507,7 @@
       {#each filterableProperties as property (property.key)}
         <Button
           variant="ghost"
-          class="h-auto min-h-8 justify-start whitespace-normal break-words py-1.5 text-left"
+          class="h-auto min-h-8 justify-start whitespace-normal py-1.5 text-left"
           disabled={!canAddDataViewFilter(query.filters, property)}
           onclick={() => selectFilterProperty(property)}
           >{property.label}</Button
@@ -515,7 +516,7 @@
     {:else if !filterOperator}
       <Button
         variant="ghost"
-        class="justify-start text-muted-foreground"
+        class="h-auto min-h-9 justify-start whitespace-normal text-left text-muted-foreground"
         onclick={resetFilterEditor}>{filterProperty.label}</Button
       >
       {#each filterProperty.operators as operator (operator)}
@@ -545,8 +546,9 @@
           oninput={handleFilterOptionSearch}
         />
       {/if}
+      <!-- Content-sized rows: auto rows would stop growing at max-h and let wrapped labels overlap. -->
       <div
-        class="grid max-h-64 gap-1 overflow-y-auto"
+        class="grid max-h-64 auto-rows-max gap-1 overflow-y-auto"
         aria-label={`${filterProperty.label} options`}
         onscroll={handleFilterOptionScroll}
       >
@@ -555,7 +557,7 @@
             variant={filterOptionDraft.includes(option.value)
               ? 'secondary'
               : 'ghost'}
-            class="h-auto min-h-8 justify-start whitespace-normal break-words py-1.5 text-left"
+            class="h-auto min-h-8 justify-start whitespace-normal py-1.5 text-left"
             aria-pressed={filterOptionDraft.includes(option.value)}
             onclick={() => toggleFilterOption(option.value)}
             >{option.label}</Button
@@ -850,7 +852,7 @@
           <Button
             variant="secondary"
             size="sm"
-            class="h-auto min-h-7 whitespace-normal break-words py-1 text-left"
+            class="h-auto min-h-7 shrink whitespace-normal py-1 text-left [overflow-wrap:anywhere]"
             aria-label={`Edit filter: ${summary}`}
             onclick={(event) => editFilter(filter, event.currentTarget)}
             >{summary}</Button
