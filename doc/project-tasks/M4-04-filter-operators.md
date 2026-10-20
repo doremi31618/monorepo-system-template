@@ -5,7 +5,8 @@
   Opus correction and separate read-only Opus Reviewer; no direct dev/main edits
 - Branch/worktree: `codex/M4-04-filter-operators` at
   `/Users/ericzhan/Documents/side-projects/monorepo-system-template-worktrees/M4-04-filter-operators`
-- Dev PR/Main PR/deployment: pending; no main merge or release before integrated App Dev UAT
+- Dev PR: https://github.com/doremi31618/monorepo-system-template/pull/24
+- Main PR/deployment: pending; no main merge or release before integrated App Dev UAT
 - Base: `origin/dev` `b611268`; consumer pin `a1c4e13` (Databricks Pipeline M4-04)
 - Spec: [Data View Toolbar](../system-spec/architecture/data-view-toolbar.md) §3.1
 - Scope: generic `@platform/svelte-ui/data-view-toolbar` only. The package knows no consumer field types, API, limits or operator names; the consumer owns persistence (sessionStorage) and does not use the URL codec.
