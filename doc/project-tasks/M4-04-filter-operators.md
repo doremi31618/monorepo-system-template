@@ -1,6 +1,6 @@
 # M4-04 — Data view toolbar: opt-in operators and repeated rules
 
-- Status: Review — independent code review approved; Dev PR and CI pending
+- Status: Review — independent code review approved; Dev PR blocked by dependency security audit
 - Actor/roles: Codex coordinator (Owner/Integrator); Claude Code CLI Sonnet implementation,
   Opus correction and separate read-only Opus Reviewer; no direct dev/main edits
 - Branch/worktree: `codex/M4-04-filter-operators` at
@@ -175,8 +175,19 @@ Results (this worktree, no install):
 
 ## Remaining review / browser needs
 
-- Independent review of the diff and public interface.
-- Re-review of the corrections above, including correction 3.
+- Independent review and re-review of the corrections are complete (see final checkpoint above).
 - Storybook mobile stories use the `mobile1` viewport or Vitest `page.viewport` resizing in headless Chromium only; no real device, Safari or iOS check was done, and the `100dvh` drawer anchoring from the consumer patch was only verified through those stories.
 - Not run: web/API suites, `bun run lint`, Storybook build, a11y audit.
-- Coordinator still must commit, then import the reviewed package into the consumer snapshot and update `svelte-ui.snapshot.json`.
+- Coordinator still must merge the reviewed Dev PR after required CI, then import the reviewed package into the consumer snapshot and update `svelte-ui.snapshot.json`.
+
+## CI blocker (2026-10-20)
+
+PR #24 head `005a482` failed the required `verify` job at `bun run deps:audit`:
+[CI run](https://github.com/doremi31618/monorepo-system-template/actions/runs/39362972542).
+The audit reports 23 high/critical advisories (3 critical, 20 high), covering existing
+mail/API/editor/build dependencies. This Work Item changes no dependency manifest or
+lockfile; comparison with base `b611268` confirms only the listed UI, tests and documentation
+files changed. No security exception, audit suppression, dependency upgrade, Dev merge or
+consumer import has been performed. A separate dependency-remediation scope has been
+proposed to the user; authorization is pending. Local feature verification does not replace
+the required CI gate, and main/Production remain untouched.
