@@ -418,3 +418,24 @@ Results (this worktree, no install, UI package rebuilt first):
 - `svelte-check` on `apps/storybook`: the same 2 pre-existing errors in untouched `UiLibrary.stories.svelte`.
 - Not run: root checks needing the owned PG16 fixture, WebKit/Safari/iOS, consumer suites, GitHub CI. The
   earlier flake record is unchanged; this single run does not show the absence of flakes.
+
+### Follow-up integration checkpoint — PR #25 (2026-10-20)
+
+- [Dev PR #25](https://github.com/doremi31618/monorepo-system-template/pull/25), code head `4859a0e`.
+  A fresh separate read-only Opus reviewer approved that frozen tree; capacity15/15, operators19/19,
+  UI unit23/23 and package check0 errors/0 warnings. No actionable findings or production edits.
+- Coordinator ran explicit migration against an owned PostgreSQL16 container on127.0.0.1:55459,
+  then dependency/graph checks and root `check`, `test`, `build`: all passed. API56 passed/1 skipped,
+  full Storybook81 passed; Web check0 errors/15 baseline warnings. Manual Storybook's two untouched
+  baseline errors and previous flake evidence remain disclosed. The one-off container and synthetic
+  test database were removed after completion; protected application databases were not touched.
+- [GitHub CI](https://github.com/doremi31618/monorepo-system-template/actions/runs/39380168825)
+  failed at the existing dependency audit:23 vulnerabilities (3 critical/20 high); later steps skipped.
+  Dependencies, lockfile and workflow are unchanged. The preceding human exception covered PR#24;
+  explicit extension to PR#25 has been requested and is **pending**. Do not merge before that decision.
+- Coordinator IAB/WebKit upstream synthetic check at667x375: the first10 CJK100-character option rows
+  are72px high, text contained/no overlap/no horizontal page overflow; Confirm is within the viewport,
+  enabled and hit-testable after selection, and commits `cjk:containsAny:["o1"]`. Not an App post-import,
+  backend/auth, real-device or performance certificate. The App still pins95b2b75; no import/deploy.
+- UI Module Catalog: reviewed and updated with desktop/phone long-option coverage and its limitations.
+  Branch/worktree retained. No Dev merge, main or Production action in this checkpoint.
