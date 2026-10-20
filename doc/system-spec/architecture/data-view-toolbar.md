@@ -1,8 +1,9 @@
 # 共用 Data View Toolbar 規格
 
-> **Work Items**: CAP-001, SUI-001
+> **Work Items**: CAP-001, SUI-001, M4-04
 > **Project Tasks**: `doc/project-tasks/CAP-001-package-architecture.md`,
-> `doc/project-tasks/SUI-001-notion-filter-builder.md`
+> `doc/project-tasks/SUI-001-notion-filter-builder.md`,
+> `doc/project-tasks/M4-04-filter-operators.md`
 > **Status**: Approved for implementation
 > **Approved at**: 2026-09-02
 
@@ -46,6 +47,17 @@ DataViewQuery
 - 未選完 property、operator 或 value 的 draft 不得進入 committed query；SUI-001 要求
   使用者按下 Confirm 後才提交完整 rule，直接關閉 overlay 必須捨棄草稿。
 - 多欄位排序依畫面順序決定優先級，後端另加穩定 ID tie-breaker。
+
+### 3.1 Opt-in operator 與重複 rule（M4-04）
+
+- Operator 型別可擴充；package 不認得任何業務型別或 operator 名稱。Property 可用 `operatorMeta` 宣告每個 operator 的 operand（`none`／`single`／`multi`）與選填 label；未宣告者維持內建行為。
+- `none`（unary）不顯示 value editor，可直接 Confirm，value 為 `''`，且不呼叫 `loadOptions`；`multi` 允許多選。自訂 `filterEditors` 由 context 的 `operand` 得知 operand 種類，`multi` 以 `selectedValues` 判斷 Confirm 與提交值；非選項型 property 若無自訂 editor 則無法提交 `multi`。
+- Property 設 `allowRepeat`（可選 `maxRules`）後，同一 property 可有多條 rule；rule 以選填的穩定 `id` 區分，可各自編輯、移除，且不會自動取代同欄位既有 rule。未啟用者仍是一個 property 一條 rule。
+- Property 可選 `normalizeText(raw)`：單值文字 operand（內建 input 或自訂 editor）的 Confirm 驗證與提交值都使用其結果，結果為空字串即視為空白；未提供時維持 `trim()`。`between` 一律 trim。Package 不內建任何業務空白規則，由 consumer 提供。
+- Rule identity：先比對物件參考，其次只認同 property 內唯一的 `id`；`id` 以 property 為範圍。無 `id`、找不到或有歧義（同 property 重複 `id`）時編輯與移除皆不變更 query，也不 append。Parse 對 `allowRepeat` 缺少或重複的 `id` 指派可重現的 `<property>-<n>`；toolbar 新 rule 取目前 query 所有 rule（不限 property）皆未使用的最小 `<property>-<n>`。編輯任何 property 的 rule 都保留其既有 `id`，只有新的重複 rule 會產生 `id`。無 `id` 的 chip 以 property 內出現次序為 key，非重複 property 編輯後移到末端仍是同一個 chip、focus 不變。父層以無 `id` 的新物件重建 query 時，進行中的編輯不會套用——跨重建保持身分須使用穩定 `id`。
+- Overlay 關閉以 `onCloseAutoFocus` 將 focus 交回 Add filter／Sort 按鈕或開啟編輯的 chip；編輯中跨越 mobile breakpoint 時 Popover／Drawer 互換但不視為關閉，草稿保留。`searchMode='persistent'` 在 mobile 以 toggle 呈現，空白時 Escape 可收合；desktop 維持常駐。
+- 草稿規則不變：只有 Confirm 才提交，Cancel／Escape／關閉捨棄。
+- Package 不自動持久化；URL codec 仍供舊 caller，`writeDataViewQuery` 可傳入 properties 以寫出 unary rule。Codec 的單值字串是否空白也依該 property 的 `normalizeText`（未提供時 `trim()`）判斷，寫出與 parse 皆保留原值。
 - URL 是可分享與可還原的 committed state；無效欄位、operator、value 或 direction 必須安全忽略。
 - Search、Filter、Sort 變更時回到第一頁，後端在 pagination 前完成所有限制與排序。
 

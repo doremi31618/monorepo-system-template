@@ -1,4 +1,4 @@
-import type { DataViewFilterOperator } from './query.js';
+import type { DataViewBuiltInFilterOperator } from './query.js';
 
 export interface DataViewToolbarLabels {
   addFilter: string;
@@ -6,6 +6,7 @@ export interface DataViewToolbarLabels {
   filterDescription: string;
   filterBy: string;
   confirmFilter: string;
+  cancelFilter: string;
   sort: string;
   sortDescription: string;
   sortBy: string;
@@ -26,7 +27,9 @@ export interface DataViewToolbarLabels {
   highestFirst: string;
   ascendingAlphabetical: string;
   descendingAlphabetical: string;
-  operators: Record<DataViewFilterOperator, string>;
+  /** Built-in operator labels plus any consumer-supplied operator keys. */
+  operators: Record<DataViewBuiltInFilterOperator, string> &
+    Record<string, string>;
 }
 
 export type DataViewToolbarLabelOverrides = Partial<
@@ -41,6 +44,7 @@ export const defaultDataViewToolbarLabels: DataViewToolbarLabels = {
   filterDescription: 'Choose a property, operator, and value.',
   filterBy: 'Filter by',
   confirmFilter: 'Confirm filter',
+  cancelFilter: 'Cancel',
   sort: 'Sort',
   sortDescription: 'Earlier rules have higher priority.',
   sortBy: 'Sort by',
