@@ -244,22 +244,26 @@
     await waitForUnlock(doc);
   }
 
-  /** Opens the 100-option list in the drawer, Tabs to the 100th option and commits it. */
-  async function selectLastOption(canvasElement: HTMLElement, property: DataViewProperty) {
+  /** Opens the 100-option list in the overlay, Tabs to the 100th option and commits it. */
+  async function selectLastOption(
+    canvasElement: HTMLElement,
+    overlaySelector: string,
+    property: DataViewProperty,
+  ) {
     const doc = canvasElement.ownerDocument;
     const canvas = within(canvasElement);
     const body = within(doc.body);
     const labels = property.options!.map((option) => option.label);
     await userEvent.click(canvas.getByRole('button', { name: 'Add filter' }));
-    const drawer = await waitFor(() => {
-      const element = doc.querySelector('[data-vaul-drawer]');
+    const overlay = await waitFor(() => {
+      const element = doc.querySelector(overlaySelector);
       expect(element).not.toBeNull();
       return element as HTMLElement;
     });
     await userEvent.click(body.getByRole('button', { name: property.label }));
     await userEvent.click(body.getByRole('button', { name: 'Contains any' }));
     const list = body.getByLabelText(`${property.label} options`);
-    await waitFor(() => expectInside(drawer, viewportRect(doc), 'drawer'));
+    await waitFor(() => expectInside(overlay, viewportRect(doc), 'overlay'));
     await expect(body.getByRole('button', { name: labels[0] })).toBeVisible();
     expectOptionsLaidOut(list, doc);
 
@@ -274,20 +278,20 @@
     await waitFor(() => expectInside(last, list.getBoundingClientRect(), '100th option in list'));
     expectInside(last, viewportRect(doc), '100th option in viewport');
     await expect(expectOptionsLaidOut(list, doc)).toHaveLength(100);
-    expect(drawer.scrollWidth).toBeLessThanOrEqual(drawer.clientWidth);
+    expect(overlay.scrollWidth).toBeLessThanOrEqual(overlay.clientWidth);
     expectNoPageOverflowX(doc);
 
     await userEvent.keyboard('{Enter}');
     await expect(last).toHaveAttribute('aria-pressed', 'true');
     // The footer stays reachable and is not covered by the options.
     const confirm = body.getByRole('button', { name: 'Confirm filter' });
-    await waitFor(() => expectInside(confirm, drawer.getBoundingClientRect(), 'Confirm in drawer'));
+    await waitFor(() => expectInside(confirm, overlay.getBoundingClientRect(), 'Confirm in overlay'));
     expectInside(confirm, viewportRect(doc), 'Confirm in viewport');
     const box = confirm.getBoundingClientRect();
     expect(confirm.contains(doc.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2))).toBe(true);
     await tabTo(confirm);
     await userEvent.keyboard('{Enter}');
-    await waitFor(() => expect(doc.querySelector('[data-vaul-drawer]')).toBeNull());
+    await waitFor(() => expect(doc.querySelector(overlaySelector)).toBeNull());
     await waitForUnlock(doc);
   }
 
@@ -345,7 +349,14 @@
   let desktopQuery = $state<DataViewQuery>(empty());
   let portraitQuery = $state<DataViewQuery>(empty());
   let landscapeQuery = $state<DataViewQuery>(empty());
-  let optionQueries = $state<DataViewQuery[]>([empty(), empty(), empty(), empty()]);
+  let optionQueries = $state<DataViewQuery[]>([
+    empty(),
+    empty(),
+    empty(),
+    empty(),
+    empty(),
+    empty(),
+  ]);
   let fieldQueries = $state<DataViewQuery[]>([empty(), empty(), empty(), empty(), empty(), empty()]);
   const rules = (value: DataViewQuery) =>
     value.filters
@@ -436,7 +447,7 @@
   asChild
   play={async ({ canvasElement }) => {
     if (!(await setViewport(tallPortrait))) return;
-    await selectLastOption(canvasElement, cjkProperty);
+    await selectLastOption(canvasElement, '[data-vaul-drawer]', cjkProperty);
     await expect(within(canvasElement).getByTestId('state')).toHaveTextContent('cjk:containsAny:["o100"]');
   }}
 >
@@ -448,7 +459,7 @@
   asChild
   play={async ({ canvasElement }) => {
     if (!(await setViewport(landscape))) return;
-    await selectLastOption(canvasElement, cjkProperty);
+    await selectLastOption(canvasElement, '[data-vaul-drawer]', cjkProperty);
     await expect(within(canvasElement).getByTestId('state')).toHaveTextContent('cjk:containsAny:["o100"]');
   }}
 >
@@ -460,7 +471,7 @@
   asChild
   play={async ({ canvasElement }) => {
     if (!(await setViewport(tallPortrait))) return;
-    await selectLastOption(canvasElement, latinProperty);
+    await selectLastOption(canvasElement, '[data-vaul-drawer]', latinProperty);
     await expect(within(canvasElement).getByTestId('state')).toHaveTextContent('latin:containsAny:["o100"]');
   }}
 >
@@ -472,11 +483,35 @@
   asChild
   play={async ({ canvasElement }) => {
     if (!(await setViewport(landscape))) return;
-    await selectLastOption(canvasElement, latinProperty);
+    await selectLastOption(canvasElement, '[data-vaul-drawer]', latinProperty);
     await expect(within(canvasElement).getByTestId('state')).toHaveTextContent('latin:containsAny:["o100"]');
   }}
 >
   {@render optionStory(3)}
+</Story>
+
+<Story
+  name="Desktop popover lays out 100 long CJK options"
+  asChild
+  play={async ({ canvasElement }) => {
+    if (!(await setViewport(desktop))) return;
+    await selectLastOption(canvasElement, '[data-slot="popover-content"]', cjkProperty);
+    await expect(within(canvasElement).getByTestId('state')).toHaveTextContent('cjk:containsAny:["o100"]');
+  }}
+>
+  {@render optionStory(4)}
+</Story>
+
+<Story
+  name="Desktop popover lays out 100 unbroken Latin options"
+  asChild
+  play={async ({ canvasElement }) => {
+    if (!(await setViewport(desktop))) return;
+    await selectLastOption(canvasElement, '[data-slot="popover-content"]', latinProperty);
+    await expect(within(canvasElement).getByTestId('state')).toHaveTextContent('latin:containsAny:["o100"]');
+  }}
+>
+  {@render optionStory(5)}
 </Story>
 
 {#snippet fieldStory(index: number, field: DataViewProperty)}

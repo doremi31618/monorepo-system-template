@@ -380,10 +380,41 @@ Results (this worktree, no install, package rebuilt from the final source):
   coordinator checked the completed report and the additional5-line test cleanup (it waits for body unlock,
   not bypassing a pointer failure).15 post-cleanup full runs passed, but this is not proof of zero flakiness.
   The inherited `overflow-wrap:anywhere` also reaches consumer-supplied custom `filterEditors`, so their
-  text can break mid-word when constrained. Desktop100-long-option coverage is still pending: the new
-  option stories cover both phone sizes; the desktop stories cover long field names, not100 options.
+  text can break mid-word when constrained. Desktop 100-long-option coverage was pending at this
+  checkpoint and is added in the next section.
   No follow-up PR/merge/import or App deployment is claimed by this checkpoint.
 - Remaining, not changed: the sort editor's property and direction buttons are still nowrap
   `justify-start` buttons, so a long sortable field name could widen the sort Popover or Drawer
   the same way. They are not covered by the stories. Not assigned: the initial mobile chip does
   not autofocus its input until Tab.
+
+## Upstream final qualification (2026-10-20): desktop 100-option coverage
+
+Gap: the 100-option stories covered only the two phone sizes. Added two stories to
+`DataViewToolbarCapacity.stories.svelte` at 1024×768 through the real `DataViewToolbar` Popover:
+`Desktop popover lays out 100 long CJK options` and `Desktop popover lays out 100 unbroken Latin
+options`. The existing `selectLastOption` helper took a new `overlaySelector` argument
+(`[data-vaul-drawer]` for the phone stories, `[data-slot="popover-content"]` here), and its
+drawer-specific names became overlay names. No assertion was removed or loosened, there are no
+sleeps, and the phone and field-name stories are unchanged apart from the extra argument.
+Each desktop story checks that every option's text range sits inside its own button, that options
+do not overlap and stay within the list width, that the overlay is inside the viewport with no page
+overflow, that Tab reaches the 100th option, that it shows `aria-pressed="true"` after Enter, and that
+Confirm is inside the overlay and viewport and is the element hit at its center. It then Tabs to
+Confirm, commits, and the state reads `["o100"]`.
+
+Method: this is **characterization coverage, not RED-first**. The production source at `439745d` was
+already approved, no production file was touched, and both new stories passed on their first run. No
+failing run was observed, and no mutation check was run in this round (it would need a temporary
+production edit). The earlier mutation results (`auto-rows-max`, inherited `overflow-wrap:anywhere`)
+were measured on the phone stories only, not on the desktop ones. No defect was found.
+
+Results (this worktree, no install, UI package rebuilt first):
+
+- Capacity file alone: 15 passed (13 earlier + 2 new).
+- `cd apps/storybook && npx vitest --run`: 81 passed (79 + 2) in 10 files, one full run in this round.
+- `bun test ./packages/svelte/ui/tests`: 23 pass, 0 fail.
+- `cd packages/svelte/ui && bun run check`: 0 errors, 0 warnings. `bun run build` succeeds.
+- `svelte-check` on `apps/storybook`: the same 2 pre-existing errors in untouched `UiLibrary.stories.svelte`.
+- Not run: root checks needing the owned PG16 fixture, WebKit/Safari/iOS, consumer suites, GitHub CI. The
+  earlier flake record is unchanged; this single run does not show the absence of flakes.
