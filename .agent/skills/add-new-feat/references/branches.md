@@ -11,7 +11,7 @@
 - 命名：`feat/<work-id>-<short-name>`。
 - 禁止混入其他 Work Item 或直接合併其他未審核 feature branch。
 - 透過 PR 合併到 `dev`，不可直接進入 `main`。
-- 多 Actor 並行時，每個 branch 使用獨立 worktree。
+- 每個 Work Item 使用獨立 worktree；合併至 `dev` 後保留 worktree 與功能分支，直到 dev 部署且使用者明確確認驗證通過才清理。
 - 同一個 branch 不得被多個 Actor 或 worktree 同時使用；建立與清理方式見 [worktrees.md](worktrees.md)。
 
 **進入 `dev` 前**：規格與 Project Task 已更新、Acceptance Criteria 可驗證、必要測試通過、Review 完成。
@@ -26,7 +26,7 @@
 - 由 Integrator 控制合併與衝突處理。
 - 整合測試失敗時，優先回原 feature branch 修正；不要在 `dev` 就地修補而失去追蹤。
 
-**進入 `main` 前**：預定發布範圍明確、完整驗證通過、release note 完成、Releaser 核准。
+**進入 `main` 前**：預定發布範圍明確、完整驗證通過、dev 部署成功且使用者明確確認對應版本驗證通過、本次 worktree 與功能分支已清理、release note 完成、Releaser 核准。合併後部署 prod 並確認部署與 smoke test 成功。
 
 ## `main`
 

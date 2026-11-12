@@ -76,18 +76,24 @@ git worktree add \
 - 安裝依賴、產生檔案與測試結果都限制在該 worktree，避免修改其他工作目錄。
 - 每次開始工作前確認 branch；提交前檢查 diff 只包含本 Work Item。
 
-## 合併後清理
+## 使用者驗證 dev 通過後清理
 
-只有 PR 已合併、Project Task 已更新，而且 worktree 沒有未提交或未推送工作時才能清理：
+標準 Feature Delivery 中，只有 PR 已合併至 `dev`、dev 已部署且使用者明確確認驗證通過、Project Task 已保存部署與驗證紀錄，而且 worktree 沒有未提交或未保存工作時才能清理。合併 PR 時保留遠端功能分支，不啟用提前刪除分支的選項。Hotfix 的清理時機依其發布與同步流程。
+
+清理前更新 remote 資訊，確認功能分支沒有 PR 合併後新增的 commit 或其他 Work Item 的工作，且未被其他 worktree／Actor 使用。離開待移除目錄，在主工作目錄操作：
 
 ```bash
+git fetch origin
 git -C ../<repo-name>-worktrees/<work-id>-<short-name> status --short
 git worktree remove ../<repo-name>-worktrees/<work-id>-<short-name>
 git branch -d feat/<work-id>-<short-name>
+git push origin --delete feat/<work-id>-<short-name>
 git worktree list
 ```
 
-清理前若 `status --short` 有輸出，停止並通知 Owner。禁止使用 `--force`、直接刪除 worktree 資料夾，或以 `git branch -D` 跳過未合併保護。
+遠端分支已不存在時略過遠端刪除。清理後確認 worktree 登錄、local 與 remote 分支均已移除，將結果保存至 Project Task，再進入 `dev -> main` 發布流程；後續文件更新沿用 repository 的 PR 流程。
+
+清理前若 `status --short` 有輸出，停止並通知 Owner。若 squash merge 等情況導致 `git branch -d` 拒絕刪除，保留剩餘資源並回報原因，不把清理視為完成。禁止使用 `--force`、直接刪除 worktree 資料夾，或以 `git branch -D` 跳過未合併保護。
 
 ## 禁止事項
 

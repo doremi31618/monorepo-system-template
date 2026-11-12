@@ -46,6 +46,14 @@
 
 - [本次明確不處理]
 
+## Technical Design Review
+
+- **Design**: [七項說明所在的 System Spec 連結與版本／日期；細節只維護在規格中]
+- **Approval required**: [新增資料表、架構變更、新增資源的具體項目；無則寫 None 並附理由]
+- **Approval status**: Pending | Approved | Not required
+- **User confirmation**: [明確同意內容、日期、決策項目及對應規格版本；未回覆不得填 Approved]
+- **Implementation comparison**: [符合設計或實際差異、必要的重新核准紀錄、關鍵程式位置與驗證證據連結]
+
 ## Required Tests
 
 - [ ] Unit: [範圍]
@@ -55,11 +63,26 @@
 ## Tasks
 
 - [ ] Spec
+- [ ] Seven-part technical design and required user approvals
 - [ ] Implementation
 - [ ] Tests
-- [ ] Review
+- [ ] Review, including design-to-implementation comparison
 - [ ] Dev integration
+- [ ] Dev deployment and smoke test
+- [ ] User validation on dev
+- [ ] Worktree and local/remote feature branch cleanup
 - [ ] Release note
+- [ ] Merge dev into main
+- [ ] Prod deployment and smoke test
+
+## Deployment / User Validation
+
+- **Dev**: [commit、URL／job／run ID、部署與 smoke test 結果]
+- **Validation steps**: [驗證入口、操作步驟與預期結果]
+- **User validation**: Pending | Passed | Failed
+- **User confirmation**: [使用者明確確認內容、日期與驗證版本；未回覆不得填 Passed]
+- **Cleanup**: [本次 worktree、local 與 remote 功能分支的清理結果]
+- **Prod**: [main commit、URL／job／run ID、部署與 smoke test 結果]
 
 ## Decisions and Work Log
 
@@ -70,6 +93,8 @@
 - **Commit/PR**: [`<commit>` (`<Work Item ID>`), PR link]
 - **Branch/Worktree**: [branch 與絕對路徑]
 - **Validation**: [實際命令與結果]
+- **CLI / Model**: [目前工作類型、CLI 與明確模型 ID]
+- **Model fallback**: [None，或 Claude 用量耗盡證據、原模型、Codex 接手模型與交接進度]
 - **Known issues**: [沒有則填 None]
 - **Next action**: [下一角色要執行的工作]
 ```
@@ -88,5 +113,5 @@
 - `Todo`：目標已記錄，尚未開始。
 - `Doing`：Owner 正在處理規格、實作或測試。
 - `Review`：變更已可供 Reviewer 獨立審核。
-- `Dev`：已合併 `dev` 並通過整合驗證。
-- `Released`：已隨核准版本進入 `main` 並完成發布紀錄。
+- `Dev`：已合併 `dev` 並通過整合驗證；部署與使用者驗證進度另記於 Deployment / User Validation，不能僅憑此狀態判定可發布。
+- `Released`：已隨核准版本進入 `main`，prod 部署及 smoke test 成功，並完成發布紀錄。
