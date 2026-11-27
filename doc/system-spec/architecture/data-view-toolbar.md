@@ -55,7 +55,7 @@ DataViewQuery
 - Property 設 `allowRepeat`（可選 `maxRules`）後，同一 property 可有多條 rule；rule 以選填的穩定 `id` 區分，可各自編輯、移除，且不會自動取代同欄位既有 rule。未啟用者仍是一個 property 一條 rule。
 - Property 可選 `normalizeText(raw)`：單值文字 operand（內建 input 或自訂 editor）的 Confirm 驗證與提交值都使用其結果，結果為空字串即視為空白；未提供時維持 `trim()`。`between` 一律 trim。Package 不內建任何業務空白規則，由 consumer 提供。
 - Rule identity：先比對物件參考，其次只認同 property 內唯一的 `id`；`id` 以 property 為範圍。無 `id`、找不到或有歧義（同 property 重複 `id`）時編輯與移除皆不變更 query，也不 append。Parse 對 `allowRepeat` 缺少或重複的 `id` 指派可重現的 `<property>-<n>`；toolbar 新 rule 取目前 query 所有 rule（不限 property）皆未使用的最小 `<property>-<n>`。編輯任何 property 的 rule 都保留其既有 `id`，只有新的重複 rule 會產生 `id`。無 `id` 的 chip 以 property 內出現次序為 key，非重複 property 編輯後移到末端仍是同一個 chip、focus 不變。父層以無 `id` 的新物件重建 query 時，進行中的編輯不會套用——跨重建保持身分須使用穩定 `id`。
-- Overlay 關閉以 `onCloseAutoFocus` 將 focus 交回 Add filter／Sort 按鈕或開啟編輯的 chip；編輯中跨越 mobile breakpoint 時 Popover／Drawer 互換但不視為關閉，草稿保留。`searchMode='persistent'` 在 mobile 以 toggle 呈現，空白時 Escape 可收合；desktop 維持常駐。
+- Overlay 關閉以 `onCloseAutoFocus` 將 focus 交回 Add filter／Sort 按鈕或開啟編輯的 chip；編輯中跨越 mobile breakpoint 時 Popover／Drawer 互換但不視為關閉，草稿保留。`searchMode='persistent'` 在 mobile 與 desktop 皆常駐（TP-UI-01 R6 起；先前 mobile 以 toggle 呈現），空白時 Escape 不收合；手機同一列為搜尋欄＋右側 Filter／Sort／`actions`，控制項最小 44px。R7：控制列任何寬度都不換行，整組靠右；桌面搜尋欄上限約 300px（最小 144px），空白留在左側；已套用 chips 另起一列（桌面靠右）；手機控制間距 8px。此版面套用到所有 `searchMode`（toggle 的開合行為與預設不變，但展開後的版面相同）。`actions` 內容由 consumer 提供 44×44px 手機目標，建議手機只放一個 More trigger。`toggle`（預設）行為不變。
 - 草稿規則不變：只有 Confirm 才提交，Cancel／Escape／關閉捨棄。
 - Package 不自動持久化；URL codec 仍供舊 caller，`writeDataViewQuery` 可傳入 properties 以寫出 unary rule。Codec 的單值字串是否空白也依該 property 的 `normalizeText`（未提供時 `trim()`）判斷，寫出與 parse 皆保留原值。
 - URL 是可分享與可還原的 committed state；無效欄位、operator、value 或 direction 必須安全忽略。

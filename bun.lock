@@ -478,7 +478,7 @@
         "vite": "^7.3.6",
       },
       "peerDependencies": {
-        "svelte": "^5.0.0",
+        "svelte": "^5.20.0",
       },
     },
     "packages/testing/utils": {

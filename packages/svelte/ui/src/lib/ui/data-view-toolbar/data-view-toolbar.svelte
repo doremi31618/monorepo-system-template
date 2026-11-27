@@ -180,8 +180,7 @@
     if (event.key !== 'Escape') return;
     event.preventDefault();
     if (searchDraft) clearSearch();
-    // Persistent search only stays open on desktop; mobile renders it as a toggle.
-    else if (searchMode !== 'persistent' || isMobile.current) void closeSearch();
+    else if (searchMode !== 'persistent') void closeSearch();
   }
 
   function resetFilterEditor() {
@@ -705,14 +704,14 @@
 >
   <div
     data-slot="data-view-toolbar-controls"
-    class="flex min-h-9 flex-nowrap items-center justify-end gap-1 sm:flex-wrap"
+    class="flex min-h-9 flex-nowrap items-center justify-end gap-1 max-md:min-h-11 max-md:gap-2"
   >
     {#if isMobile.current}
       <Button
         data-toolbar-trigger="filter"
         variant="ghost"
         size="sm"
-        class="order-2 shrink-0"
+        class="order-2 shrink-0 max-md:min-h-11 max-md:min-w-11"
         aria-label={copy.addFilter}
         aria-haspopup="dialog"
         aria-expanded={filterOpen}
@@ -761,7 +760,7 @@
           data-toolbar-trigger="sort"
           variant="ghost"
           size="sm"
-          class="order-3 shrink-0"
+          class="order-3 shrink-0 max-md:min-h-11 max-md:min-w-11"
           aria-label={query.sorts.length
             ? `${copy.sort} · ${query.sorts.length}`
             : copy.sort}
@@ -809,11 +808,17 @@
       {/if}
     {/if}
 
-    {#if searchMode !== 'hidden' && ((searchMode === 'persistent' && !isMobile.current) || searchExpanded)}
-      <div class="order-1 flex min-w-0 flex-1 items-center gap-1 sm:min-w-52">
+    {#if searchMode !== 'hidden' && (searchMode === 'persistent' || searchExpanded)}
+      <!-- R7: one right-aligned, never-wrapping control group. Phones: search fills the row and shrinks while the
+           44px controls keep their size. Desktop: search is bounded (~300px) and the free space stays on the left. -->
+      <div
+        data-slot="data-view-toolbar-search"
+        class="order-1 flex min-w-0 flex-1 basis-0 items-center gap-1 md:max-w-[300px] md:min-w-36 md:basis-[300px]"
+      >
         <Input
           bind:ref={searchInput}
           type="search"
+          class="max-md:h-11"
           aria-label={effectiveSearchLabel}
           placeholder={effectiveSearchPlaceholder}
           bind:value={searchDraft}
@@ -833,19 +838,19 @@
         bind:ref={searchTrigger}
         variant="ghost"
         size="sm"
-        class="order-1 shrink-0"
+        class="order-1 shrink-0 max-md:min-h-11 max-md:min-w-11"
         aria-label={effectiveSearchLabel}
         onclick={openSearch}
         ><SearchIcon data-icon="inline-start" /><span class="hidden sm:inline">{copy.search}</span></Button
       >
     {/if}
     {#if actions}
-      <div class="order-4 shrink-0">{@render actions()}</div>
+      <div class="order-4 flex shrink-0 items-center justify-end gap-1">{@render actions()}</div>
     {/if}
   </div>
 
   {#if query.filters.length}
-    <div class="flex flex-wrap items-center gap-1" aria-label="Active filters">
+    <div class="flex flex-wrap items-center gap-1 md:justify-end" aria-label="Active filters">
       {#each query.filters as filter, index (filterKeys[index])}
         {@const summary = filterSummary(filter)}
         <div class="inline-flex max-w-full items-center gap-1">
