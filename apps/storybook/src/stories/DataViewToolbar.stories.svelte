@@ -92,6 +92,45 @@
     },
     { key: 'active', label: 'Active', type: 'boolean', operators: ['is'] },
   ];
+
+  const pcViewports = [
+    { width: 1280, height: 800 },
+    { width: 1440, height: 900 },
+  ];
+  const phoneViewports = [
+    { width: 320, height: 568 },
+    { width: 390, height: 844 },
+    { width: 430, height: 932 },
+  ];
+
+  async function setViewport(size: { width: number; height: number }) {
+    if (!(globalThis as { __vitest_browser__?: unknown }).__vitest_browser__) return false;
+    const { page } = await import('vitest/browser');
+    await page.viewport(size.width, size.height);
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    return true;
+  }
+
+  /** Search, Filter, Sort and the caller's action: every control of the single control row, left to right. */
+  function controlGroup(canvasElement: HTMLElement) {
+    const canvas = within(canvasElement);
+    const search = canvas.getByRole('searchbox');
+    const controls = [
+      search.closest('[data-slot="data-view-toolbar-search"]') ?? search.parentElement!,
+      canvas.getByRole('button', { name: '新增篩選' }),
+      canvas.getByRole('button', { name: '排序' }),
+      canvas.getByRole('button', { name: 'View mode' }),
+    ];
+    const row = canvasElement.querySelector<HTMLElement>('[data-slot="data-view-toolbar-controls"]')!;
+    return { search, controls, row };
+  }
+  function expectOneRow(controls: Element[]) {
+    const centers = controls.map((control) => {
+      const box = control.getBoundingClientRect();
+      return box.top + box.height / 2;
+    });
+    expect(Math.max(...centers) - Math.min(...centers), 'controls share one row').toBeLessThanOrEqual(6);
+  }
 </script>
 
 <script lang="ts">
@@ -123,7 +162,8 @@
 {/snippet}
 
 {#snippet viewActions()}
-  <button type="button">View mode</button>
+  <!-- Caller-owned action: the toolbar only wraps it, so the caller provides the 44px phone target. -->
+  <button type="button" class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2 text-sm hover:bg-muted md:min-h-8">View mode</button>
 {/snippet}
 
 <Story
@@ -169,9 +209,8 @@
     await expect(canvas.getByRole('button', { name: 'View mode' })).toBeVisible();
     const toolbar = canvasElement.querySelector<HTMLElement>('[data-slot="data-view-toolbar"]');
     await expect(toolbar).not.toBeNull();
-    await expect(searchbox.getBoundingClientRect().width).toBeGreaterThan(
-      toolbar!.getBoundingClientRect().width * 0.5,
-    );
+    // R7 supersedes the earlier full-width search: it is bounded and the control group sits at the right.
+    await expect(searchbox.getBoundingClientRect().width).toBeLessThanOrEqual(300.5);
     await userEvent.click(canvas.getByRole('button', { name: '排序' }));
     await userEvent.click(body.getByRole('button', { name: 'Updated' }));
     await expect(body.getByRole('button', { name: '最新優先' })).toBeVisible();
@@ -188,6 +227,56 @@
       sort: '排序',
       newestFirst: '最新優先',
     }}
+    actions={viewActions}
+    onquerychange={(next) => (query = next)}
+  />
+</Story>
+
+<Story
+  name="Persistent controls right-align as one group on PC and keep one 44px row on phones"
+  asChild
+  play={async ({ canvasElement }) => {
+    const doc = canvasElement.ownerDocument;
+    for (const size of pcViewports) {
+      if (!(await setViewport(size))) return;
+      const { search, controls, row } = controlGroup(canvasElement);
+      const rowBox = row.getBoundingClientRect();
+      const box = (control: Element) => control.getBoundingClientRect();
+      expectOneRow(controls);
+      // Bounded search where it fits; it no longer stretches across the toolbar.
+      await expect(box(controls[0]).width, `search bounded at ${size.width}`).toBeLessThanOrEqual(300.5);
+      await expect(box(controls[0]).width).toBeGreaterThanOrEqual(144);
+      // The whole group sits at the right edge, and the empty space stays on the left.
+      await expect(rowBox.right - box(controls[3]).right, `group flush right at ${size.width}`).toBeLessThanOrEqual(2);
+      await expect(box(controls[0]).left - rowBox.left, `free space left of group at ${size.width}`).toBeGreaterThan(rowBox.width * 0.4);
+      for (let index = 1; index < controls.length; index++)
+        await expect(box(controls[index]).left).toBeGreaterThanOrEqual(box(controls[index - 1]).right - 1);
+      await expect(doc.documentElement.scrollWidth).toBeLessThanOrEqual(doc.documentElement.clientWidth);
+      await expect(search).toBeVisible();
+    }
+    for (const size of phoneViewports) {
+      if (!(await setViewport(size))) return;
+      const { search, controls, row } = controlGroup(canvasElement);
+      const rowBox = row.getBoundingClientRect();
+      expectOneRow(controls);
+      await expect(search.getBoundingClientRect().height, `search 44px at ${size.width}`).toBeGreaterThanOrEqual(44);
+      for (const control of controls.slice(1)) {
+        const target = control.getBoundingClientRect();
+        await expect(target.width).toBeGreaterThanOrEqual(44);
+        await expect(target.height).toBeGreaterThanOrEqual(44);
+      }
+      await expect(controls[0].getBoundingClientRect().width, `search keeps width at ${size.width}`).toBeGreaterThan(40);
+      await expect(rowBox.right - controls[3].getBoundingClientRect().right).toBeLessThanOrEqual(2);
+      await expect(doc.documentElement.scrollWidth).toBeLessThanOrEqual(doc.documentElement.clientWidth);
+    }
+    await setViewport({ width: 1024, height: 768 });
+  }}
+>
+  <DataViewToolbar
+    {properties}
+    {query}
+    searchMode="persistent"
+    labels={{ addFilter: '新增篩選', search: '搜尋資料', sort: '排序' }}
     actions={viewActions}
     onquerychange={(next) => (query = next)}
   />

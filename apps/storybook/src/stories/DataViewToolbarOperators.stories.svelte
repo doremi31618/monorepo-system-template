@@ -609,21 +609,22 @@
 </Story>
 
 <Story
-  name="Persistent search collapses on mobile and stays on desktop"
+  name="Persistent search stays visible with 44px controls on one phone row"
   asChild
   parameters={{ viewport: { defaultViewport: 'mobile1' } }}
   play={async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole('button', { name: 'Search' }));
-    await expect(canvas.getByRole('searchbox', { name: 'Search' })).toHaveFocus();
-    await userEvent.keyboard('{Escape}');
-    await waitFor(() => expect(canvas.queryByRole('searchbox')).not.toBeInTheDocument());
-    await expect(canvas.getByRole('button', { name: 'Search' })).toHaveFocus();
-
-    if (!(await setViewport(desktop))) return;
     const searchbox = await canvas.findByRole('searchbox', { name: 'Search' });
+    const filter = canvas.getByRole('button', { name: 'Add filter' });
+    const box = filter.getBoundingClientRect();
+    await expect(box.width).toBeGreaterThanOrEqual(44);
+    await expect(box.height).toBeGreaterThanOrEqual(44);
+    await expect(Math.abs(box.top - searchbox.getBoundingClientRect().top)).toBeLessThan(44);
     await userEvent.click(searchbox);
     await userEvent.keyboard('{Escape}');
+    await expect(canvas.getByRole('searchbox', { name: 'Search' })).toBeVisible();
+
+    if (!(await setViewport(desktop))) return;
     await expect(canvas.getByRole('searchbox', { name: 'Search' })).toBeVisible();
   }}
 >
